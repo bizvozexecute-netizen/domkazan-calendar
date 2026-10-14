@@ -74,12 +74,14 @@
           addTextElement(card, "p", `До ${house.maxGuests} гостей · ${house.quote.nights} ночей · ${house.quote.total} ₽`);
           if (house.tildaUrl) {
             const link = document.createElement("a");
-            const target = new URL(house.tildaUrl);
-            if (target.protocol === "https:") {
-              link.href = target.href;
-              link.textContent = "Подробнее на сайте";
-              card.append(link);
-            }
+            try {
+              const target = new URL(house.tildaUrl);
+              if (target.protocol === "https:") {
+                link.href = target.href;
+                link.textContent = "Подробнее на сайте";
+                card.append(link);
+              }
+            } catch { /* Ignore an invalid external URL in catalog data. */ }
           }
           results.append(card);
         }

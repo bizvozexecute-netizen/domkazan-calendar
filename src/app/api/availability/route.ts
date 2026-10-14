@@ -11,7 +11,7 @@ const querySchema = z.object({
   guests: z.coerce.number().int().min(1).max(50),
 });
 
-function corsHeaders(request: NextRequest): HeadersInit {
+function corsHeaders(request: NextRequest): Record<string, string> {
   const allowed = process.env.TILDA_ORIGIN;
   const origin = request.headers.get("origin");
   return allowed && origin === allowed
