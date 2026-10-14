@@ -11,9 +11,13 @@ model House {
   id              String           @id @default(cuid())
   slug            String           @unique
   name            String
-  description     String?
   tildaUrl        String?
   maxGuests       Int
+  district        String?
+  bedrooms        Int?
+  bathrooms       Int?
+  amenities       String[]         @default([])
+  petsAllowed     Boolean?
   isActive        Boolean          @default(true)
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
@@ -24,14 +28,18 @@ model House {
 }
 
 // Date ranges use [startsOn, endsOn); prices are RUB per night.
+// A SQL exclusion constraint prevents overlapping periods for the same house.
 model BaseRate {
-  id            String   @id @default(cuid())
-  houseId       String
-  startsOn      DateTime @db.Date
-  endsOn        DateTime @db.Date
-  pricePerNight Decimal  @db.Decimal(10, 2)
-  minNights     Int      @default(1)
-  house         House    @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  id           String   @id @default(cuid())
+  houseId      String
+  startsOn     DateTime @db.Date
+  endsOn       DateTime @db.Date
+  weekdayPrice Decimal  @db.Decimal(10, 2)
+  fridayPrice  Decimal  @db.Decimal(10, 2)
+  saturdayPrice Decimal @db.Decimal(10, 2)
+  sundayPrice  Decimal  @db.Decimal(10, 2)
+  minNights    Int      @default(1)
+  house        House    @relation(fields: [houseId], references: [id], onDelete: Cascade)
 
   @@index([houseId, startsOn, endsOn])
 }
@@ -83,4 +91,20 @@ model BookingRequest {
 
   @@index([houseId, status, checkIn, checkOut])
   @@index([createdAt])
+}
+
+model AdminSession {
+  tokenHash  String   @id
+  email      String
+  credentialTag String
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+
+  @@index([expiresAt])
+}
+
+model LoginThrottle {
+  key         String   @id
+  attempts    Int
+  windowStart DateTime
 }

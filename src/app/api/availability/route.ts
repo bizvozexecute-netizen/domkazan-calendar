@@ -9,6 +9,10 @@ const querySchema = z.object({
   checkIn: z.string(),
   checkOut: z.string(),
   guests: z.coerce.number().int().min(1).max(50),
+  district: z.string().trim().max(100).optional(),
+  bedrooms: z.coerce.number().int().min(1).max(30).optional(),
+  amenities: z.array(z.string().trim().min(1).max(40)).max(10).optional(),
+  petsAllowed: z.boolean().optional(),
 });
 
 function corsHeaders(request: NextRequest): Record<string, string> {
@@ -29,6 +33,10 @@ export async function GET(request: NextRequest) {
     checkIn: params.get("checkIn"),
     checkOut: params.get("checkOut"),
     guests: params.get("guests"),
+    district: params.get("district") || undefined,
+    bedrooms: params.get("bedrooms") || undefined,
+    amenities: params.get("amenities")?.split(",").filter(Boolean),
+    petsAllowed: params.get("petsAllowed") === "true" ? true : undefined,
   });
   const headers = corsHeaders(request);
   if (!parsed.success) {
@@ -42,7 +50,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const houses = await findAvailableHouses(checkIn, checkOut, parsed.data.guests);
+    const houses = await findAvailableHouses(checkIn, checkOut, parsed.data);
     return NextResponse.json({ checkIn: parsed.data.checkIn, checkOut: parsed.data.checkOut, guests: parsed.data.guests, houses }, { headers: { ...headers, "Cache-Control": "no-store" } });
   } catch {
     return NextResponse.json({ error: "Поиск временно недоступен." }, { status: 503, headers });

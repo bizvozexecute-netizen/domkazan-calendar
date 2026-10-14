@@ -1,11 +1,23 @@
 import { db } from "@/lib/db";
 import { quoteStay } from "@/lib/pricing";
 
-export async function findAvailableHouses(checkIn: Date, checkOut: Date, guests: number) {
+export type HouseFilters = {
+  guests: number;
+  district?: string;
+  bedrooms?: number;
+  amenities?: string[];
+  petsAllowed?: boolean;
+};
+
+export async function findAvailableHouses(checkIn: Date, checkOut: Date, filters: HouseFilters) {
   const houses = await db.house.findMany({
     where: {
       isActive: true,
-      maxGuests: { gte: guests },
+      maxGuests: { gte: filters.guests },
+      ...(filters.district && { district: { equals: filters.district, mode: "insensitive" as const } }),
+      ...(filters.bedrooms && { bedrooms: { gte: filters.bedrooms } }),
+      ...(filters.amenities?.length && { amenities: { hasEvery: filters.amenities } }),
+      ...(filters.petsAllowed && { petsAllowed: true }),
       blockedPeriods: { none: { startsOn: { lt: checkOut }, endsOn: { gt: checkIn } } },
       bookingRequests: {
         none: { status: "CONFIRMED", checkIn: { lt: checkOut }, checkOut: { gt: checkIn } },
@@ -26,6 +38,11 @@ export async function findAvailableHouses(checkIn: Date, checkOut: Date, guests:
       slug: house.slug,
       name: house.name,
       maxGuests: house.maxGuests,
+      district: house.district,
+      bedrooms: house.bedrooms,
+      bathrooms: house.bathrooms,
+      amenities: house.amenities,
+      petsAllowed: house.petsAllowed,
       tildaUrl: house.tildaUrl,
       quote,
     }];
