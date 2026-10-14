@@ -12,7 +12,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/dates.test.ts tests/pricing.test.ts tests/rates.test.ts tests/widget.test.mjs",
+    "test": "tsx --test tests/dates.test.ts tests/pricing.test.ts tests/rates.test.ts tests/widget.test.mjs tests/admin-ui.test.tsx",
     "test:integration": "node scripts/test-integration.mjs",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
@@ -30,6 +30,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0",
+    "@types/jsdom": "^30.0.0",
     "@types/node": "^24.0.0",
     "@types/pg": "^8.0.0",
     "@types/react": "^19.0.0",

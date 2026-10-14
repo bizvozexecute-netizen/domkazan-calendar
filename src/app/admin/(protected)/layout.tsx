@@ -11,13 +11,14 @@ export default async function AdminLayout({ children }: Readonly<{ children: Rea
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4">
           <Link className="text-xl font-bold" href="/admin">DomKazan Calendar</Link>
           <nav className="flex items-center gap-5 text-sm" aria-label="Администрирование">
+            <Link href="/admin">Шахматка</Link>
             <Link href="/admin/houses">Дома</Link>
             <Link href="/admin/requests">Заявки</Link>
             <form action="/api/admin/logout" method="post"><button type="submit" className="text-emerald-800">Выйти</button></form>
           </nav>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-6 py-10">{children}</main>
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">{children}</main>
     </div>
   );
 }
