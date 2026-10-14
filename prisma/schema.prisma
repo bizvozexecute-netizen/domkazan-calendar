@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model House {
+  id              String           @id @default(cuid())
+  slug            String           @unique
+  name            String
+  description     String?
+  tildaUrl        String?
+  maxGuests       Int
+  isActive        Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  baseRates       BaseRate[]
+  dateOverrides   DateOverride[]
+  blockedPeriods  BlockedPeriod[]
+  bookingRequests BookingRequest[]
+}
+
+// Date ranges use [startsOn, endsOn); prices are RUB per night.
+model BaseRate {
+  id            String   @id @default(cuid())
+  houseId       String
+  startsOn      DateTime @db.Date
+  endsOn        DateTime @db.Date
+  pricePerNight Decimal  @db.Decimal(10, 2)
+  minNights     Int      @default(1)
+  house         House    @relation(fields: [houseId], references: [id], onDelete: Cascade)
+
+  @@index([houseId, startsOn, endsOn])
+}
+
+model DateOverride {
+  id            String   @id @default(cuid())
+  houseId       String
+  date          DateTime @db.Date
+  pricePerNight Decimal  @db.Decimal(10, 2)
+  house         House    @relation(fields: [houseId], references: [id], onDelete: Cascade)
+
+  @@unique([houseId, date])
+}
+
+model BlockedPeriod {
+  id        String   @id @default(cuid())
+  houseId   String
+  startsOn  DateTime @db.Date
+  endsOn    DateTime @db.Date
+  reason    String?
+  createdAt DateTime @default(now())
+  house     House    @relation(fields: [houseId], references: [id], onDelete: Cascade)
+
+  @@index([houseId, startsOn, endsOn])
+}
+
+enum BookingStatus {
+  NEW
+  CONTACTED
+  CONFIRMED
+  DECLINED
+  CANCELLED
+}
+
+model BookingRequest {
+  id          String        @id @default(cuid())
+  houseId     String
+  checkIn     DateTime      @db.Date
+  checkOut    DateTime      @db.Date
+  guestCount  Int
+  clientName  String
+  clientEmail String?
+  clientPhone String?
+  message     String?
+  status      BookingStatus @default(NEW)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  house       House         @relation(fields: [houseId], references: [id], onDelete: Restrict)
+
+  @@index([houseId, status, checkIn, checkOut])
+  @@index([createdAt])
+}
