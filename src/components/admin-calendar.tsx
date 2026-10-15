@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CalendarBoardData } from "@/lib/calendar-board";
-import { dateKey, todayInMoscow } from "@/lib/dates";
+import { dateKey, parseDateOnly, todayInMoscow } from "@/lib/dates";
 
 type Selection = { houseId: string; start: string; end: string; complete: boolean };
 type Action = "close" | "open" | "setPrice" | "clearPrice";
@@ -24,10 +24,18 @@ async function responseJson(response: Response) {
   return data;
 }
 
-export function AdminCalendar() {
-  const [month, setMonth] = useState(() => today().slice(0, 7));
+export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFrom = "", initialTo = "" }: {
+  initialMonth?: string; initialHouse?: string; initialFrom?: string; initialTo?: string;
+}) {
+  const [month, setMonth] = useState(() => /^\d{4}-\d{2}$/.test(initialMonth) ? initialMonth : today().slice(0, 7));
   const [board, setBoard] = useState<CalendarBoardData | null>(null);
-  const [selection, setSelection] = useState<Selection | null>(null);
+  const [selection, setSelection] = useState<Selection | null>(() => {
+    const start = parseDateOnly(initialFrom);
+    const end = parseDateOnly(initialTo);
+    return initialHouse && start ? { houseId: initialHouse, start: initialFrom,
+      end: end && end > start ? new Date(end.getTime() - 86_400_000).toISOString().slice(0, 10) : initialFrom,
+      complete: true } : null;
+  });
   const [price, setPrice] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -54,11 +62,14 @@ export function AdminCalendar() {
   }, [month]);
 
   useEffect(() => {
+    if (initialFrom && board?.month === initialFrom.slice(0, 7)) {
+      scrollRegion.current?.querySelector<HTMLElement>(`[data-calendar-date="${initialFrom}"]`)?.scrollIntoView({ block: "nearest", inline: "center" });
+    }
     if (scrollToToday.current && board?.month === today().slice(0, 7)) {
       scrollRegion.current?.querySelector<HTMLElement>(`[data-calendar-date="${today()}"]`)?.scrollIntoView({ block: "nearest", inline: "center" });
       scrollToToday.current = false;
     }
-  }, [board]);
+  }, [board, initialFrom]);
 
   function changeMonth(value: string) {
     if (!value || value < "2000-01" || value > "2100-12" || value === month) return;

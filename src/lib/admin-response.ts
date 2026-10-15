@@ -6,7 +6,8 @@ export function adminErrorResponse(error: unknown): NextResponse {
   if (normalized instanceof AdminConflictError) return NextResponse.json({ error: normalized.message }, { status: 409 });
   if (normalized instanceof AdminInputError) return NextResponse.json({ error: normalized.message }, { status: 400 });
   if (normalized instanceof AdminNotFoundError) return NextResponse.json({ error: normalized.message }, { status: 404 });
-  console.error("Admin operation failed", normalized);
+  console.error("Admin operation failed", { name: normalized.name, code: (error as { code?: string })?.code,
+    sqlState: (error as { meta?: { code?: string } })?.meta?.code });
   return NextResponse.json({ error: "Не удалось сохранить изменения. Повторите позже." }, { status: 500 });
 }
 

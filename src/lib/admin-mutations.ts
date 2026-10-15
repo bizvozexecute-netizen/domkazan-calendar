@@ -18,6 +18,9 @@ export function normalizeAdminError(error: unknown): Error {
   if (code === "P2034" || code === "P2004" || code === "23P01" || String(error).includes("_no_overlap")) {
     return new AdminConflictError("Выбранный период пересекается с существующим. Обновите данные.");
   }
+  if (code === "P2010" && ["40001", "40P01", "23P01"].includes((error as { meta?: { code?: string } }).meta?.code ?? "")) {
+    return new AdminConflictError("Данные изменились одновременно. Повторите действие.");
+  }
   return error instanceof Error ? error : new Error("Неизвестная ошибка.");
 }
 

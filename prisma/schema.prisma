@@ -84,14 +84,41 @@ model BookingRequest {
   clientName  String
   clientEmail String?
   clientPhone String?
+  messenger   String?
+  messengerContact String?
+  consentAt   DateTime?
+  quotedTotal Decimal? @db.Decimal(10, 2)
+  idempotencyKey String? @unique
+  payloadHash String?
   message     String?
   status      BookingStatus @default(NEW)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   house       House         @relation(fields: [houseId], references: [id], onDelete: Restrict)
+  notification TelegramNotification?
 
   @@index([houseId, status, checkIn, checkOut])
   @@index([createdAt])
+}
+
+model TelegramNotification {
+  id String @id @default(cuid())
+  bookingRequestId String @unique
+  bookingRequest BookingRequest @relation(fields: [bookingRequestId], references: [id], onDelete: Cascade)
+  status String @default("PENDING")
+  attempts Int @default(0)
+  nextAttemptAt DateTime @default(now())
+  lockedUntil DateTime?
+  sentAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([status, nextAttemptAt])
+}
+
+model RequestThrottle {
+  key String @id
+  attempts Int
+  windowStart DateTime
 }
 
 model AdminSession {
