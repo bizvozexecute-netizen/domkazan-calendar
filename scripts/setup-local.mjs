@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 
 const path = ".env.local-test";
 if (!existsSync(path)) {
+  if (existsSync(".local-test-credentials.json")) throw new Error("Credentials exist without .env.local-test. Restore the matching settings file or move both aside before creating a new local environment.");
   const password = randomBytes(18).toString("hex");
   const databasePassword = randomBytes(24).toString("hex");
   const salt = randomBytes(16).toString("hex");

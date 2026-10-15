@@ -60,7 +60,9 @@ test("catalog search, stale form reset, application and manual confirmation work
   await page.goto("/admin/login");
   await page.getByLabel("Email", { exact: true }).fill("browser-tester@example.invalid");
   await page.getByLabel("Пароль", { exact: true }).fill(process.env.E2E_ADMIN_PASSWORD!);
+  const loginResponse = page.waitForResponse((response) => response.url().endsWith("/api/admin/login") && response.request().method() === "POST");
   await page.getByRole("button", { name: "Войти", exact: true }).click();
+  expect((await loginResponse).status()).toBe(303);
   await expect(page).toHaveURL(/\/admin$/);
   await expect(page.getByRole("heading", { name: "Шахматка занятости" })).toBeVisible();
   await expect(page.locator("button[aria-pressed]").first()).toBeVisible();

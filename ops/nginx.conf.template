@@ -9,7 +9,7 @@ server {
   access_log off;
   error_log /dev/stderr crit;
   add_header X-Content-Type-Options nosniff always;
-  add_header Referrer-Policy no-referrer always;
+  add_header Referrer-Policy same-origin always;
   location /api/internal/ { return 404; }
   location / {
     proxy_pass http://app:3000;

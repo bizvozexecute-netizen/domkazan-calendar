@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
     return [
       { source: "/:path*", headers: [
         { key: "X-Content-Type-Options", value: "nosniff" },
-        { key: "Referrer-Policy", value: "no-referrer" },
+        { key: "Referrer-Policy", value: "same-origin" },
       ] },
       ...["/admin/:path*", "/api/admin/:path*"].map((source) => ({ source, headers: [
         { key: "Cache-Control", value: "no-store" }, { key: "X-Frame-Options", value: "DENY" },
