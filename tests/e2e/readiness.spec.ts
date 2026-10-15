@@ -63,6 +63,7 @@ test("catalog search, stale form reset, application and manual confirmation work
   await page.getByRole("button", { name: "Войти", exact: true }).click();
   await expect(page).toHaveURL(/\/admin$/);
   await expect(page.getByRole("heading", { name: "Шахматка занятости" })).toBeVisible();
+  await expect(page.locator("button[aria-pressed]").first()).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("admin-calendar.png"), fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
   await page.getByRole("link", { name: "Дома", exact: true }).click();
