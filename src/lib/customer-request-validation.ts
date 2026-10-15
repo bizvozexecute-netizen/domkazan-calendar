@@ -12,6 +12,7 @@ export const requestSchema = z.strictObject({
   messengerContact: z.string().trim().max(100).nullable().optional(),
   comment: z.string().trim().max(2000).nullable().optional(),
   consent: z.literal(true),
+  privacyPolicyUrl: z.url().max(2048),
   idempotencyKey: z.uuid(),
   website: z.string().max(100).optional(),
 });

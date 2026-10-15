@@ -53,7 +53,7 @@ export async function createCustomerRequest(input: CustomerRequestInput, clientI
         houseId: house.id, checkIn, checkOut, guestCount: input.guestCount,
         clientName: input.clientName, clientPhone: input.clientPhone,
         messenger: input.messenger ?? null, messengerContact: input.messengerContact ?? null,
-        message: input.comment ?? null, consentAt: new Date(), quotedTotal: quote.total,
+        message: input.comment ?? null, consentAt: new Date(), consentPolicyUrl: input.privacyPolicyUrl, quotedTotal: quote.total,
         idempotencyKey: input.idempotencyKey, payloadHash,
       } });
       await tx.telegramNotification.create({ data: { bookingRequestId: booking.id } });

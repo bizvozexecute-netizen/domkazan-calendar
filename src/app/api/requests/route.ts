@@ -4,6 +4,7 @@ import { createCustomerRequest } from "@/lib/customer-requests";
 import { CustomerRequestError, validateCustomerRequest } from "@/lib/customer-request-validation";
 import { db } from "@/lib/db";
 import { deliverTelegramNotification } from "@/lib/telegram";
+import { appOrigin, clientIp, privacyPolicyUrl } from "@/lib/request-security";
 
 export const runtime = "nodejs";
 
@@ -41,7 +42,10 @@ async function readLimitedJson(request: NextRequest): Promise<unknown> {
 export async function POST(request: NextRequest) {
   const headers = corsHeaders(request);
   const origin = request.headers.get("origin");
-  if (origin && origin !== request.nextUrl.origin && origin !== process.env.TILDA_ORIGIN) {
+  let canonicalOrigin: string;
+  try { canonicalOrigin = appOrigin(request); }
+  catch { return NextResponse.json({ error: "Форма заявки пока не настроена." }, { status: 503, headers }); }
+  if (origin && origin !== canonicalOrigin && origin !== process.env.TILDA_ORIGIN) {
     return NextResponse.json({ error: "Недопустимый источник запроса." }, { status: 403, headers });
   }
   if (!request.headers.get("content-type")?.startsWith("application/json")) {
@@ -51,10 +55,11 @@ export async function POST(request: NextRequest) {
   try { raw = await readLimitedJson(request); }
   catch { return NextResponse.json({ error: "Проверьте данные заявки." }, { status: 400, headers }); }
   try {
+    const policy = privacyPolicyUrl();
+    if (!policy) return NextResponse.json({ error: "Форма заявки пока не настроена." }, { status: 503, headers });
     const input = validateCustomerRequest(raw);
-    const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-    const ip = forwarded && /^[0-9a-fA-F:.]{3,45}$/.test(forwarded) ? forwarded : "unknown";
-    const result = await createCustomerRequest(input, ip);
+    if (new URL(input.privacyPolicyUrl).href !== policy) throw new CustomerRequestError(400, "Обновите форму и ознакомьтесь с действующей политикой обработки данных.");
+    const result = await createCustomerRequest(input, clientIp(request.headers));
     if (result.created) {
       try {
         const notification = await db.telegramNotification.findUnique({ where: { bookingRequestId: result.id }, select: { id: true } });

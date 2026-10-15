@@ -8,7 +8,8 @@ import { contactOptions } from "../src/lib/contact-options.ts";
 const tomorrow = dateKey(new Date(todayInMoscow().getTime() + 86_400_000));
 const next = dateKey(new Date(todayInMoscow().getTime() + 2 * 86_400_000));
 const valid = () => ({ houseId: "house-1", checkIn: tomorrow, checkOut: next, guestCount: 2,
-  clientName: "Synthetic Guest", clientPhone: "+70000000000", consent: true as const, idempotencyKey: randomUUID() });
+  clientName: "Synthetic Guest", clientPhone: "+70000000000", consent: true as const,
+  privacyPolicyUrl: "https://example.invalid/privacy", idempotencyKey: randomUUID() });
 
 test("public application requires consent and a valid date interval", () => {
   assert.equal(validateCustomerRequest(valid()).guestCount, 2);

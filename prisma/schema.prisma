@@ -87,6 +87,7 @@ model BookingRequest {
   messenger   String?
   messengerContact String?
   consentAt   DateTime?
+  consentPolicyUrl String?
   quotedTotal Decimal? @db.Decimal(10, 2)
   idempotencyKey String? @unique
   payloadHash String?

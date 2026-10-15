@@ -11,22 +11,26 @@ import { GET as availability } from "../src/app/api/availability/route.ts";
 import { deliverTelegramNotification } from "../src/lib/telegram.ts";
 import { createAdminSession, revokeAdminSession, SESSION_COOKIE } from "../src/lib/auth.ts";
 import { changeCalendar } from "../src/lib/admin-mutations.ts";
+import { POST as retryTelegram } from "../src/app/api/internal/telegram/retry/route.ts";
 
 process.env.SESSION_SECRET = "synthetic-test-secret-with-more-than-32-characters";
 process.env.ADMIN_EMAIL = "requests-admin@example.invalid";
 process.env.ADMIN_PASSWORD_HASH = `scrypt:test:${"0".repeat(128)}`;
 process.env.TILDA_ORIGIN = "https://domkazan116.ru";
+process.env.PRIVACY_POLICY_URL = "https://example.invalid/privacy";
+process.env.TRUSTED_PROXY_SECRET = "synthetic-proxy-secret-with-more-than-32-characters";
 
 const day = (offset: number) => new Date(todayInMoscow().getTime() + offset * 86_400_000);
 const key = (offset: number) => dateKey(day(offset));
 const body = (houseId: string, overrides: Record<string, unknown> = {}) => ({
   houseId, checkIn: key(7), checkOut: key(9), guestCount: 2, clientName: "Synthetic Guest",
   clientPhone: `+7000${Math.floor(Math.random() * 10_000_000).toString().padStart(7, "0")}`, messenger: null, messengerContact: null, comment: "Synthetic test only",
-  consent: true, idempotencyKey: randomUUID(), website: "", ...overrides,
+  consent: true, privacyPolicyUrl: process.env.PRIVACY_POLICY_URL, idempotencyKey: randomUUID(), website: "", ...overrides,
 });
 const request = (payload: unknown) => new NextRequest("http://localhost:3000/api/requests", {
   method: "POST", headers: { origin: "https://domkazan116.ru", "Content-Type": "application/json",
-    "x-forwarded-for": `2001:db8::${randomUUID().slice(0, 4)}` }, body: JSON.stringify(payload),
+    "x-domkazan-client-ip": `2001:db8::${randomUUID().slice(0, 4)}`,
+    "x-domkazan-proxy-secret": process.env.TRUSTED_PROXY_SECRET! }, body: JSON.stringify(payload),
 });
 async function withHouse(run: (houseId: string, slug: string) => Promise<void>) {
   const slug = `request-test-${randomUUID()}`;
@@ -144,5 +148,45 @@ test("public form throttles repeated submissions and rejects an unrelated Origin
       body: JSON.stringify(body(houseId)),
     }));
     assert.equal(foreign.status, 403);
+  });
+});
+
+test("server requires the configured privacy policy and preserves its URL with consent", async () => {
+  await withHouse(async (houseId) => {
+    const original = process.env.PRIVACY_POLICY_URL;
+    delete process.env.PRIVACY_POLICY_URL;
+    const input = body(houseId, { privacyPolicyUrl: original });
+    assert.equal((await submit(request(input))).status, 503);
+    process.env.PRIVACY_POLICY_URL = original;
+    assert.equal((await submit(request({ ...input, privacyPolicyUrl: "https://other.example.invalid/privacy" }))).status, 400);
+    const response = await submit(request(input));
+    assert.equal(response.status, 201);
+    const booking = await db.bookingRequest.findUniqueOrThrow({ where: { id: (await response.json()).requestId } });
+    assert.equal(booking.consentPolicyUrl, original);
+    assert.ok(booking.consentAt);
+  });
+});
+
+test("overlapping Telegram handlers claim a notification once and retry endpoint needs a secret", async () => {
+  const denied = await retryTelegram(new NextRequest("http://localhost/api/internal/telegram/retry", { method: "POST" }));
+  assert.equal(denied.status, 401);
+  await withHouse(async (houseId) => {
+    const response = await submit(request(body(houseId)));
+    assert.equal(response.status, 201);
+    const id = (await response.json()).requestId;
+    const notification = await db.telegramNotification.findUniqueOrThrow({ where: { bookingRequestId: id } });
+    const originalFetch = globalThis.fetch;
+    process.env.TELEGRAM_BOT_TOKEN = "synthetic-token"; process.env.TELEGRAM_CHAT_ID = "123";
+    let calls = 0;
+    globalThis.fetch = async () => {
+      calls++;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      return Response.json({ ok: true });
+    };
+    try {
+      const results = await Promise.all([deliverTelegramNotification(notification.id), deliverTelegramNotification(notification.id)]);
+      assert.equal(results.filter(Boolean).length, 1);
+      assert.equal(calls, 1);
+    } finally { globalThis.fetch = originalFetch; delete process.env.TELEGRAM_BOT_TOKEN; delete process.env.TELEGRAM_CHAT_ID; }
   });
 });

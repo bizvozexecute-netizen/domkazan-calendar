@@ -1,0 +1,80 @@
+name: Test readiness
+on:
+  pull_request:
+  push:
+    branches: [main, codex/project-foundation]
+permissions:
+  contents: read
+concurrency:
+  group: readiness-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: domkazan_ci_test
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci-only-not-a-secret
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U ci -d domkazan_ci_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://ci:ci-only-not-a-secret@127.0.0.1:5432/unused
+      TEST_DATABASE_URL: postgresql://ci:ci-only-not-a-secret@127.0.0.1:5432/domkazan_ci_test
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with: { node-version: "22", cache: npm }
+      - run: npm ci
+      - run: npm run db:generate
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run test:integration
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client-16
+      - run: npm run test:backup
+      - run: npm audit --omit=dev
+      - name: Full dependency audit (known dev advisory requires manual review)
+        continue-on-error: true
+        run: npm audit
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: browser-screenshots
+          path: |
+            test-results/**/widget.png
+            test-results/**/admin-calendar.png
+          if-no-files-found: ignore
+          retention-days: 7
+  containers:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with: { node-version: "22" }
+      - run: node scripts/setup-local.mjs
+      - run: docker compose --env-file .env.local-test config --quiet
+      - run: docker compose --env-file .env.local-test up --build -d --wait --wait-timeout 180
+      - run: docker compose --env-file .env.local-test run --rm seed
+      - run: curl --fail --silent --insecure https://localhost:8443/api/health
+      - run: node scripts/test-proxy.mjs
+      - name: No form contacts in application or proxy logs
+        run: |
+          if docker compose --env-file .env.local-test logs --no-color app proxy | grep -q 'Proxy Synthetic Guest'; then exit 1; fi
+      - run: docker compose --env-file .env.local-test run --rm backup /backups/ci.dump
+      - run: docker compose --env-file .env.local-test run --rm restore /backups/ci.dump domkazan_restore_ci_test
+      - name: Verify restored synthetic houses
+        run: |
+          test "$(docker compose --env-file .env.local-test exec -T postgres psql -U domkazan -d domkazan_restore_ci_test -Atqc 'SELECT count(*) FROM "House"')" = 9
+      - if: always()
+        run: docker compose --env-file .env.local-test down

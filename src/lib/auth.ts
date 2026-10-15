@@ -1,6 +1,7 @@
 import { createHash, createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { db } from "@/lib/db";
+import { insecureLocalHttp } from "./request-security";
 
 export const SESSION_COOKIE = "domkazan_admin_session";
 const SESSION_DURATION_SECONDS = 60 * 60 * 8;
@@ -96,7 +97,7 @@ export async function revokeAdminSession(token: string | undefined): Promise<voi
 export const sessionCookieOptions = {
   httpOnly: true,
   sameSite: "strict" as const,
-  secure: process.env.NODE_ENV === "production",
+  secure: process.env.NODE_ENV === "production" && !insecureLocalHttp(),
   path: "/",
   maxAge: SESSION_DURATION_SECONDS,
 };
