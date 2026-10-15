@@ -39,6 +39,7 @@ test("catalog search, stale form reset, application and manual confirmation work
   await page.getByLabel("Район", { exact: true }).selectOption("Тестовый север");
   await expect(action).toHaveCount(0);
   await search.click(); await expect(action).toBeVisible();
+  await expect(page.locator('[data-domkazan-house="demo-house-02"]')).toBeHidden();
   await action.click();
   expect(new URL(page.url()).hash).toBe("");
   await expect(page.getByRole("link", { name: "Политика обработки данных" })).toHaveAttribute("href", "https://example.invalid/privacy");

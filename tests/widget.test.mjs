@@ -138,3 +138,19 @@ test("application action is outside a linked card and does not trigger its navig
   assert.equal(f.dom.window.document.querySelector("a[data-domkazan-house]").getAttribute("href"), "#house-page");
   f.controller.destroy(); f.dom.window.close();
 });
+
+test("a non-clickable grid item can group its link and separate application slot", async () => {
+  const dom = new JSDOM(`<div id="search"></div><div id="free"><a href="#free">Дом</a><span id="price">Цена</span><div id="slot"></div></div>
+    <div id="busy"><a href="#busy">Занятый дом</a></div>`, { url: "https://domkazan116.ru/", runScripts: "outside-only" });
+  dom.window.fetch = async () => found();
+  dom.window.eval(script);
+  const doc = dom.window.document;
+  const controller = dom.window.DomKazanCalendar.mount({ root: doc.getElementById("search"), apiUrl: "https://calendar.example.invalid/api/availability",
+    cards: [{ slug: "free", element: doc.getElementById("free"), priceElement: doc.getElementById("price"), actionElement: doc.getElementById("slot") },
+      { slug: "busy", element: doc.getElementById("busy") }] });
+  const form = doc.getElementById("search").shadowRoot.querySelector("form");
+  form.dispatchEvent(new dom.window.Event("submit", { cancelable: true })); await tick();
+  assert.equal(doc.querySelector("#slot button").closest("a"), null);
+  assert.equal(doc.getElementById("busy").style.display, "none");
+  controller.destroy(); dom.window.close();
+});

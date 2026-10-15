@@ -32,10 +32,10 @@ export function TestCatalog({ houses, policy }: { houses: House[]; policy: strin
       <option value="">Все районы</option>{[...new Set(houses.map((house) => house.district))].filter(Boolean).map((value) => <option key={value} value={value!}>{value}</option>)}
     </select></div>
     <div ref={searchRoot} />
-    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">{houses.map((house, index) => <div key={house.slug}>
-      {index % 2 === 0 ? <a id={house.slug} data-domkazan-house={house.slug} href={`#page-${house.slug}`} className="block rounded-xl border bg-white p-5">
+    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">{houses.map((house, index) => <div key={house.slug} id={house.slug} data-domkazan-house={house.slug}>
+      {index % 2 === 0 ? <a href={`#page-${house.slug}`} className="block rounded-xl border bg-white p-5">
         <h2 className="font-bold">{house.name}</h2><p>{house.district} · до {house.maxGuests} гостей</p><span id={`${house.slug}-price`} data-domkazan-price>Цена после поиска</span>
-      </a> : <article id={house.slug} data-domkazan-house={house.slug} className="rounded-xl border bg-white p-5">
+      </a> : <article className="rounded-xl border bg-white p-5">
         <h2 className="font-bold"><a href={`#page-${house.slug}`}>{house.name}</a></h2><p>{house.district} · до {house.maxGuests} гостей</p><span id={`${house.slug}-price`} data-domkazan-price>Цена после поиска</span>
       </article>}
       <div id={`${house.slug}-action`} />

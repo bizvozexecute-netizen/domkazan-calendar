@@ -255,8 +255,8 @@
           action.addEventListener("pointerdown", (event) => event.stopPropagation());
           actionHost.append(action);
           if (card.actionElement) {
-            if (card.actionElement.closest("a,button") || card.actionElement === card.element || card.element.contains(card.actionElement)) {
-              throw new Error("Контейнер кнопки заявки должен находиться вне кликабельной карточки и ссылок.");
+            if (card.actionElement.closest("a,button") || card.actionElement === card.element) {
+              throw new Error("Контейнер кнопки заявки должен находиться вне ссылок и кнопок; используйте отдельную область некликабельной обёртки.");
             }
             card.actionElement.append(actionHost);
           } else (card.element.closest("a,button") || card.element).after(actionHost);
