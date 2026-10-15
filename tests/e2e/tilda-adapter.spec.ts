@@ -8,7 +8,7 @@ test("dynamic Tilda-shaped catalog keeps keyboard actions separate from links", 
     { id: "synthetic-a", slug: "synthetic-a", name: "Тестовый дом А", quote: { total: "12000", nights: 2 } },
   ] } }));
   await page.goto("/test-policy");
-  await page.setContent(`<main><div id="search"></div><section id="catalog">
+  await page.setContent(`<meta name="viewport" content="width=device-width, initial-scale=1"><main><div id="search"></div><section id="catalog">
     <label>Фильтр Tilda <input id="filter"></label><div id="grid"></div>
   </section></main>`);
   await page.addScriptTag({ path: "public/embed/domkazan-search.js" });
@@ -39,6 +39,8 @@ test("dynamic Tilda-shaped catalog keeps keyboard actions separate from links", 
   await expect(page.getByLabel("Заезд", { exact: true })).toHaveValue("2026-11-02");
   await page.getByRole("button", { name: "Показать свободные дома" }).click();
   await expect(action).toBeVisible();
+  if (testInfo.project.name === "mobile") expect(await page.evaluate(() => window.innerWidth)).toBeLessThan(760);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
   await page.screenshot({ path: testInfo.outputPath("tilda-adapter.png"), fullPage: true });
   await page.getByRole("link", { name: "Подробнее о тестовом доме 101" }).click();
   expect(new URL(page.url()).hash).toBe("#prodpopup");
