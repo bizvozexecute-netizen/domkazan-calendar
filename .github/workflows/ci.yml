@@ -53,6 +53,7 @@ jobs:
           path: |
             test-results/**/widget.png
             test-results/**/admin-calendar.png
+            test-results/**/tilda-adapter.png
           if-no-files-found: ignore
           retention-days: 7
   containers:
