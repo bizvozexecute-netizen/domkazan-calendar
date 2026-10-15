@@ -67,11 +67,23 @@ test("catalog search, stale form reset, application and manual confirmation work
   await expect(page).toHaveURL(/\/admin$/);
   await expect(page.getByRole("heading", { name: "Шахматка занятости" })).toBeVisible();
   await expect(page.locator("button[aria-pressed]").first()).toBeVisible();
+  if (testInfo.project.name === "desktop") {
+    const houseBox = await page.getByLabel("Дом", { exact: true }).boundingBox();
+    const dateBox = await page.getByLabel("С даты", { exact: true }).boundingBox();
+    expect(houseBox!.x + houseBox!.width).toBeLessThanOrEqual(dateBox!.x);
+  }
+  await page.getByRole("button", { name: "Сегодня", exact: true }).click();
   await page.screenshot({ path: testInfo.outputPath("admin-calendar.png"), fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
   await page.getByRole("link", { name: "Дома", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Дома", exact: true })).toBeVisible();
+  await page.locator('a[href="/admin/houses/demo-house-01"]').click();
+  await expect(page.getByRole("heading", { name: "Редактирование дома", exact: true })).toBeVisible();
+  await expect(page.getByLabel("Максимум гостей *", { exact: true })).toHaveValue("4");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
   await page.getByRole("link", { name: "Заявки", exact: true }).click();
+  await expect(page.getByLabel("Дом", { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
   const card = page.getByRole("article").filter({ hasText: "Сосновый свет" }).first();
   await card.getByRole("button", { name: "Открыть контакты" }).click();
   await expect(card.getByText("Synthetic Browser Guest", { exact: false })).toBeVisible();

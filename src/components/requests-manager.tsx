@@ -65,10 +65,10 @@ export function RequestsManager() {
     <h1 className="text-3xl font-bold">Заявки</h1>
     <p className="mt-2 text-slate-600">Свяжитесь с клиентом и проверьте оплату вручную перед подтверждением.</p>
     <div className="my-6 flex flex-wrap gap-3">
-      <label className="grid gap-1 text-sm">Дом<select className="rounded-lg border bg-white px-3 py-2" value={houseId}
+      <label className="grid min-w-0 max-w-full gap-1 text-sm">Дом<select aria-label="Дом" className="min-w-0 w-full rounded-lg border bg-white px-3 py-2" value={houseId}
         onChange={(event) => { setHouseId(event.target.value); setPage(1); }}><option value="">Все дома</option>
         {data?.houses.map((house) => <option key={house.id} value={house.id}>{house.name}</option>)}</select></label>
-      <label className="grid gap-1 text-sm">Статус<select className="rounded-lg border bg-white px-3 py-2" value={status}
+      <label className="grid min-w-0 max-w-full gap-1 text-sm">Статус<select aria-label="Статус" className="min-w-0 w-full rounded-lg border bg-white px-3 py-2" value={status}
         onChange={(event) => { setStatus(event.target.value); setPage(1); }}><option value="">Все статусы</option>
         {(Object.keys(labels) as Status[]).map((key) => <option key={key} value={key}>{labels[key]}</option>)}</select></label>
     </div>
