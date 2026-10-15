@@ -42,10 +42,10 @@ test("catalog search, stale form reset, application and manual confirmation work
   await action.click();
   expect(new URL(page.url()).hash).toBe("");
   await expect(page.getByRole("link", { name: "Политика обработки данных" })).toHaveAttribute("href", "https://example.invalid/privacy");
+  await page.screenshot({ path: testInfo.outputPath("widget.png"), fullPage: true });
   await page.getByLabel("Имя", { exact: true }).fill("Synthetic Browser Guest");
   await page.getByLabel("Телефон", { exact: true }).fill("+70000000000");
   await page.getByRole("checkbox").check();
-  await page.screenshot({ path: testInfo.outputPath("widget.png"), fullPage: true });
   const responsePromise = page.waitForResponse((response) => response.url().endsWith("/api/requests") && response.request().method() === "POST");
   await page.getByRole("button", { name: "Отправить заявку", exact: true }).click();
   const response = await responsePromise;

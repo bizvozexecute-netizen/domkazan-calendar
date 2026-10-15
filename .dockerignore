@@ -11,4 +11,5 @@ playwright-report
 coverage
 *.tsbuildinfo
 *.dump
+*.dump.sha256
 *.partial

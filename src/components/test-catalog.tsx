@@ -28,9 +28,9 @@ export function TestCatalog({ houses, policy }: { houses: House[]; policy: strin
   return <main className="mx-auto max-w-6xl space-y-6 p-4 sm:p-8">
     <h1 className="text-3xl font-bold">Вымышленный каталог для тестирования</h1>
     <p>Только синтетические дома и контакты. Карточки имитируют ссылки Tilda; это не контент рабочего сайта.</p>
-    <label className="grid max-w-sm gap-2">Район<select ref={district} className="rounded-lg border bg-white p-3">
+    <div className="grid max-w-sm gap-2"><label htmlFor="catalog-district">Район</label><select id="catalog-district" ref={district} className="rounded-lg border bg-white p-3">
       <option value="">Все районы</option>{[...new Set(houses.map((house) => house.district))].filter(Boolean).map((value) => <option key={value} value={value!}>{value}</option>)}
-    </select></label>
+    </select></div>
     <div ref={searchRoot} />
     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">{houses.map((house, index) => <div key={house.slug}>
       {index % 2 === 0 ? <a id={house.slug} data-domkazan-house={house.slug} href={`#page-${house.slug}`} className="block rounded-xl border bg-white p-5">

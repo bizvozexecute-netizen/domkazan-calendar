@@ -3,7 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "tests/e2e", workers: 1, fullyParallel: false, timeout: 60_000, globalTimeout: 300_000,
   reporter: [["list"], ["html", { open: "never" }]],
-  use: { baseURL: "http://localhost:3100", trace: "off", video: "off", screenshot: "only-on-failure" },
+  use: { baseURL: "http://localhost:3100", trace: "off", video: "off", screenshot: "only-on-failure", actionTimeout: 10_000, navigationTimeout: 30_000 },
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },
     { name: "mobile", use: { ...devices["Pixel 7"] } },
