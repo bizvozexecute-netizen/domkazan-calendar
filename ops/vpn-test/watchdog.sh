@@ -2,7 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 command -v flock >/dev/null
-exec 9>/tmp/domkazan-vpn-test-watchdog.lock
+exec 9>./watchdog.lock
 flock -n 9 || { echo "Watchdog already running" >&2; exit 1; }
 compose=(docker compose --project-name domkazan-vpn-test --profile tools --profile worker --env-file .env.vpn-test -f compose.vpn-test.yaml)
 soft_count=0

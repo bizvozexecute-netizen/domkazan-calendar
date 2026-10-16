@@ -48,13 +48,29 @@ sudo install -d -m 700 -o dkcal-test -g dkcal-test /home/dkcal-test/.ssh /home/d
 
 Владелец записывает предоставленный публичный ключ в `/home/dkcal-test/.ssh/authorized_keys` с правами 0600 и владельцем `dkcal-test`; секретный ключ на сервер не передаёт. **Не** добавлять пользователя в группы `docker` или `sudo` и не давать доступ к Docker socket. Публичный SSH-ключ и fingerprint ключа сервера сверить вне текущего сеанса. Можно ограничить ключ параметрами `restrict,port-forwarding,permitopen="127.0.0.1:9443"`. Пользователь загружает только архив и `.env.vpn-test`; запуск Docker выполняет владелец из проверенной root-owned копии.
 
-Пример передачи с локальной машины; `<VPN_HOST>` владелец подставляет только в локальной команде:
+Пример передачи с локальной машины; `VPN_HOST` — условное имя, владелец подставляет фактический адрес только в локальной команде. SHA-256 архива отдельно передать владельцу по доверенному каналу:
 
 ```sh
-scp vpn-test-release.tar.gz .env.vpn-test dkcal-test@<VPN_HOST>:incoming/
+sha256sum vpn-test-release.tar.gz
+scp vpn-test-release.tar.gz .env.vpn-test dkcal-test@VPN_HOST:incoming/
 ```
 
-Владелец сверяет архив и помещает файлы в новый `/opt/domkazan-vpn-test` с владельцем root; `.env.vpn-test` — режим 0600, каталог `backups` — 0700. Список архива проверить перед распаковкой, чтобы исключить неожиданные пути. В каталоге должны оказаться `compose.vpn-test.yaml`, `ops/vpn-test/nginx.conf.template`, `ops/vpn-test/watchdog.sh`, `ops/vpn-test/check.sh` и `ops/backup.sh`. Переключать этот каталог на записи пользователя `dkcal-test` нельзя.
+Владелец копирует архив в новый закрытый каталог, сверяет **эту копию** с SHA-256, полученным отдельно, и проверяет список файлов до распаковки. При несовпадении остановиться. Проверенный архив распаковывается с root-владельцем:
+
+```sh
+sudo install -d -m 750 -o root -g root /opt/domkazan-vpn-test /opt/domkazan-vpn-test/ops /opt/domkazan-vpn-test/ops/vpn-test
+sudo install -m 600 -o root -g root /home/dkcal-test/incoming/vpn-test-release.tar.gz /opt/domkazan-vpn-test/release.tar.gz
+sudo sha256sum /opt/domkazan-vpn-test/release.tar.gz
+sudo tar -tzf /opt/domkazan-vpn-test/release.tar.gz
+sudo tar -xzf /opt/domkazan-vpn-test/release.tar.gz -C /opt/domkazan-vpn-test --no-same-owner --no-same-permissions
+sudo chown -R root:root /opt/domkazan-vpn-test
+sudo chmod 750 /opt/domkazan-vpn-test /opt/domkazan-vpn-test/ops /opt/domkazan-vpn-test/ops/vpn-test
+sudo chmod 644 /opt/domkazan-vpn-test/compose.vpn-test.yaml /opt/domkazan-vpn-test/ops/vpn-test/nginx.conf.template /opt/domkazan-vpn-test/ops/backup.sh
+sudo install -m 600 -o root -g root /home/dkcal-test/incoming/.env.vpn-test /opt/domkazan-vpn-test/.env.vpn-test
+sudo install -d -m 700 -o root -g root /opt/domkazan-vpn-test/backups
+```
+
+Права каталога `/opt/domkazan-vpn-test` не выдавать пользователю `dkcal-test`. В архиве ожидаются только `compose.vpn-test.yaml`, `ops/vpn-test/` и `ops/backup.sh`; если есть неожиданные пути, `..` или symlink, не распаковывать. После распаковки права скриптов можно оставить 0644: команды ниже запускают их через `bash`.
 
 Если GHCR-пакеты приватные, владелец на сервере выполняет `docker login ghcr.io` токеном только с правом `read:packages` через stdin. Токен не сохранять в файлах стенда. Доступность образов по digest проверить до запуска.
 
@@ -89,7 +105,7 @@ bash ops/vpn-test/check.sh
 Пользователь `dkcal-test` создаёт туннель со своего компьютера:
 
 ```sh
-ssh -N -L 9443:127.0.0.1:9443 dkcal-test@<VPN_HOST>
+ssh -N -L 9443:127.0.0.1:9443 dkcal-test@VPN_HOST
 ```
 
 Затем открывает `https://localhost:9443/admin/login` и `https://localhost:9443/test-catalog`. Проверить fingerprint самоподписанного сертификата из доверенного канала перед его принятием. Туннель не требует открытия нового внешнего порта. Проверять только вымышленные данные и контакты.
