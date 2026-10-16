@@ -1,0 +1,4 @@
+FROM alpine:3.23
+RUN apk add --no-cache openssl
+COPY ops/init-local-tls.sh /init-local-tls.sh
+CMD ["sh", "/init-local-tls.sh"]

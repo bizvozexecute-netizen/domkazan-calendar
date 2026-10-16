@@ -1,0 +1,105 @@
+name: domkazan-calendar-test
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?Run npm run local:setup}
+      POSTGRES_USER: domkazan
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run npm run local:setup}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U domkazan -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [database]
+  migrate:
+    build: { context: ., target: tools }
+    env_file: .env.local-test
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [database]
+    restart: "no"
+  app:
+    build: { context: ., target: runner }
+    env_file: .env.local-test
+    restart: unless-stopped
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 10
+    networks: [database, web]
+    security_opt: [no-new-privileges:true]
+  tls-init:
+    build: { context: ., dockerfile: ops/Dockerfile.tls }
+    volumes: [local_tls:/certs]
+    restart: "no"
+  proxy:
+    image: nginx:1.28-alpine
+    restart: unless-stopped
+    environment:
+      TRUSTED_PROXY_SECRET: ${TRUSTED_PROXY_SECRET:?Run npm run local:setup}
+      PUBLIC_HOST: localhost:8443
+    depends_on:
+      app: { condition: service_healthy }
+      tls-init: { condition: service_completed_successfully }
+    ports: ["127.0.0.1:8443:443"]
+    volumes:
+      - ./ops/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - local_tls:/certs:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --no-check-certificate -O /dev/null https://127.0.0.1/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [web]
+  telegram-worker:
+    build: { context: ., target: runner }
+    command: ["node", "scripts/telegram-scheduler.mjs"]
+    environment:
+      TELEGRAM_RETRY_SECRET: ${TELEGRAM_RETRY_SECRET:?Run npm run local:setup}
+      TELEGRAM_RETRY_URL: http://app:3000/api/internal/telegram/retry
+    depends_on:
+      app: { condition: service_healthy }
+    restart: unless-stopped
+    read_only: true
+    security_opt: [no-new-privileges:true]
+    networks: [web]
+  seed:
+    build: { context: ., target: tools }
+    command: ["npm", "run", "db:seed:test"]
+    env_file: .env.local-test
+    profiles: [tools]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    networks: [database]
+  backup:
+    image: postgres:16-alpine
+    entrypoint: ["sh", "/ops/backup.sh"]
+    profiles: [tools]
+    environment:
+      PGHOST: postgres
+      PGUSER: domkazan
+      PGDATABASE: ${POSTGRES_DB:?Run npm run local:setup}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Run npm run local:setup}
+    volumes: ["./ops:/ops:ro", "./backups:/backups"]
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [database]
+  restore:
+    extends: backup
+    entrypoint: ["sh", "/ops/restore.sh"]
+volumes:
+  postgres_data:
+  local_tls:
+networks:
+  database:
+    internal: true
+  web:

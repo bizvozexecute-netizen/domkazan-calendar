@@ -1,0 +1,15 @@
+.git
+.next
+node_modules
+generated
+.env
+.env.*
+.local*
+backups
+test-results
+playwright-report
+coverage
+*.tsbuildinfo
+*.dump
+*.dump.sha256
+*.partial

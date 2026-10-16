@@ -1,0 +1,139 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model House {
+  id              String           @id @default(cuid())
+  slug            String           @unique
+  name            String
+  tildaUrl        String?
+  maxGuests       Int
+  district        String?
+  bedrooms        Int?
+  bathrooms       Int?
+  amenities       String[]         @default([])
+  petsAllowed     Boolean?
+  isActive        Boolean          @default(true)
+  revision        Int              @default(0)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  baseRates       BaseRate[]
+  dateOverrides   DateOverride[]
+  blockedPeriods  BlockedPeriod[]
+  bookingRequests BookingRequest[]
+}
+
+// Date ranges use [startsOn, endsOn); prices are RUB per night.
+// A SQL exclusion constraint prevents overlapping periods for the same house.
+model BaseRate {
+  id           String   @id @default(cuid())
+  houseId      String
+  startsOn     DateTime @db.Date
+  endsOn       DateTime @db.Date
+  weekdayPrice Decimal  @db.Decimal(10, 2)
+  fridayPrice  Decimal  @db.Decimal(10, 2)
+  saturdayPrice Decimal @db.Decimal(10, 2)
+  sundayPrice  Decimal  @db.Decimal(10, 2)
+  minNights    Int      @default(1)
+  house        House    @relation(fields: [houseId], references: [id], onDelete: Cascade)
+
+  @@index([houseId, startsOn, endsOn])
+}
+
+model DateOverride {
+  id            String   @id @default(cuid())
+  houseId       String
+  date          DateTime @db.Date
+  pricePerNight Decimal  @db.Decimal(10, 2)
+  house         House    @relation(fields: [houseId], references: [id], onDelete: Cascade)
+
+  @@unique([houseId, date])
+}
+
+model BlockedPeriod {
+  id        String   @id @default(cuid())
+  houseId   String
+  startsOn  DateTime @db.Date
+  endsOn    DateTime @db.Date
+  reason    String?
+  createdAt DateTime @default(now())
+  house     House    @relation(fields: [houseId], references: [id], onDelete: Cascade)
+
+  @@index([houseId, startsOn, endsOn])
+}
+
+enum BookingStatus {
+  NEW
+  CONTACTED
+  CONFIRMED
+  DECLINED
+  CANCELLED
+}
+
+model BookingRequest {
+  id          String        @id @default(cuid())
+  houseId     String
+  checkIn     DateTime      @db.Date
+  checkOut    DateTime      @db.Date
+  guestCount  Int
+  clientName  String
+  clientEmail String?
+  clientPhone String?
+  messenger   String?
+  messengerContact String?
+  consentAt   DateTime?
+  consentPolicyUrl String?
+  quotedTotal Decimal? @db.Decimal(10, 2)
+  idempotencyKey String? @unique
+  payloadHash String?
+  message     String?
+  status      BookingStatus @default(NEW)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  house       House         @relation(fields: [houseId], references: [id], onDelete: Restrict)
+  notification TelegramNotification?
+
+  @@index([houseId, status, checkIn, checkOut])
+  @@index([createdAt])
+}
+
+model TelegramNotification {
+  id String @id @default(cuid())
+  bookingRequestId String @unique
+  bookingRequest BookingRequest @relation(fields: [bookingRequestId], references: [id], onDelete: Cascade)
+  status String @default("PENDING")
+  attempts Int @default(0)
+  nextAttemptAt DateTime @default(now())
+  lockedUntil DateTime?
+  sentAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([status, nextAttemptAt])
+}
+
+model RequestThrottle {
+  key String @id
+  attempts Int
+  windowStart DateTime
+}
+
+model AdminSession {
+  tokenHash  String   @id
+  email      String
+  credentialTag String
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+
+  @@index([expiresAt])
+}
+
+model LoginThrottle {
+  key         String   @id
+  attempts    Int
+  windowStart DateTime
+}

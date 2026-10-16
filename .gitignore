@@ -1,0 +1,17 @@
+node_modules/
+.next/
+out/
+coverage/
+.env
+.env.*
+!.env.example
+generated/
+*.tsbuildinfo
+.DS_Store
+.local*
+backups/
+test-results/
+playwright-report/
+*.dump
+*.dump.sha256
+*.partial
