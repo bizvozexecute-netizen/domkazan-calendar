@@ -61,8 +61,7 @@
     if (!root || !apiUrl) throw new Error("Укажите root и apiUrl для DomKazanCalendar.");
     if (root.closest("a,button")) throw new Error("Форма поиска должна находиться вне ссылки или кнопки.");
     instances.get(root)?.destroy();
-    const cards = collectCards(explicitCards);
-    if (cards.length === 0) throw new Error("Карточки каталога не найдены.");
+    let cards = collectCards(explicitCards);
     const shadow = root.shadowRoot || root.attachShadow({ mode: "open" });
     shadow.replaceChildren();
     const style = document.createElement("style");
@@ -222,6 +221,7 @@
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       invalidate(false);
+      if (!cards.length) { message.textContent = "Каталог ещё не готов к поиску. Дождитесь загрузки и проверки карточек."; return; }
       const currentGeneration = generation;
       searchController = new AbortController();
       button.disabled = true;
@@ -269,7 +269,12 @@
         message.textContent = error instanceof Error ? error.message : "Поиск временно недоступен.";
       } finally { if (generation === currentGeneration) button.disabled = false; }
     });
-    const controller = { reset, invalidate: () => invalidate(), destroy() {
+    const controller = { reset, invalidate: () => invalidate(), updateCards(nextCards) {
+      // Tilda replaces cards after filters/pagination. Never retain an application
+      // or a pending search tied to the previous catalog DOM.
+      invalidate();
+      cards = collectCards(nextCards);
+    }, destroy() {
       reset(); document.removeEventListener("input", filtersChanged); document.removeEventListener("change", filtersChanged);
       shadow.replaceChildren(); instances.delete(root);
     } };

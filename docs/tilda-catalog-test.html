@@ -1,0 +1,60 @@
+<!-- Template for a NEW T123 block on the UNPUBLISHED catalog COPY only. -->
+<div id="domkazan-test-filters">
+  <label>Район <input name="district" type="text"></label>
+  <label>Спален от <input name="bedrooms" type="number" min="1" max="30"></label>
+  <label>Удобства (коды через запятую) <input name="amenities" type="text"></label>
+</div>
+<div id="domkazan-test-search"></div>
+<p id="domkazan-test-status" role="status">Тестовая интеграция выключена.</p>
+<script>
+(async () => {
+  const config = {
+    enabled: false,
+    testPageId: "REPLACE_WITH_DUPLICATED_PAGE_ID",
+    catalogRecordId: "REPLACE_WITH_COPIED_CATALOG_RECORD_ID",
+    apiOrigin: "https://calendar.example.invalid",
+    privacyUrl: "https://example.invalid/privacy",
+    // Paste the reviewed mapping here. Keep the disabled template until verified.
+    mapping: [],
+  };
+  const status = document.getElementById("domkazan-test-status");
+  if (!config.enabled) return;
+  try {
+    const page = document.querySelector("[data-tilda-page-id]");
+    if (page?.getAttribute("data-tilda-page-id") !== config.testPageId || config.testPageId === "70446131") {
+      throw new Error("Этот код разрешён только на указанной тестовой копии страницы.");
+    }
+    const origin = new URL(config.apiOrigin);
+    const policy = new URL(config.privacyUrl);
+    if (origin.protocol !== "https:" || policy.protocol !== "https:" ||
+        origin.hostname.endsWith(".invalid") || policy.hostname.endsWith(".invalid")) {
+      throw new Error("Укажите HTTPS-адрес тестового API и действительную политику.");
+    }
+    const catalog = document.getElementById(config.catalogRecordId);
+    if (!catalog) throw new Error("Блок каталога тестовой страницы не найден.");
+    const mapping = config.mapping;
+    if (!Array.isArray(mapping) || !mapping.length || mapping.some((row) => row.confirmed !== true)) {
+      throw new Error("Сначала подтвердите соответствие всех UID домам в тестовой базе.");
+    }
+    for (const file of ["domkazan-search.js", "domkazan-tilda.js"]) {
+      await new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = new URL(`/embed/${file}`, origin).href;
+        script.onload = resolve;
+        script.onerror = () => reject(new Error("Не удалось загрузить тестовый модуль календаря."));
+        document.head.append(script);
+      });
+    }
+    const filterRoot = document.getElementById("domkazan-test-filters");
+    window.domkazanTestCatalog = window.DomKazanTilda.mount({
+      root: document.getElementById("domkazan-test-search"), catalog, mapping,
+      apiUrl: new URL("/api/availability", origin).href, privacyUrl: policy.href, filterRoot,
+      getFilters: () => Object.fromEntries([...filterRoot.querySelectorAll("input[name]")]
+        .map((input) => [input.name, input.value.trim()])),
+    });
+    status.textContent = "Тестовый календарь подключён. Отправляйте только вымышленные заявки.";
+  } catch (error) {
+    status.textContent = error instanceof Error ? error.message : "Не удалось подключить тестовый календарь.";
+  }
+})();
+</script>
