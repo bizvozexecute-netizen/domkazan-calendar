@@ -1,0 +1,194 @@
+name: domkazan-vpn-test
+
+x-logs: &logs
+  driver: json-file
+  options:
+    max-size: "2m"
+    max-file: "2"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: domkazan_vpn_test
+      POSTGRES_USER: domkazan
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run ops/vpn-test/setup.mjs}
+    command: [postgres, -c, shared_buffers=48MB, -c, work_mem=4MB, -c, max_connections=20, -c, maintenance_work_mem=24MB]
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U domkazan -d domkazan_vpn_test"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    networks: [database]
+    mem_limit: 224m
+    oom_score_adj: 500
+    mem_reservation: 128m
+    cpus: 0.25
+    pids_limit: 64
+    security_opt: [no-new-privileges:true]
+    logging: *logs
+
+  migrate:
+    image: ${TOOLS_IMAGE:?Use an immutable GHCR digest}
+    command: [npm, run, db:deploy]
+    restart: "no"
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Run ops/vpn-test/setup.mjs}
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [database]
+    mem_limit: 384m
+    oom_score_adj: 700
+    cpus: 0.4
+    pids_limit: 128
+    security_opt: [no-new-privileges:true]
+    logging: *logs
+
+  seed:
+    image: ${TOOLS_IMAGE:?Use an immutable GHCR digest}
+    command: [npm, run, db:seed:test]
+    profiles: [tools]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Run ops/vpn-test/setup.mjs}
+      ALLOW_TEST_SEED: "true"
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [database]
+    mem_limit: 384m
+    oom_score_adj: 700
+    cpus: 0.4
+    pids_limit: 128
+    security_opt: [no-new-privileges:true]
+    logging: *logs
+
+  app:
+    image: ${APP_IMAGE:?Use an immutable GHCR digest}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=256
+      DATABASE_URL: ${DATABASE_URL:?Run ops/vpn-test/setup.mjs}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?Run ops/vpn-test/setup.mjs}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:?Run ops/vpn-test/setup.mjs}
+      SESSION_SECRET: ${SESSION_SECRET:?Run ops/vpn-test/setup.mjs}
+      TRUSTED_PROXY_SECRET: ${TRUSTED_PROXY_SECRET:?Run ops/vpn-test/setup.mjs}
+      TELEGRAM_RETRY_SECRET: ${TELEGRAM_RETRY_SECRET:?Run ops/vpn-test/setup.mjs}
+      TELEGRAM_BOT_TOKEN: ""
+      TELEGRAM_CHAT_ID: ""
+      APP_ORIGIN: https://localhost:9443
+      TILDA_ORIGIN: https://example.invalid
+      PRIVACY_POLICY_URL: https://localhost:9443/test-policy
+      TEST_CATALOG_ENABLED: "true"
+      ALLOW_TEST_SEED: "false"
+      PUBLIC_OWNER_PHONE: ""
+      PUBLIC_OWNER_TELEGRAM: ""
+      PUBLIC_OWNER_WHATSAPP: ""
+      NEXT_TELEMETRY_DISABLED: "1"
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+    networks: [database, web]
+    mem_limit: 384m
+    oom_score_adj: 700
+    mem_reservation: 256m
+    cpus: 0.35
+    pids_limit: 128
+    security_opt: [no-new-privileges:true]
+    logging: *logs
+
+  tls-init:
+    image: ${TLS_IMAGE:?Use an immutable GHCR digest}
+    restart: "no"
+    volumes: [test_tls:/certs]
+    mem_limit: 64m
+    oom_score_adj: 700
+    cpus: 0.1
+    pids_limit: 32
+    security_opt: [no-new-privileges:true]
+    logging: *logs
+
+  proxy:
+    image: nginx:1.28-alpine
+    restart: unless-stopped
+    environment:
+      PUBLIC_HOST: localhost:9443
+      TRUSTED_PROXY_SECRET: ${TRUSTED_PROXY_SECRET:?Run ops/vpn-test/setup.mjs}
+    depends_on:
+      app: { condition: service_healthy }
+      tls-init: { condition: service_completed_successfully }
+    ports: ["127.0.0.1:9443:443"]
+    volumes:
+      - ./ops/vpn-test/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - test_tls:/certs:ro
+    healthcheck:
+      test: [CMD-SHELL, "wget -q --no-check-certificate -O /dev/null https://127.0.0.1/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks: [web]
+    mem_limit: 48m
+    oom_score_adj: 700
+    cpus: 0.08
+    pids_limit: 32
+    security_opt: [no-new-privileges:true]
+    logging: *logs
+
+  telegram-worker:
+    image: ${APP_IMAGE:?Use an immutable GHCR digest}
+    command: [node, scripts/telegram-scheduler.mjs]
+    profiles: [worker]
+    restart: unless-stopped
+    environment:
+      TELEGRAM_RETRY_SECRET: ${TELEGRAM_RETRY_SECRET:?Run ops/vpn-test/setup.mjs}
+      TELEGRAM_RETRY_URL: http://app:3000/api/internal/telegram/retry
+    depends_on:
+      app: { condition: service_healthy }
+    networks: [web]
+    mem_limit: 80m
+    oom_score_adj: 700
+    cpus: 0.05
+    pids_limit: 32
+    read_only: true
+    tmpfs: [/tmp:rw,nosuid,noexec,size=8m]
+    security_opt: [no-new-privileges:true]
+    logging: *logs
+
+  backup:
+    image: postgres:16-alpine
+    entrypoint: [sh, /ops/backup.sh]
+    profiles: [tools]
+    environment:
+      PGHOST: postgres
+      PGUSER: domkazan
+      PGDATABASE: domkazan_vpn_test
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Run ops/vpn-test/setup.mjs}
+    volumes:
+      - ./ops/backup.sh:/ops/backup.sh:ro
+      - ./backups:/backups
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [database]
+    mem_limit: 96m
+    oom_score_adj: 700
+    cpus: 0.1
+    pids_limit: 32
+    security_opt: [no-new-privileges:true]
+    logging: *logs
+
+volumes:
+  postgres_data:
+    name: domkazan-vpn-test-postgres
+  test_tls:
+    name: domkazan-vpn-test-tls
+networks:
+  database:
+    internal: true
+  web:
+    driver: bridge

@@ -9,6 +9,7 @@ generated/
 *.tsbuildinfo
 .DS_Store
 .local*
+.vpn-test-credentials.json
 backups/
 test-results/
 playwright-report/
