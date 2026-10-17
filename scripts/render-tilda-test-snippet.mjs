@@ -3,8 +3,8 @@ import { fileURLToPath } from 'node:url';
 import { Script } from 'node:vm';
 
 const origin = process.argv[2];
-if (!origin || !/^https:\/\/[a-z0-9-]+\.vercel\.app$/.test(origin) || !origin.includes('domkazan-calendar-test-')) {
-  throw new Error('Pass the exact protected Vercel Preview origin.');
+if (origin !== 'https://domkazan-calendar-tilda-test-gatewa.vercel.app') {
+  throw new Error('Pass the reviewed public Tilda test gateway origin.');
 }
 const snapshot = JSON.parse(await readFile(new URL('../data/tilda-catalog-public.json', import.meta.url), 'utf8'));
 if (snapshot.products.length !== 63) throw new Error('Review the current Tilda catalog before rendering.');
@@ -13,7 +13,7 @@ const mapping = snapshot.products.map(({ productUid }) => ({
 }));
 const script = `(async () => {
   const config = {
-    enabled: false,
+    enabled: true,
     testPageId: "311744409",
     catalogRecordId: "rec4862082901",
     apiOrigin: "${origin}",
@@ -23,6 +23,9 @@ const script = `(async () => {
   const status = document.getElementById("domkazan-test-status");
   if (!config.enabled) return;
   try {
+    if (document.readyState === "loading") {
+      await new Promise(resolve => document.addEventListener("DOMContentLoaded", resolve, { once: true }));
+    }
     const page = document.querySelector("[data-tilda-page-id]");
     if (page?.getAttribute("data-tilda-page-id") !== config.testPageId || config.testPageId === "70446131") throw new Error("Только тестовая копия страницы.");
     const origin = new URL(config.apiOrigin);
@@ -47,18 +50,18 @@ const script = `(async () => {
       privacyUrl: policy.href,
       getFilters: () => ({}),
     });
-    status.textContent = "Тестовый календарь подключён. Только вымышленные заявки. Занятость и суммы тестовые.";
+    status.textContent = "Тестовый календарь подключён. Занятость и суммы демонстрационные, бронирование не подтверждают. Для заявки: Тестовый Гость, +70000000000.";
   } catch (error) {
     status.textContent = error instanceof Error ? error.message : "Не удалось подключить тестовый календарь.";
   }
 })();`;
 new Script(script);
-const snippet = `<!-- DomKazan Calendar: only test page 311744409. Disabled until a separate test API is accessible from Tilda. -->
+const snippet = `<!-- DomKazan Calendar: only test page 311744409. Public gateway serves synthetic data only. -->
 <div id="domkazan-test-search"></div>
-<p id="domkazan-test-status" role="status">Интеграция подготовлена и выключена. Занятость и расчёт цен пока тестовые.</p>
+<p id="domkazan-test-status" role="status">Тестовый календарь: занятость и суммы демонстрационные, бронирование не подтверждают. Для заявки используйте только «Тестовый Гость» и +70000000000.</p>
 <script>
 ${script}
 </script>`;
 const output = fileURLToPath(new URL('../../tilda-311744409-t123.html', import.meta.url));
 await writeFile(output, snippet, 'utf8');
-console.log(`T123 prepared: ${mapping.length} confirmed UID-to-test-slug rows, enabled=false, ${snippet.length} characters.`);
+console.log(`T123 prepared: ${mapping.length} confirmed UID-to-test-slug rows, enabled=true, ${snippet.length} characters.`);

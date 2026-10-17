@@ -1,4 +1,4 @@
-/* Page-local adapter for the Tilda catalog. No Tilda globals or CSS classes. */
+/* Page-local adapter for the Tilda catalog. Only the popup class is Tilda-specific. */
 (() => {
   const instances = new WeakMap();
   const selector = "[data-product-uid][data-product-url]";
@@ -30,7 +30,10 @@
 
     function candidates() {
       return [...catalog.querySelectorAll(selector)].filter((element) =>
-        !element.parentElement?.closest(selector));
+        !element.parentElement?.closest(selector) &&
+        // Tilda inserts a second product node inside the same record for its popup.
+        !element.classList.contains("t-store__product-popup") &&
+        !element.closest(".t-store__prod-popup__container"));
     }
 
     function release() {
