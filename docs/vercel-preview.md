@@ -10,6 +10,8 @@ This is a public-URL test stand, separate from the loopback-only VPN Docker proj
 4. Set this Vercel project's build command to `npm run build:vercel-preview`. Its guard checks Preview and the database fingerprint before applying committed migrations, seeding nine fictional houses (without client records), and building Next.js. A mismatched or rotated URL fails the build safely; recalculate the fingerprint only after confirming the new URL still belongs to the dedicated test resource. Never log the full connection URL.
 5. Deploy the reviewed Git commit to **Preview**. Verify `/api/health`, `/admin/login`, `/test-catalog`, `/test-policy`, and the date/guest search. The Telegram retry route must return 404 in Preview. Test applications must use fictional names and contacts; no Telegram bot is connected.
 
+Before relying on the deployment URL, inspect its Vercel target. A first deployment of a new project can be misclassified as `production` even when Preview is explicitly requested ([Vercel issue #17069](https://github.com/vercel/vercel/issues/17069)). The Preview build guard intentionally fails before migrations in that case. Stop there; do not retry through CLI, Git, or API while Production deployments remain prohibited.
+
 The preview URL changes with each deployment. `VERCEL_ENV=preview` and a valid `VERCEL_URL` are required for application forms. Production has no automatic origin fallback, so an accidental Production deployment cannot accept applications without separate configuration.
 
 ## Sharing and later Tilda testing
