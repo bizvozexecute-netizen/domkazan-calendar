@@ -42,7 +42,7 @@ test("Tilda adapter waits for asynchronous cards and maps by UID without CSS or 
   assert.equal(f.root.shadowRoot.querySelector(".message").textContent, "");
   f.search(); await tick();
   const [free, busy] = f.grid.children;
-  assert.match(free.querySelector('[data-domkazan-tilda-slot]').textContent, /12345 ₽ за 2 ноч/);
+  assert.match(free.querySelector('[data-domkazan-tilda-slot]').textContent, /12\s345 ₽ за 2 ноч/);
   assert.equal(busy.style.display, "none");
   assert.equal(free.querySelector("span").textContent, "1000 р.");
   assert.equal(free.querySelector("a").getAttribute("href"), "#prodpopup");

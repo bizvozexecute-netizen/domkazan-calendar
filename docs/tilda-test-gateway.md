@@ -15,7 +15,7 @@ app and admin remain behind Vercel Authentication in project
 Sources rule permits only Production tokens of the gateway project to reach
 Preview deployments of the application. The gateway forwards a short-lived
 Vercel OIDC token from its server-side function, never to the browser.
-The reviewed gateway deployment is `dpl_BEphRvehvXp2Smwzwq7sNVuA2G2L`.
+The reviewed gateway deployment is `dpl_H8imeyFmggPZp3jCMj9JS73wC75j`.
 
 The gateway serves only:
 
@@ -66,6 +66,15 @@ responsive layout and a styled test notice. The gateway widget now leaves its
 initial status empty while Tilda first loads its cards. The published page was
 rechecked at a narrow viewport with the same 20–22 October, two-guest search:
 62 results, no clipped submit button, and 63 Tilda catalog slots.
+
+The follow-up design pass on the test page adds a heading and a contained search
+panel, aligns its colors with the catalog, rounds the card edges, and formats
+search prices as Russian ruble amounts without trailing zero kopecks. A live
+visitor search for 20–22 October and two guests still returned 62 houses;
+the first test price displayed as `12 000 ₽ за 2 ноч.`. The gateway and page
+remain limited to the same test endpoints and page ID. The test page also
+overrides its own Tilda navigation block from fixed to absolute positioning,
+so its 160px menu no longer covers the search and catalog while scrolling.
 
 The 63 homes reuse public titles, capacities and base nightly tariffs. No
 live occupancy or client records were imported. Extra guest charges, service

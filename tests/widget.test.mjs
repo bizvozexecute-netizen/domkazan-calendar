@@ -22,7 +22,7 @@ test("widget filters existing catalog cards and updates only their price labels"
   const free = dom.window.document.querySelector('[data-domkazan-house="free"]');
   const busy = dom.window.document.querySelector('[data-domkazan-house="busy"]');
   assert.equal(free.querySelector("h2").textContent, "Дом А");
-  assert.match(free.querySelector("[data-domkazan-price]").textContent, /12000\.00 ₽/);
+  assert.match(free.querySelector("[data-domkazan-price]").textContent, /12\s000 ₽/);
   assert.equal(busy.style.getPropertyValue("display"), "none");
   assert.equal(busy.style.getPropertyPriority("display"), "important");
   dom.window.document.querySelector('[data-domkazan-action-for="free"] button').click();

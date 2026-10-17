@@ -2,24 +2,26 @@
 (() => {
   const instances = new WeakMap();
   const css = `
-    :host { display:block; font:16px Arial,sans-serif; color:#20342b; }
+    :host { display:block; font:16px Arial,sans-serif; color:#1d3028; }
     * { box-sizing:border-box; }
-    form { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)) auto; gap:12px; align-items:end; }
+    form { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)) auto; gap:14px; align-items:end; }
     form > * { min-width:0; }
-    .request-form { grid-template-columns:repeat(2,minmax(0,1fr)); margin-top:20px; padding:16px; border:1px solid #b9c9bd; border-radius:10px; }
+    .request-form { grid-template-columns:repeat(2,minmax(0,1fr)); margin-top:24px; padding:24px; border:1px solid #dce6df; border-radius:16px; background:#f9fbf9; }
     .request-form[hidden], .contacts[hidden] { display:none; }
-    .request-form label { font-weight:600; }
-    .request-form textarea, .request-form select { width:100%; padding:12px; border:1px solid #b9c9bd; border-radius:8px; font:inherit; }
+    .request-form h2 { margin:0 0 4px; font-size:23px; line-height:1.25; }
+    .request-form textarea, .request-form select { width:100%; min-height:54px; padding:14px 16px; border:1px solid #d5ded7; border-radius:11px; background:#fff; font:inherit; }
     .request-form .wide { grid-column:1 / -1; }
     .consent { display:flex; align-items:flex-start; gap:8px; }
-    .consent input { width:auto; }
+    .consent input { width:auto; min-height:auto; }
     .honeypot { position:absolute; left:-10000px; }
     .contacts { display:flex; flex-wrap:wrap; gap:12px; margin-top:12px; }
-    label { display:grid; gap:6px; font-weight:600; }
-    input { width:100%; padding:12px; border:1px solid #b9c9bd; border-radius:8px; font:inherit; }
-    button { padding:13px 20px; border:0; border-radius:8px; background:#176348; color:white; font:inherit; cursor:pointer; }
+    label { display:grid; gap:8px; color:#31473b; font-size:14px; font-weight:700; }
+    input { width:100%; min-height:54px; padding:14px 16px; border:1px solid #d5ded7; border-radius:11px; background:#f8faf8; color:#1d3028; font:16px Arial,sans-serif; }
+    input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible { outline:3px solid #a9d2b7; outline-offset:2px; }
+    button { min-height:54px; padding:13px 20px; border:0; border-radius:11px; background:#1c6047; color:white; font:700 15px Arial,sans-serif; cursor:pointer; transition:background-color .15s ease,transform .15s ease; }
+    button:hover:not(:disabled) { background:#164d39; transform:translateY(-1px); }
     button:disabled { opacity:.6; cursor:wait; }
-    .message { margin:12px 0 0; line-height:1.5; }
+    .message { margin:16px 0 0; color:#345747; font-size:14px; font-weight:700; line-height:1.5; }
     @media (max-width:1100px) {
       form:not(.request-form) { grid-template-columns:repeat(2,minmax(0,1fr)); }
       form:not(.request-form) > button { grid-column:1 / -1; }
@@ -29,6 +31,8 @@
       form:not(.request-form) > button { grid-column:1; }
     }
   `;
+
+  const money = (amount) => new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 }).format(Number(amount));
 
   function field(form, title, name, type) {
     const label = document.createElement("label");
@@ -160,7 +164,7 @@
       selectedHouse = { house, snapshot };
       submissionKey = window.crypto.randomUUID();
       heading.textContent = `Заявка: ${house.name}, ${snapshot.checkIn} — ${snapshot.checkOut}, гостей: ${snapshot.guests}`;
-      requestMessage.textContent = `Стоимость по поиску: ${house.quote.total} ₽. Итог будет проверен сервером.`;
+      requestMessage.textContent = `Стоимость по поиску: ${money(house.quote.total)} ₽. Итог будет проверен сервером.`;
       contacts.hidden = true; contacts.replaceChildren(); requestForm.hidden = false;
       requestForm.querySelector('[name="clientName"]').focus();
     }
@@ -252,7 +256,7 @@
           const house = available.get(card.slug);
           if (!house) { hide(card); continue; }
           show(card);
-          if (card.priceElement) card.priceElement.textContent = `${house.quote.total} ₽ за ${house.quote.nights} ноч.`;
+          if (card.priceElement) card.priceElement.textContent = `${money(house.quote.total)} ₽ за ${house.quote.nights} ноч.`;
           const action = document.createElement("button"); action.type = "button"; action.textContent = "Оставить заявку";
           action.setAttribute("aria-label", `Оставить заявку: ${house.name}`);
           // The action lives outside the card's links, including fully linked cards.

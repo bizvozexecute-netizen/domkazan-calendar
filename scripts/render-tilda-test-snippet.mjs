@@ -50,7 +50,7 @@ const script = `(async () => {
       privacyUrl: policy.href,
       getFilters: () => ({}),
     });
-    status.textContent = "Тестовый календарь подключён. Занятость и суммы демонстрационные, бронирование не подтверждают. Для заявки: Тестовый Гость, +70000000000.";
+    status.textContent = "Цены и занятость демонстрационные. Для проверки заявки: Тестовый Гость, +70000000000. Бронирование не создаётся.";
   } catch (error) {
     status.textContent = error instanceof Error ? error.message : "Не удалось подключить тестовый календарь.";
   }
@@ -58,12 +58,40 @@ const script = `(async () => {
 new Script(script);
 const snippet = `<!-- DomKazan Calendar: only test page 311744409. Public gateway serves synthetic data only. -->
 <style>
-  #rec4862390501 { background:#f4f7f4; padding:28px 16px 32px; }
-  #domkazan-test-search, #domkazan-test-status { max-width:1180px; margin-left:auto; margin-right:auto; }
-  #domkazan-test-status { margin-top:12px; padding:12px 16px; border-left:4px solid #176348; border-radius:6px; background:#e7f1e9; color:#315546; font:14px/1.5 Arial,sans-serif; }
+  #nav4862082401 { position:absolute !important; }
+  #rec4862390501 { background:#f6f7f3; padding:52px 20px 56px; }
+  #rec4862390501 .dkcal-shell { max-width:1160px; margin:0 auto; font-family:Arial,sans-serif; }
+  #rec4862390501 .dkcal-intro { margin:0 0 26px; }
+  #rec4862390501 .dkcal-kicker { display:inline-block; margin-bottom:12px; color:#2e7153; font-size:12px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; }
+  #rec4862390501 .dkcal-intro h2 { margin:0 0 10px; color:#173b2c; font:700 clamp(28px,3.5vw,38px)/1.16 Arial,sans-serif; }
+  #rec4862390501 .dkcal-intro p { margin:0; color:#627469; font:16px/1.55 Arial,sans-serif; }
+  #rec4862390501 .dkcal-panel { padding:30px; border:1px solid #e1e8e1; border-radius:20px; background:#fff; box-shadow:0 18px 42px rgba(24,57,39,.08); }
+  #rec4862390501 #domkazan-test-status { margin:20px 0 0; padding:14px 16px; border:1px solid #dbe8dc; border-radius:10px; background:#f5faf5; color:#52685a; font:13px/1.5 Arial,sans-serif; }
+  #rec4862390501 #domkazan-test-status:before { content:'ТЕСТОВЫЙ РЕЖИМ'; display:block; margin-bottom:5px; color:#2b7150; font-size:11px; font-weight:700; letter-spacing:.1em; }
+  #rec4862082901 { background-color:#f6f7f3 !important; }
+  #rec4862082901 .t-section__title { color:#173b2c; font-family:Arial,sans-serif; }
+  #rec4862082901 .t-store__card__wrap_all { border-radius:16px 16px 0 0; overflow:hidden; }
+  #rec4862082901 [data-domkazan-tilda-slot] { padding:14px 18px 18px !important; border-radius:0 0 16px 16px; background:#fff; box-shadow:0 12px 22px rgba(24,57,39,.07); }
+  #rec4862082901 [data-domkazan-tilda-slot] p { margin:0; color:#52685a; font-size:14px; line-height:1.4; }
+  #rec4862082901 .t-store__card__title { color:#173b2c; font-weight:700; }
+  #rec4862082901 .t-store__card__btn { background-color:#1c6047 !important; border-radius:10px !important; }
+  @media(max-width:760px) {
+    #rec4862390501 { padding:34px 16px 42px; }
+    #rec4862390501 .dkcal-intro { margin-bottom:20px; }
+    #rec4862390501 .dkcal-panel { padding:18px; border-radius:16px; }
+  }
 </style>
-<div id="domkazan-test-search"></div>
-<p id="domkazan-test-status" role="status">Тестовый календарь: занятость и суммы демонстрационные, бронирование не подтверждают. Для заявки используйте только «Тестовый Гость» и +70000000000.</p>
+<div class="dkcal-shell">
+  <div class="dkcal-intro">
+    <span class="dkcal-kicker">Тестовый подбор домов</span>
+    <h2>Найдите дом на нужные даты</h2>
+    <p>Укажите даты поездки и количество гостей — покажем подходящие варианты.</p>
+  </div>
+  <div class="dkcal-panel">
+    <div id="domkazan-test-search"></div>
+    <p id="domkazan-test-status" role="status">Цены и занятость демонстрационные. Для проверки заявки: Тестовый Гость, +70000000000. Бронирование не создаётся.</p>
+  </div>
+</div>
 <script>
 ${script}
 </script>`;
