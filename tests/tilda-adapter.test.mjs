@@ -39,9 +39,10 @@ test("Tilda adapter waits for asynchronous cards and maps by UID without CSS or 
   f.search(); await tick();
   assert.equal(f.calls.length, 0);
   f.grid.innerHTML = card("101") + card("102"); await tick();
+  assert.equal(f.root.shadowRoot.querySelector(".message").textContent, "");
   f.search(); await tick();
   const [free, busy] = f.grid.children;
-  assert.match(free.querySelector('[data-domkazan-tilda-slot]').textContent, /12345 ₽ за 2 ноч/);
+  assert.match(free.querySelector('[data-domkazan-tilda-slot]').textContent, /12\s345 ₽ за 2 ноч/);
   assert.equal(busy.style.display, "none");
   assert.equal(free.querySelector("span").textContent, "1000 р.");
   assert.equal(free.querySelector("a").getAttribute("href"), "#prodpopup");
@@ -64,6 +65,21 @@ test("Tilda request action stays outside links and does not trigger delegated po
   assert.equal(f.root.shadowRoot.querySelector(".request-form").hidden, false);
   f.grid.querySelector("a").click();
   assert.equal(popupClicks, 1);
+  f.controller.destroy(); f.dom.window.close();
+});
+
+test("Tilda product popup does not create a duplicate catalog card", async () => {
+  const f = fixture();
+  f.grid.innerHTML = card("101"); await tick();
+  f.search(); await tick();
+  const popup = f.w.document.createElement("div");
+  popup.className = "t-store__prod-popup__container";
+  popup.innerHTML = `<div class="js-store-product t-store__product-popup" data-product-uid="101" data-product-url="/tproduct/101-synthetic">Synthetic popup</div>`;
+  f.catalog.append(popup); await tick();
+  assert.doesNotMatch(f.root.shadowRoot.textContent, /Поиск приостановлен/);
+  assert.equal(f.grid.querySelectorAll('[data-domkazan-tilda-slot]').length, 1);
+  popup.remove(); await tick();
+  assert.doesNotMatch(f.root.shadowRoot.textContent, /Поиск приостановлен/);
   f.controller.destroy(); f.dom.window.close();
 });
 

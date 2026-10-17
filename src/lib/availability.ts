@@ -31,7 +31,8 @@ export async function findAvailableHouses(checkIn: Date, checkOut: Date, filters
   });
 
   return houses.flatMap((house) => {
-    const quote = quoteStay(checkIn, checkOut, house.baseRates, house.dateOverrides);
+    const quote = quoteStay(checkIn, checkOut, house.baseRates, house.dateOverrides,
+      { guests: filters.guests, includedGuests: house.includedGuests, extraGuestPrice: house.extraGuestPrice, serviceFee: house.serviceFee });
     if (!quote) return [];
     return [{
       id: house.id,

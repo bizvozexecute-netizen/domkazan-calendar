@@ -7,9 +7,11 @@ import { dateKey, todayInMoscow } from "@/lib/dates";
 
 type HouseData = { id: string; name: string; slug: string; tildaUrl: string | null; maxGuests: number;
   district: string | null; bedrooms: number | null; bathrooms: number | null; amenities: string[];
-  petsAllowed: boolean | null; isActive: boolean; revision: number };
+  petsAllowed: boolean | null; isActive: boolean; revision: number;
+  includedGuests?: number | null; extraGuestPrice?: string; serviceFee?: string };
 type HouseDraft = { name: string; slug: string; tildaUrl: string; maxGuests: string; district: string;
-  bedrooms: string; bathrooms: string; amenities: string; petsAllowed: boolean; isActive: boolean };
+  bedrooms: string; bathrooms: string; amenities: string; petsAllowed: boolean; isActive: boolean;
+  includedGuests: string; extraGuestPrice: string; serviceFee: string };
 type Rate = { id: string; startsOn: string; endsOn: string; weekdayPrice: string; fridayPrice: string;
   saturdayPrice: string; sundayPrice: string; minNights: number };
 type RateDraft = { id: string | null; startsOn: string; lastDay: string; weekdayPrice: string;
@@ -17,7 +19,7 @@ type RateDraft = { id: string | null; startsOn: string; lastDay: string; weekday
 
 const dateOffset = (value: string, days: number) => new Date(new Date(`${value}T00:00:00Z`).getTime() + days * 86_400_000).toISOString().slice(0, 10);
 const emptyHouse: HouseDraft = { name: "", slug: "", tildaUrl: "", maxGuests: "2", district: "", bedrooms: "",
-  bathrooms: "", amenities: "", petsAllowed: false, isActive: true };
+  bathrooms: "", amenities: "", petsAllowed: false, isActive: true, includedGuests: "", extraGuestPrice: "0", serviceFee: "0" };
 const newRate = (): RateDraft => ({ id: null, startsOn: dateKey(todayInMoscow()), lastDay: dateOffset(dateKey(todayInMoscow()), 29),
   weekdayPrice: "", fridayPrice: "", saturdayPrice: "", sundayPrice: "", minNights: "1" });
 const fieldClass = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 focus-visible:outline-2 focus-visible:outline-emerald-800";
@@ -25,7 +27,8 @@ const fieldClass = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2
 function toDraft(house: HouseData): HouseDraft {
   return { name: house.name, slug: house.slug, tildaUrl: house.tildaUrl ?? "", maxGuests: String(house.maxGuests),
     district: house.district ?? "", bedrooms: house.bedrooms?.toString() ?? "", bathrooms: house.bathrooms?.toString() ?? "",
-    amenities: house.amenities.join(", "), petsAllowed: house.petsAllowed ?? false, isActive: house.isActive };
+    amenities: house.amenities.join(", "), petsAllowed: house.petsAllowed ?? false, isActive: house.isActive,
+    includedGuests: house.includedGuests?.toString() ?? "", extraGuestPrice: house.extraGuestPrice ?? "0", serviceFee: house.serviceFee ?? "0" };
 }
 
 function rateToDraft(rate: Rate): RateDraft {
@@ -87,6 +90,8 @@ export function HouseEditor({ houseId, initialNotice = "" }: { houseId: string |
     try {
       const payload = { name: house.name, slug: house.slug, tildaUrl: house.tildaUrl.trim() || null,
         maxGuests: Number(house.maxGuests), district: house.district.trim() || null,
+        includedGuests: house.includedGuests === "" ? null : Number(house.includedGuests),
+        extraGuestPrice: house.extraGuestPrice, serviceFee: house.serviceFee,
         bedrooms: house.bedrooms === "" ? null : Number(house.bedrooms), bathrooms: house.bathrooms === "" ? null : Number(house.bathrooms),
         amenities: [...new Set(house.amenities.split(",").map((item) => item.trim()).filter(Boolean))],
         petsAllowed: house.petsAllowed, isActive: house.isActive, ...(houseId && { revision: houseRevision }) };
@@ -148,6 +153,9 @@ export function HouseEditor({ houseId, initialNotice = "" }: { houseId: string |
         <label className="grid gap-1 text-sm">Район<input maxLength={100} value={house.district} onChange={(e) => updateHouseField("district", e.target.value)} className={fieldClass} /></label>
         <label className="grid gap-1 text-sm">Спален<input type="number" min="0" max="50" value={house.bedrooms} onChange={(e) => updateHouseField("bedrooms", e.target.value)} className={fieldClass} /></label>
         <label className="grid gap-1 text-sm">Санузлов<input type="number" min="0" max="50" value={house.bathrooms} onChange={(e) => updateHouseField("bathrooms", e.target.value)} className={fieldClass} /></label>
+        <label className="grid gap-1 text-sm">Гостей включено в тариф<input type="number" min="1" max={house.maxGuests} value={house.includedGuests} onChange={(e) => updateHouseField("includedGuests", e.target.value)} className={fieldClass} /><span className="text-xs text-slate-600">Оставьте пустым, если доплаты за гостей нет.</span></label>
+        <label className="grid gap-1 text-sm">Доплата за гостя за ночь, ₽<input required inputMode="decimal" value={house.extraGuestPrice} onChange={(e) => updateHouseField("extraGuestPrice", e.target.value)} className={fieldClass} /></label>
+        <label className="grid gap-1 text-sm">Обязательный сбор за весь заезд, ₽<input required inputMode="decimal" value={house.serviceFee} onChange={(e) => updateHouseField("serviceFee", e.target.value)} className={fieldClass} /></label>
         <label className="grid gap-1 text-sm sm:col-span-2">Удобства через запятую<input placeholder="sauna, wifi, pool" value={house.amenities} onChange={(e) => updateHouseField("amenities", e.target.value)} className={fieldClass} /></label>
       </div>
       <div className="flex flex-wrap gap-5"><label className="flex items-center gap-2"><input type="checkbox" checked={house.petsAllowed} onChange={(e) => updateHouseField("petsAllowed", e.target.checked)} /> Можно с животными</label><label className="flex items-center gap-2"><input type="checkbox" checked={house.isActive} onChange={(e) => updateHouseField("isActive", e.target.checked)} /> Дом виден в поиске</label></div>

@@ -1,0 +1,763 @@
+{
+  "source": "https://store.tildaapi.com/api/getproductslist/?storepartuid=213912569062&recid=4148990801&getparts=true&getoptions=true&size=100",
+  "capturedAt": "2026-10-17T09:06:18.767Z",
+  "caveat": "Published catalog metadata only. Prices may omit guest supplements, service fees, seasonality and owner changes. No live occupancy is included.",
+  "products": [
+    {
+      "productUid": "555240345232",
+      "name": "Казанка большой",
+      "tildaUrl": "https://domkazan116.ru/tproduct/555240345232-kazanka-bolshoi",
+      "maxGuests": 20,
+      "publicBaseRates": {
+        "weekday": 6000,
+        "friday": 8000,
+        "saturday": 10000,
+        "sunday": 7000
+      }
+    },
+    {
+      "productUid": "429528013032",
+      "name": "Казанка малый",
+      "tildaUrl": "https://domkazan116.ru/tproduct/429528013032-kazanka-malii",
+      "maxGuests": 20,
+      "publicBaseRates": {
+        "weekday": 5000,
+        "friday": 7000,
+        "saturday": 9000,
+        "sunday": 5000
+      }
+    },
+    {
+      "productUid": "629523010012",
+      "name": "Соц город",
+      "tildaUrl": "https://domkazan116.ru/tproduct/629523010012-sots-gorod",
+      "maxGuests": 15,
+      "publicBaseRates": {
+        "weekday": 8500,
+        "friday": 12500,
+        "saturday": 15500,
+        "sunday": 8500
+      }
+    },
+    {
+      "productUid": "929904646092",
+      "name": "Щербаковка 1",
+      "tildaUrl": "https://domkazan116.ru/tproduct/929904646092-scherbakovka-1",
+      "maxGuests": 20,
+      "publicBaseRates": {
+        "weekday": 15000,
+        "friday": 17000,
+        "saturday": 20000,
+        "sunday": 15000
+      }
+    },
+    {
+      "productUid": "128500103582",
+      "name": "Щербаковка 2",
+      "tildaUrl": "https://domkazan116.ru/tproduct/128500103582-scherbakovka-2",
+      "maxGuests": 30,
+      "publicBaseRates": {
+        "weekday": 15000,
+        "friday": 17000,
+        "saturday": 20000,
+        "sunday": 15000
+      }
+    },
+    {
+      "productUid": "956218018842",
+      "name": "Щербаковка 3",
+      "tildaUrl": "https://domkazan116.ru/tproduct/956218018842-scherbakovka-3",
+      "maxGuests": 15,
+      "publicBaseRates": {
+        "weekday": 15000,
+        "friday": 17000,
+        "saturday": 20000,
+        "sunday": 15000
+      }
+    },
+    {
+      "productUid": "447918482153",
+      "name": "Квартал 1",
+      "tildaUrl": "https://domkazan116.ru/tproduct/447918482153-kvartal-1",
+      "maxGuests": 32,
+      "publicBaseRates": {
+        "weekday": 35000,
+        "friday": 45000,
+        "saturday": 50000,
+        "sunday": 45000
+      }
+    },
+    {
+      "productUid": "215059213373",
+      "name": "Квартал 2",
+      "tildaUrl": "https://domkazan116.ru/tproduct/215059213373-kvartal-2",
+      "maxGuests": 30,
+      "publicBaseRates": {
+        "weekday": 40000,
+        "friday": 50000,
+        "saturday": 55000,
+        "sunday": 50000
+      }
+    },
+    {
+      "productUid": "376511195522",
+      "name": "Дербышки 1",
+      "tildaUrl": "https://domkazan116.ru/tproduct/376511195522-derbishki-1",
+      "maxGuests": 20,
+      "publicBaseRates": {
+        "weekday": 8000,
+        "friday": 12500,
+        "saturday": 18000,
+        "sunday": 8000
+      }
+    },
+    {
+      "productUid": "660034704232",
+      "name": "Дербышки 2",
+      "tildaUrl": "https://domkazan116.ru/tproduct/660034704232-derbishki-2",
+      "maxGuests": 20,
+      "publicBaseRates": {
+        "weekday": 12000,
+        "friday": 15000,
+        "saturday": 16000,
+        "sunday": 13000
+      }
+    },
+    {
+      "productUid": "349543697222",
+      "name": "Дербышки 3",
+      "tildaUrl": "https://domkazan116.ru/tproduct/349543697222-derbishki-3",
+      "maxGuests": 30,
+      "publicBaseRates": {
+        "weekday": 12000,
+        "friday": 16000,
+        "saturday": 19000,
+        "sunday": 12000
+      }
+    },
+    {
+      "productUid": "843048752482",
+      "name": "Дербышки 4",
+      "tildaUrl": "https://domkazan116.ru/tproduct/843048752482-derbishki-4",
+      "maxGuests": 15,
+      "publicBaseRates": {
+        "weekday": 13000,
+        "friday": 21000,
+        "saturday": 27000,
+        "sunday": 17000
+      }
+    },
+    {
+      "productUid": "503593168692",
+      "name": "Дербышки 5",
+      "tildaUrl": "https://domkazan116.ru/tproduct/503593168692-derbishki-5",
+      "maxGuests": 20,
+      "publicBaseRates": {
+        "weekday": 15000,
+        "friday": 23000,
+        "saturday": 30000,
+        "sunday": 19000
+      }
+    },
+    {
+      "productUid": "485769117142",
+      "name": "Константиновка 1",
+      "tildaUrl": "https://domkazan116.ru/tproduct/485769117142-konstantinovka-1",
+      "maxGuests": 30,
+      "publicBaseRates": {
+        "weekday": 11000,
+        "friday": 18000,
+        "saturday": 21000,
+        "sunday": 14000
+      }
+    },
+    {
+      "productUid": "341850585362",
+      "name": "Константиновка 2",
+      "tildaUrl": "https://domkazan116.ru/tproduct/341850585362-konstantinovka-2",
+      "maxGuests": 30,
+      "publicBaseRates": {
+        "weekday": 11000,
+        "friday": 18000,
+        "saturday": 21000,
+        "sunday": 14000
+      }
+    },
+    {
+      "productUid": "746356417922",
+      "name": "Константиновка 3",
+      "tildaUrl": "https://domkazan116.ru/tproduct/746356417922-konstantinovka-3",
+      "maxGuests": 40,
+      "publicBaseRates": {
+        "weekday": 15000,
+        "friday": 22000,
+        "saturday": 22000,
+        "sunday": 15000
+      }
+    },
+    {
+      "productUid": "145704696152",
+      "name": "Константиновка 4",
+      "tildaUrl": "https://domkazan116.ru/tproduct/145704696152-konstantinovka-4",
+      "maxGuests": 25,
+      "publicBaseRates": {
+        "weekday": 12000,
+        "friday": 18700,
+        "saturday": 22000,
+        "sunday": 14000
+      }
+    },
+    {
+      "productUid": "148236906942",
+      "name": "Константиновка 5",
+      "tildaUrl": "https://domkazan116.ru/tproduct/148236906942-konstantinovka-5",
+      "maxGuests": 40,
+      "publicBaseRates": {
+        "weekday": 15000,
+        "friday": 25000,
+        "saturday": 27000,
+        "sunday": 15000
+      }
+    },
+    {
+      "productUid": "964668928862",
+      "name": "Константиновка 6",
+      "tildaUrl": "https://domkazan116.ru/tproduct/964668928862-konstantinovka-6",
+      "maxGuests": 50,
+      "publicBaseRates": {
+        "weekday": 15000,
+        "friday": 22000,
+        "saturday": 25000,
+        "sunday": 15000
+      }
+    },
+    {
+      "productUid": "478096427342",
+      "name": "Константиновка 7",
+      "tildaUrl": "https://domkazan116.ru/tproduct/478096427342-konstantinovka-7",
+      "maxGuests": 30,
+      "publicBaseRates": {
+        "weekday": 15000,
+        "friday": 25000,
+        "saturday": 28000,
+        "sunday": 18000
+      }
+    },
+    {
+      "productUid": "177219011422",
+      "name": "Константиновка 8",
+      "tildaUrl": "https://domkazan116.ru/tproduct/177219011422-konstantinovka-8",
+      "maxGuests": 15,
+      "publicBaseRates": {
+        "weekday": 14000,
+        "friday": 18000,
+        "saturday": 23000,
+        "sunday": 15000
+      }
+    },
+    {
+      "productUid": "712766529822",
+      "name": "Малые Клыки",
+      "tildaUrl": "https://domkazan116.ru/tproduct/712766529822-malie-kliki",
+      "maxGuests": 25,
+      "publicBaseRates": {
+        "weekday": 12000,
+        "friday": 18000,
+        "saturday": 25000,
+        "sunday": 12000
+      }
+    },
+    {
+      "productUid": "171442612092",
+      "name": "Самосырово",
+      "tildaUrl": "https://domkazan116.ru/tproduct/171442612092-samosirovo",
+      "maxGuests": 20,
+      "publicBaseRates": {
+        "weekday": 6000,
+        "friday": 9000,
+        "saturday": 11000,
+        "sunday": 6000
+      }
+    },
+    {
+      "productUid": "920959845222",
+      "name": "Чебакса",
+      "tildaUrl": "https://domkazan116.ru/tproduct/920959845222-chebaksa",
+      "maxGuests": null,
+      "publicBaseRates": {
+        "weekday": 14000,
+        "friday": 18000,
+        "saturday": 23000,
+        "sunday": 15000
+      }
+    },
+    {
+      "productUid": "166056422932",
+      "name": "Новая Сосновка Японский",
+      "tildaUrl": "https://domkazan116.ru/tproduct/166056422932-novaya-sosnovka-yaponskii",
+      "maxGuests": 20,
+      "publicBaseRates": {
+        "weekday": 12000,
+        "friday": 21000,
+        "saturday": 26000,
+        "sunday": 12000
+      }
+    },
+    {
+      "productUid": "320229128592",
+      "name": "Новая Сосновка Восточный 1",
+      "tildaUrl": "https://domkazan116.ru/tproduct/320229128592-novaya-sosnovka-vostochnii-1",
+      "maxGuests": 20,
+      "publicBaseRates": {
+        "weekday": 12000,
+        "friday": 21000,
+        "saturday": 26000,
+        "sunday": 12000
+      }
+    },
+    {
+      "productUid": "376694256692",
+      "name": "Новая Сосновка Восточный 2",
+      "tildaUrl": "https://domkazan116.ru/tproduct/376694256692-novaya-sosnovka-vostochnii-2",
+      "maxGuests": 20,
+      "publicBaseRates": {
+        "weekday": 12000,
+        "friday": 21000,
+        "saturday": 26000,
+        "sunday": 12000
+      }
+    },
+    {
+      "productUid": "269441002302",
+      "name": "Новая Сосновка Классический",
+      "tildaUrl": "https://domkazan116.ru/tproduct/269441002302-novaya-sosnovka-klassicheskii",
+      "maxGuests": 40,
+      "publicBaseRates": {
+        "weekday": 15000,
+        "friday": 26000,
+        "saturday": 36000,
+        "sunday": 15000
+      }
+    },
+    {
+      "productUid": "631447234292",
+      "name": "Новая Сосновка Вип",
+      "tildaUrl": "https://domkazan116.ru/tproduct/631447234292-novaya-sosnovka-vip",
+      "maxGuests": 40,
+      "publicBaseRates": {
+        "weekday": 15000,
+        "friday": 26000,
+        "saturday": 36000,
+        "sunday": 15000
+      }
+    },
+    {
+      "productUid": "340865734932",
+      "name": "Новая Сосновка Рыцарский",
+      "tildaUrl": "https://domkazan116.ru/tproduct/340865734932-novaya-sosnovka-ritsarskii",
+      "maxGuests": 40,
+      "publicBaseRates": {
+        "weekday": 15000,
+        "friday": 26000,
+        "saturday": 36000,
+        "sunday": 15000
+      }
+    },
+    {
+      "productUid": "240084083802",
+      "name": "Новая Сосновка Гостевой",
+      "tildaUrl": "https://domkazan116.ru/tproduct/240084083802-novaya-sosnovka-gostevoi",
+      "maxGuests": 30,
+      "publicBaseRates": {
+        "weekday": 9000,
+        "friday": 16000,
+        "saturday": 19000,
+        "sunday": 9000
+      }
+    },
+    {
+      "productUid": "657229140953",
+      "name": "Царицыно",
+      "tildaUrl": "https://domkazan116.ru/tproduct/657229140953-tsaritsino",
+      "maxGuests": 36,
+      "publicBaseRates": {
+        "weekday": 30000,
+        "friday": 40000,
+        "saturday": 45000,
+        "sunday": 35000
+      }
+    },
+    {
+      "productUid": "623323840142",
+      "name": "Нагорный 1",
+      "tildaUrl": "https://domkazan116.ru/tproduct/623323840142-nagornii-1",
+      "maxGuests": 18,
+      "publicBaseRates": {
+        "weekday": 8000,
+        "friday": 12000,
+        "saturday": 15000,
+        "sunday": 8000
+      }
+    },
+    {
+      "productUid": "850289470213",
+      "name": "Нагорный 2",
+      "tildaUrl": "https://domkazan116.ru/tproduct/850289470213-nagornii-2",
+      "maxGuests": 27,
+      "publicBaseRates": {
+        "weekday": 30000,
+        "friday": 40000,
+        "saturday": 45000,
+        "sunday": 30000
+      }
+    },
+    {
+      "productUid": "191768553253",
+      "name": "Мирный 1",
+      "tildaUrl": "https://domkazan116.ru/tproduct/191768553253-mirnii-1",
+      "maxGuests": 16,
+      "publicBaseRates": {
+        "weekday": 17000,
+        "friday": 24000,
+        "saturday": 34000,
+        "sunday": 19000
+      }
+    },
+    {
+      "productUid": "525699126373",
+      "name": "Мирный 2",
+      "tildaUrl": "https://domkazan116.ru/tproduct/525699126373-mirnii-2",
+      "maxGuests": 16,
+      "publicBaseRates": {
+        "weekday": 17000,
+        "friday": 24000,
+        "saturday": 34000,
+        "sunday": 19000
+      }
+    },
+    {
+      "productUid": "198170828743",
+      "name": "Вознесение 1",
+      "tildaUrl": "https://domkazan116.ru/tproduct/198170828743-voznesenie-1",
+      "maxGuests": 27,
+      "publicBaseRates": {
+        "weekday": 25000,
+        "friday": 30000,
+        "saturday": 35000,
+        "sunday": 25000
+      }
+    },
+    {
+      "productUid": "874605813333",
+      "name": "Вознесение 2",
+      "tildaUrl": "https://domkazan116.ru/tproduct/874605813333-voznesenie-2",
+      "maxGuests": 20,
+      "publicBaseRates": {
+        "weekday": 14000,
+        "friday": 20000,
+        "saturday": 30000,
+        "sunday": 16000
+      }
+    },
+    {
+      "productUid": "205363765432",
+      "name": "Салмачи 1",
+      "tildaUrl": "https://domkazan116.ru/tproduct/205363765432-salmachi-1",
+      "maxGuests": 10,
+      "publicBaseRates": {
+        "weekday": 14000,
+        "friday": 17000,
+        "saturday": 19000,
+        "sunday": 14000
+      }
+    },
+    {
+      "productUid": "496120612042",
+      "name": "Салмачи 2",
+      "tildaUrl": "https://domkazan116.ru/tproduct/496120612042-salmachi-2",
+      "maxGuests": 12,
+      "publicBaseRates": {
+        "weekday": 15000,
+        "friday": 19000,
+        "saturday": 23000,
+        "sunday": 15000
+      }
+    },
+    {
+      "productUid": "835547658532",
+      "name": "Салмачи 3",
+      "tildaUrl": "https://domkazan116.ru/tproduct/835547658532-salmachi-3",
+      "maxGuests": 12,
+      "publicBaseRates": {
+        "weekday": 15000,
+        "friday": 19000,
+        "saturday": 23000,
+        "sunday": 15000
+      }
+    },
+    {
+      "productUid": "482407985582",
+      "name": "Салмачи 4",
+      "tildaUrl": "https://domkazan116.ru/tproduct/482407985582-salmachi-4",
+      "maxGuests": 15,
+      "publicBaseRates": {
+        "weekday": 19000,
+        "friday": 25000,
+        "saturday": 29000,
+        "sunday": 19000
+      }
+    },
+    {
+      "productUid": "449282817762",
+      "name": "Салмачи 5",
+      "tildaUrl": "https://domkazan116.ru/tproduct/449282817762-salmachi-5",
+      "maxGuests": 20,
+      "publicBaseRates": {
+        "weekday": 12000,
+        "friday": 15000,
+        "saturday": 15000,
+        "sunday": 13000
+      }
+    },
+    {
+      "productUid": "886960047282",
+      "name": "Салмачи 6",
+      "tildaUrl": "https://domkazan116.ru/tproduct/886960047282-salmachi-6",
+      "maxGuests": 20,
+      "publicBaseRates": {
+        "weekday": 17000,
+        "friday": 22000,
+        "saturday": 22000,
+        "sunday": 19000
+      }
+    },
+    {
+      "productUid": "495458885352",
+      "name": "Салмачи 7",
+      "tildaUrl": "https://domkazan116.ru/tproduct/495458885352-salmachi-7",
+      "maxGuests": 25,
+      "publicBaseRates": {
+        "weekday": 16000,
+        "friday": 22000,
+        "saturday": 22000,
+        "sunday": 17000
+      }
+    },
+    {
+      "productUid": "592695562052",
+      "name": "Салмачи 8",
+      "tildaUrl": "https://domkazan116.ru/tproduct/592695562052-salmachi-8",
+      "maxGuests": 50,
+      "publicBaseRates": {
+        "weekday": 35000,
+        "friday": 45000,
+        "saturday": 45000,
+        "sunday": 40000
+      }
+    },
+    {
+      "productUid": "987677373262",
+      "name": "Салмачи 9",
+      "tildaUrl": "https://domkazan116.ru/tproduct/987677373262-salmachi-9",
+      "maxGuests": 50,
+      "publicBaseRates": {
+        "weekday": 35000,
+        "friday": 45000,
+        "saturday": 45000,
+        "sunday": 40000
+      }
+    },
+    {
+      "productUid": "575690020202",
+      "name": "Салмачи 10",
+      "tildaUrl": "https://domkazan116.ru/tproduct/575690020202-salmachi-10",
+      "maxGuests": 100,
+      "publicBaseRates": {
+        "weekday": 50000,
+        "friday": 70000,
+        "saturday": 70000,
+        "sunday": 55000
+      }
+    },
+    {
+      "productUid": "218338086082",
+      "name": "Куюки",
+      "tildaUrl": "https://domkazan116.ru/tproduct/218338086082-kuyuki",
+      "maxGuests": 20,
+      "publicBaseRates": {
+        "weekday": 12000,
+        "friday": 15000,
+        "saturday": 17000,
+        "sunday": 14000
+      }
+    },
+    {
+      "productUid": "420934320333",
+      "name": "Суконная Слобода 1",
+      "tildaUrl": "https://domkazan116.ru/tproduct/420934320333-sukonnaya-sloboda-1",
+      "maxGuests": 20,
+      "publicBaseRates": {
+        "weekday": 23000,
+        "friday": 28000,
+        "saturday": 38000,
+        "sunday": 25000
+      }
+    },
+    {
+      "productUid": "415848563473",
+      "name": "Суконная Слобода 2",
+      "tildaUrl": "https://domkazan116.ru/tproduct/415848563473-sukonnaya-sloboda-2",
+      "maxGuests": 16,
+      "publicBaseRates": {
+        "weekday": 21000,
+        "friday": 26000,
+        "saturday": 36000,
+        "sunday": 23000
+      }
+    },
+    {
+      "productUid": "757824833333",
+      "name": "Суконная Слобода 3",
+      "tildaUrl": "https://domkazan116.ru/tproduct/757824833333-sukonnaya-sloboda-3",
+      "maxGuests": 16,
+      "publicBaseRates": {
+        "weekday": 20000,
+        "friday": 25000,
+        "saturday": 35000,
+        "sunday": 22000
+      }
+    },
+    {
+      "productUid": "435306892832",
+      "name": "Северный 1",
+      "tildaUrl": "https://domkazan116.ru/tproduct/435306892832-severnii-1",
+      "maxGuests": 15,
+      "publicBaseRates": {
+        "weekday": 14000,
+        "friday": 20000,
+        "saturday": 21000,
+        "sunday": 14000
+      }
+    },
+    {
+      "productUid": "366754231662",
+      "name": "Северный 2",
+      "tildaUrl": "https://domkazan116.ru/tproduct/366754231662-severnii-2",
+      "maxGuests": 40,
+      "publicBaseRates": {
+        "weekday": 20000,
+        "friday": 25000,
+        "saturday": 30000,
+        "sunday": 20000
+      }
+    },
+    {
+      "productUid": "287415445312",
+      "name": "Северный 3",
+      "tildaUrl": "https://domkazan116.ru/tproduct/287415445312-severnii-3",
+      "maxGuests": 50,
+      "publicBaseRates": {
+        "weekday": 30000,
+        "friday": 40000,
+        "saturday": 40000,
+        "sunday": 35000
+      }
+    },
+    {
+      "productUid": "238943341872",
+      "name": "Левченко",
+      "tildaUrl": "https://domkazan116.ru/tproduct/238943341872-levchenko",
+      "maxGuests": 40,
+      "publicBaseRates": {
+        "weekday": 25000,
+        "friday": 30000,
+        "saturday": 35000,
+        "sunday": 28000
+      }
+    },
+    {
+      "productUid": "533796397522",
+      "name": "Барнхаус 1",
+      "tildaUrl": "https://domkazan116.ru/tproduct/533796397522-barnhaus-1",
+      "maxGuests": 20,
+      "publicBaseRates": {
+        "weekday": 19000,
+        "friday": 25000,
+        "saturday": 28000,
+        "sunday": 20000
+      }
+    },
+    {
+      "productUid": "225070254512",
+      "name": "Барнхаус 2",
+      "tildaUrl": "https://domkazan116.ru/tproduct/225070254512-barnhaus-2",
+      "maxGuests": 6,
+      "publicBaseRates": {
+        "weekday": 9000,
+        "friday": 11000,
+        "saturday": 11000,
+        "sunday": 9000
+      }
+    },
+    {
+      "productUid": "534968314492",
+      "name": "Барнхаус 3",
+      "tildaUrl": "https://domkazan116.ru/tproduct/534968314492-barnhaus-3",
+      "maxGuests": 4,
+      "publicBaseRates": {
+        "weekday": 8000,
+        "friday": 12000,
+        "saturday": 12000,
+        "sunday": 8000
+      }
+    },
+    {
+      "productUid": "259712110892",
+      "name": "А-фрейм",
+      "tildaUrl": "https://domkazan116.ru/tproduct/259712110892-a-freim",
+      "maxGuests": 4,
+      "publicBaseRates": {
+        "weekday": 7000,
+        "friday": 11000,
+        "saturday": 11000,
+        "sunday": 8000
+      }
+    },
+    {
+      "productUid": "354717687042",
+      "name": "Локомотив",
+      "tildaUrl": "https://domkazan116.ru/tproduct/354717687042-lokomotiv",
+      "maxGuests": 10,
+      "publicBaseRates": {
+        "weekday": 10000,
+        "friday": 15000,
+        "saturday": 15000,
+        "sunday": 10000
+      }
+    },
+    {
+      "productUid": "115739296222",
+      "name": "Губкина",
+      "tildaUrl": "https://domkazan116.ru/tproduct/115739296222-gubkina",
+      "maxGuests": 8,
+      "publicBaseRates": {
+        "weekday": 7000,
+        "friday": 10000,
+        "saturday": 10000,
+        "sunday": 7000
+      }
+    },
+    {
+      "productUid": "526819587082",
+      "name": "Чистое озеро",
+      "tildaUrl": "https://domkazan116.ru/tproduct/526819587082-chistoe-ozero",
+      "maxGuests": 15,
+      "publicBaseRates": {
+        "weekday": 11000,
+        "friday": 15000,
+        "saturday": 20000,
+        "sunday": 12000
+      }
+    }
+  ]
+}
