@@ -50,6 +50,7 @@ test('filters combine with date search, quotes survive in separate house URLs, e
   await flush();
   const widget = shadow.querySelector('.search > div').shadowRoot;
   assert.match(widget.querySelector('.message').textContent, /Свободных домов: 3/);
+  assert.equal(shadow.querySelector('.price small').textContent, 'за 2 ноч.');
   const houseLink = shadow.querySelector('.details-link');
   assert.match(houseLink.href, /house=555240345232&checkIn=2026-11-02&checkOut=2026-11-04&guests=2/);
   assert.equal(houseLink.target, '_blank');

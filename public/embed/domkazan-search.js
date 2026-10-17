@@ -79,7 +79,7 @@
   function hide(card) { card.element.style.setProperty("display", "none", "important"); }
 
   function mount({ root, apiUrl, requestUrl, privacyUrl, cards: explicitCards, getFilters,
-    initialValues = {}, getViewState, transformHouses, onResults, onInvalidate, testMode = false }) {
+    initialValues = {}, getViewState, transformHouses, onResults, onInvalidate, renderPrice, testMode = false }) {
     if (!root || !apiUrl) throw new Error("Укажите root и apiUrl для DomKazanCalendar.");
     if (root.closest("a,button")) throw new Error("Форма поиска должна находиться вне ссылки или кнопки.");
     instances.get(root)?.destroy();
@@ -283,7 +283,10 @@
           const house = available.get(card.slug);
           if (!house) { hide(card); continue; }
           show(card);
-          if (card.priceElement) card.priceElement.textContent = `${money(house.quote.total)} ₽ за ${house.quote.nights} ноч.`;
+          if (card.priceElement) {
+            if (renderPrice) renderPrice(card.priceElement, house);
+            else card.priceElement.textContent = `${money(house.quote.total)} ₽ за ${house.quote.nights} ноч.`;
+          }
           const action = document.createElement("button"); action.type = "button"; action.textContent = "Оставить заявку";
           action.setAttribute("aria-label", `Оставить заявку: ${house.name}`);
           // The action lives outside the card's links, including fully linked cards.

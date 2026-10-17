@@ -177,6 +177,9 @@
 
       widget = window.DomKazanCalendar.mount({ root: search, apiUrl: new URL('/api/availability', origin).href,
         privacyUrl: privacyUrl || new URL('/test-policy', origin).href, cards, initialValues: values, testMode,
+        renderPrice(target, house) {
+          target.replaceChildren(document.createTextNode(`${rub(house.quote.total)} ₽ `), text('small', `за ${house.quote.nights} ноч.`));
+        },
         getViewState: filterState,
         transformHouses(houses) {
           return houses.filter(house => {
