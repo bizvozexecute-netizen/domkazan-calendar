@@ -32,7 +32,7 @@ test("Tilda catalog, house page, price changes, occupancy and request use the sa
     await route.fulfill({ json: await response.json(), status: response.status() });
   });
   // Real browser, real quote/request endpoints; only the public content source is a fixture.
-  await context.route("**/catalog-fixture*", route => route.fulfill({ contentType: "text/html", body: `<!doctype html><html lang="ru"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0}</style><div id="catalog"></div><script src="/embed/domkazan-search.js"></script><script src="/embed/domkazan-catalog.js"></script><script>DomKazanCatalog.mount({root:document.getElementById('catalog'),apiOrigin:'${origin}',pagePath:'/catalog-fixture'});</script></html>` }));
+  await context.route("**/catalog-fixture*", route => route.fulfill({ contentType: "text/html", body: `<!doctype html><html lang="ru"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0}</style><div id="catalog"></div><script src="/embed/domkazan-search.js"></script><script src="/embed/domkazan-catalog.js"></script><script>DomKazanCatalog.mount({root:document.getElementById('catalog'),apiOrigin:'${origin}',privacyUrl:'https://example.invalid/privacy',pagePath:'/catalog-fixture'});</script></html>` }));
   const path = `/catalog-fixture?checkIn=${day(10)}&checkOut=${day(12)}&guests=3`;
   await page.goto(path);
   await expect(page.getByText("Найдено домов: 1", { exact: true })).toBeVisible();
@@ -51,7 +51,10 @@ test("Tilda catalog, house page, price changes, occupancy and request use the sa
   await page.screenshot({ path: testInfo.outputPath("house.png"), fullPage: true });
   await page.getByRole("button", { name: "Оставить заявку: Проверочный дом" }).click();
   await page.getByRole("checkbox", { name: /Согласен на обработку/ }).check();
+  const sent = page.waitForResponse(response => response.url() === `${origin}/api/requests`);
   await page.getByRole("button", { name: "Отправить заявку", exact: true }).click();
+  const sentResponse = await sent;
+  expect(sentResponse.status(), await sentResponse.text()).toBe(201);
   await expect(page.getByText(/Заявка .*Проверочный дом/)).toBeVisible();
   const booking = await db.bookingRequest.findFirstOrThrow({ where: { houseId: slug } });
   expect(booking.quotedTotal?.toString()).toBe("2900");

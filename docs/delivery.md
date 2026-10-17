@@ -77,7 +77,8 @@ Telegram-бот к стенду не подключён. Обычные конт
 3. Через админку импортировать объекты из Tilda. Заполнить тарифы, закрыть текущие брони,
    проверить цены и даты с владельцем. Сверка всегда предшествует включению дома в поиск.
 4. Рабочий T123 загружает `domkazan-search.js` и `domkazan-catalog.js` с рабочего API origin,
-   вызывает `DomKazanCatalog.mount({root, apiOrigin, pagePath, testMode:false})`.
+   вызывает `DomKazanCatalog.mount({root, apiOrigin, privacyUrl, pagePath, testMode:false})`.
+   `privacyUrl` должен точно совпадать с серверным `PRIVACY_POLICY_URL`.
    Включение и скрытие прежних блоков ограничить точными ID согласованной страницы/блока.
 5. До публикации проверить полный сценарий и реальную доставку согласованной заявки.
    Для Vercel обеспечить повторную доставку outbox планировщиком; Compose включает worker.

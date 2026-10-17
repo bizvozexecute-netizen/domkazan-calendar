@@ -29,7 +29,7 @@
     ...(product.beds ? [text('span', `${product.beds} спальных мест`)] : []),
   ]);
 
-  function mount({ root, apiOrigin, pagePath = window.location.pathname, testMode = true }) {
+  function mount({ root, apiOrigin, privacyUrl, pagePath = window.location.pathname, testMode = true }) {
     if (!root || !window.DomKazanCalendar) throw new Error('Модуль поиска не загружен.');
     const origin = new URL(apiOrigin);
     if (origin.protocol !== 'https:') throw new Error('Требуется HTTPS API.');
@@ -175,7 +175,7 @@
       }
 
       widget = window.DomKazanCalendar.mount({ root: search, apiUrl: new URL('/api/availability', origin).href,
-        privacyUrl: new URL('/test-policy', origin).href, cards, initialValues: values, testMode,
+        privacyUrl: privacyUrl || new URL('/test-policy', origin).href, cards, initialValues: values, testMode,
         getViewState: filterState,
         transformHouses(houses) {
           return houses.filter(house => {
