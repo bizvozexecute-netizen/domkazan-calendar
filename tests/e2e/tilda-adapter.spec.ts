@@ -27,7 +27,7 @@ test("dynamic Tilda-shaped catalog keeps keyboard actions separate from links", 
   await page.getByLabel("Выезд", { exact: true }).fill("2026-11-04");
   await page.getByRole("button", { name: "Показать свободные дома" }).click();
   await expect(page.locator('[data-product-uid="102"]')).toBeHidden();
-  await expect(page.locator('[data-product-uid="101"]')).toContainText("12000 ₽ за 2 ноч.");
+  await expect(page.locator('[data-product-uid="101"]')).toContainText(/12\s000 ₽ за 2 ноч\./);
   const action = page.getByRole("button", { name: "Оставить заявку: Тестовый дом А" });
   expect(await action.evaluate((button) => button.closest("a") === null)).toBe(true);
   await action.focus(); await page.keyboard.press("Enter");
