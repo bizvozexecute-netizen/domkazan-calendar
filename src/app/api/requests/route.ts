@@ -5,6 +5,7 @@ import { CustomerRequestError, validateCustomerRequest } from "@/lib/customer-re
 import { db } from "@/lib/db";
 import { deliverTelegramNotification } from "@/lib/telegram";
 import { appOrigin, clientIp, privacyPolicyUrl } from "@/lib/request-security";
+import { permittedPreviewRequest } from "@/lib/preview-request";
 
 export const runtime = "nodejs";
 
@@ -58,6 +59,9 @@ export async function POST(request: NextRequest) {
     const policy = privacyPolicyUrl();
     if (!policy) return NextResponse.json({ error: "Форма заявки пока не настроена." }, { status: 503, headers });
     const input = validateCustomerRequest(raw);
+    if (process.env.VERCEL_ENV === "preview" && !permittedPreviewRequest(input)) {
+      throw new CustomerRequestError(400, "На тестовом стенде укажите имя «Тестовый Гость» и номер +70000000000 без мессенджера.");
+    }
     if (new URL(input.privacyPolicyUrl).href !== policy) throw new CustomerRequestError(400, "Обновите форму и ознакомьтесь с действующей политикой обработки данных.");
     const result = await createCustomerRequest(input, clientIp(request.headers));
     if (result.created) {

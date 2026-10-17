@@ -12,4 +12,5 @@ function run(command: string, args: string[], env = process.env) {
 
 run("npm", ["run", "db:deploy"]);
 run("npm", ["run", "db:seed:test"], { ...process.env, ALLOW_TEST_SEED: "true" });
+run("npm", ["run", "db:seed:tilda:test"], { ...process.env, ALLOW_TEST_SEED: "true" });
 run("npm", ["run", "build"]);
