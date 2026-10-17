@@ -5,7 +5,8 @@
     :host { display:block; font:16px Arial,sans-serif; color:#20342b; }
     * { box-sizing:border-box; }
     form { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)) auto; gap:12px; align-items:end; }
-    .request-form { margin-top:20px; padding:16px; border:1px solid #b9c9bd; border-radius:10px; }
+    form > * { min-width:0; }
+    .request-form { grid-template-columns:repeat(2,minmax(0,1fr)); margin-top:20px; padding:16px; border:1px solid #b9c9bd; border-radius:10px; }
     .request-form[hidden], .contacts[hidden] { display:none; }
     .request-form label { font-weight:600; }
     .request-form textarea, .request-form select { width:100%; padding:12px; border:1px solid #b9c9bd; border-radius:8px; font:inherit; }
@@ -18,8 +19,15 @@
     input { width:100%; padding:12px; border:1px solid #b9c9bd; border-radius:8px; font:inherit; }
     button { padding:13px 20px; border:0; border-radius:8px; background:#176348; color:white; font:inherit; cursor:pointer; }
     button:disabled { opacity:.6; cursor:wait; }
-    .message { margin:12px 0 0; }
-    @media (max-width:760px) { form { grid-template-columns:1fr; } }
+    .message { margin:12px 0 0; line-height:1.5; }
+    @media (max-width:1100px) {
+      form:not(.request-form) { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      form:not(.request-form) > button { grid-column:1 / -1; }
+    }
+    @media (max-width:600px) {
+      form, form:not(.request-form) { grid-template-columns:1fr; }
+      form:not(.request-form) > button { grid-column:1; }
+    }
   `;
 
   function field(form, title, name, type) {
@@ -272,7 +280,7 @@
     const controller = { reset, invalidate: () => invalidate(), updateCards(nextCards) {
       // Tilda replaces cards after filters/pagination. Never retain an application
       // or a pending search tied to the previous catalog DOM.
-      invalidate();
+      invalidate(Boolean(successfulSearch || button.disabled));
       cards = collectCards(nextCards);
     }, destroy() {
       reset(); document.removeEventListener("input", filtersChanged); document.removeEventListener("change", filtersChanged);

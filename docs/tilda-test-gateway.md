@@ -15,7 +15,7 @@ app and admin remain behind Vercel Authentication in project
 Sources rule permits only Production tokens of the gateway project to reach
 Preview deployments of the application. The gateway forwards a short-lived
 Vercel OIDC token from its server-side function, never to the browser.
-The reviewed gateway deployment is `dpl_4y1pRVADN2ahiVvu3CsJrKKnxfBA`.
+The reviewed gateway deployment is `dpl_BEphRvehvXp2Smwzwq7sNVuA2G2L`.
 
 The gateway serves only:
 
@@ -60,6 +60,12 @@ gateway API smoke test created `cmvc77c5h000007l6j5v5ie0f`. The gateway's
 admin and internal paths returned 404; `/test-policy` and both scripts
 returned 200. The original homepage and test page both returned 200, with
 integration code only on the test page.
+
+After visitor feedback, the test page's search block was given a contained,
+responsive layout and a styled test notice. The gateway widget now leaves its
+initial status empty while Tilda first loads its cards. The published page was
+rechecked at a narrow viewport with the same 20–22 October, two-guest search:
+62 results, no clipped submit button, and 63 Tilda catalog slots.
 
 The 63 homes reuse public titles, capacities and base nightly tariffs. No
 live occupancy or client records were imported. Extra guest charges, service

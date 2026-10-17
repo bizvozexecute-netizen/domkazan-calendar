@@ -57,6 +57,11 @@ const script = `(async () => {
 })();`;
 new Script(script);
 const snippet = `<!-- DomKazan Calendar: only test page 311744409. Public gateway serves synthetic data only. -->
+<style>
+  #rec4862390501 { background:#f4f7f4; padding:28px 16px 32px; }
+  #domkazan-test-search, #domkazan-test-status { max-width:1180px; margin-left:auto; margin-right:auto; }
+  #domkazan-test-status { margin-top:12px; padding:12px 16px; border-left:4px solid #176348; border-radius:6px; background:#e7f1e9; color:#315546; font:14px/1.5 Arial,sans-serif; }
+</style>
 <div id="domkazan-test-search"></div>
 <p id="domkazan-test-status" role="status">Тестовый календарь: занятость и суммы демонстрационные, бронирование не подтверждают. Для заявки используйте только «Тестовый Гость» и +70000000000.</p>
 <script>
