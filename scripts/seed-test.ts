@@ -1,10 +1,10 @@
 import "dotenv/config";
 import { db } from "../src/lib/db";
 import { todayInMoscow } from "../src/lib/dates";
+import { dedicatedTestDatabase } from "../src/lib/test-catalog";
 
-const database = new URL(process.env.DATABASE_URL ?? "").pathname.slice(1);
-if (!database.endsWith("_test") || process.env.ALLOW_TEST_SEED !== "true") {
-  throw new Error("Seed is allowed only for a dedicated *_test database with ALLOW_TEST_SEED=true.");
+if (!dedicatedTestDatabase() || process.env.ALLOW_TEST_SEED !== "true") {
+  throw new Error("Seed is allowed only for an identified test database with ALLOW_TEST_SEED=true.");
 }
 const names = ["Сосновый свет", "Тихий ручей", "Лунная поляна", "Берёзовый остров", "Лесной маяк", "Кедровый ветер", "Облачный берег", "Звёздная терраса", "Дом за радугой"];
 const districts = ["Тестовый север", "Тестовый юг", "Тестовый восток"];
