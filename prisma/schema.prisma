@@ -13,6 +13,9 @@ model House {
   name            String
   tildaUrl        String?
   maxGuests       Int
+  includedGuests  Int?
+  extraGuestPrice Decimal          @default(0) @db.Decimal(10, 2)
+  serviceFee      Decimal          @default(0) @db.Decimal(10, 2)
   district        String?
   bedrooms        Int?
   bathrooms       Int?

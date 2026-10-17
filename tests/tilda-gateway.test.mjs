@@ -11,7 +11,7 @@ const query = 'checkIn=2026-10-20&checkOut=2026-10-22&guests=2';
 const tildaHouse = { id: 'test-tilda-id', slug: 'tilda-259712110892', quote: { total: '14000.00' } };
 
 test('public gateway serves the reviewed adapter and widget unchanged', () => {
-  for (const name of ['domkazan-search.js', 'domkazan-tilda.js']) {
+  for (const name of ['domkazan-search.js', 'domkazan-tilda.js', 'domkazan-catalog.js']) {
     assert.equal(readFileSync(new URL(`../ops/tilda-test-gateway/public/embed/${name}`, import.meta.url), 'utf8'),
       readFileSync(new URL(`../public/embed/${name}`, import.meta.url), 'utf8'));
   }

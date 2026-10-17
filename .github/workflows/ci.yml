@@ -54,6 +54,8 @@ jobs:
             test-results/**/widget.png
             test-results/**/admin-calendar.png
             test-results/**/tilda-adapter.png
+            test-results/**/catalog.png
+            test-results/**/house.png
           if-no-files-found: ignore
           retention-days: 7
   containers:

@@ -37,6 +37,7 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
       complete: true } : null;
   });
   const [price, setPrice] = useState("");
+  const [houseSearch, setHouseSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -121,6 +122,7 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
   }
 
   const selectedHouse = board?.houses.find((house) => house.id === selection?.houseId);
+  const visibleHouses = board?.houses.filter(house => house.name.toLocaleLowerCase("ru").includes(houseSearch.trim().toLocaleLowerCase("ru"))) ?? [];
   const buttonStyle = "rounded-lg border px-3 py-2 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800";
   return <section className="space-y-6">
     <div className="flex flex-wrap items-end justify-between gap-4">
@@ -156,12 +158,13 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
     </div>
 
     <div ref={scrollRegion} className="max-h-[70vh] overflow-auto rounded-xl border bg-white shadow-sm" aria-busy={loading}>
+      <label className="sticky left-0 block max-w-sm p-4 text-sm font-medium">Найти дом в шахматке<input type="search" placeholder="Название дома" value={houseSearch} onChange={event => setHouseSearch(event.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2" /></label>
       {loading && <p className="p-4">Загружаем календарь…</p>}
       {!loading && board?.houses.length === 0 && <p className="p-6">Домов пока нет. <Link className="underline" href="/admin/houses/new">Добавьте первый дом</Link>.</p>}
       {!loading && board && board.houses.length > 0 && <table className="border-separate border-spacing-0 text-left text-sm">
         <caption className="sr-only">Занятость и цены домов за {month}</caption>
         <thead><tr><th scope="col" className="sticky top-0 left-0 z-30 min-w-40 border-b border-r bg-slate-100 p-3 sm:min-w-56">Дом</th>{board.dates.map((day) => <th scope="col" key={day} data-calendar-date={day} className="sticky top-0 z-20 min-w-24 border-b border-r bg-slate-100 p-2 text-center font-medium"><span className="block">{day.slice(8)}</span><span className="text-slate-600">{weekdays[new Date(`${day}T00:00:00Z`).getUTCDay()]}</span></th>)}</tr></thead>
-        <tbody>{board.houses.map((house) => <tr key={house.id}><th scope="row" className="sticky left-0 z-10 border-b border-r bg-white p-3 align-middle"><Link className="font-semibold text-emerald-900 underline" href={`/admin/houses/${house.id}`}>{house.name}</Link><span className="block text-xs font-normal text-slate-500">{house.isActive ? house.slug : "Отключён из поиска"}</span></th>{house.cells.map((cell) => {
+        <tbody>{visibleHouses.map((house) => <tr key={house.id}><th scope="row" className="sticky left-0 z-10 border-b border-r bg-white p-3 align-middle"><Link className="font-semibold text-emerald-900 underline" href={`/admin/houses/${house.id}`}>{house.name}</Link><span className="block text-xs font-normal text-slate-500">{house.isActive ? house.slug : "Отключён из поиска"}</span></th>{house.cells.map((cell) => {
           const selected = selection?.houseId === house.id && cell.date >= selection.start && cell.date <= selection.end;
           const status = cell.status === "booked" ? "Заявка подтверждена" : cell.status === "closed" ? "Закрыто" : "Свободно";
           return <td key={cell.date} className="border-b border-r p-1"><button type="button" aria-pressed={selected} aria-label={`${house.name}, ${cell.date}, ${status}, ${cell.price ? `${cell.price} рублей` : "цена не задана"}${cell.source === "manual" ? ", ручная цена" : ""}`} onClick={() => selectCell(house.id, cell.date)} className={`min-h-16 w-full rounded-lg p-2 text-center focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-emerald-900 ${selected ? "ring-2 ring-emerald-900" : ""} ${cell.status === "booked" ? "bg-rose-100 text-rose-950" : cell.status === "closed" ? "bg-amber-100 text-amber-950" : "bg-emerald-50 text-emerald-950"}`}><span className="block font-semibold">{cell.price ? `${Number(cell.price).toLocaleString("ru-RU")} ₽` : "—"}</span><span className="block text-xs">{cell.status === "booked" ? "Занято" : cell.status === "closed" ? "Закрыто" : cell.source === "manual" ? "◇ ручная" : "Свободно"}</span></button></td>;
