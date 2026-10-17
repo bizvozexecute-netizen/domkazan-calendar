@@ -29,6 +29,13 @@ endpoint and the exact test-page origin are approved and verified. CORS by
 origin alone cannot distinguish the test page from another page on the same
 Tilda domain. The working Tilda page and production database remain untouched.
 
+Generate the disabled test-page T123 code with
+`node scripts/render-tilda-test-snippet.mjs https://<verified-preview-host>`.
+It writes `integration/tilda-311744409-t123.html`, pins the 63 UID-to-test-slug
+rows, and checks JavaScript syntax. The current code saved in the test page's
+T123 matched that local file by length and FNV-1a 32 after saving. The URL is
+deployment-specific; regenerate only after a new verified Preview deployment.
+
 In Vercel Preview, `/api/requests` accepts only `Тестовый Гость` with
 `+70000000000` and no messenger contact. The test policy explains this. This
 guard prevents test UI mistakes from storing real contact details; it does not
