@@ -2,6 +2,7 @@
 (() => {
   const labels = { pool: 'Бассейн', sauna: 'Баня / сауна', billiards: 'Бильярд', jacuzzi: 'Джакузи', tub: 'Чан / фурако', bbq: 'Мангал', wifi: 'Wi-Fi' };
   const rub = value => new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format(Number(value));
+  const plural = (value, forms) => forms[value % 100 >= 11 && value % 100 <= 14 ? 2 : value % 10 === 1 ? 0 : value % 10 >= 2 && value % 10 <= 4 ? 1 : 2];
   const css = `
     :host{display:block;--dk-accent:#218df1;color:#192a3a;font:16px/1.5 Arial,sans-serif;background:#f6f8fb}
     *{box-sizing:border-box} [hidden]{display:none!important} a{color:inherit;text-decoration:none} button,input,select{font:inherit} button,a,input,select,summary{-webkit-tap-highlight-color:transparent} button,a{touch-action:manipulation} button{cursor:pointer} button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid #9cd0ff;outline-offset:3px}
@@ -25,8 +26,8 @@
   const amenities = product => el('ul', { class: 'amenities' }, product.amenities.map(key => text('li', labels[key] || key)));
   const facts = product => el('div', { class: 'facts' }, [
     ...(product.maxGuests ? [text('span', `До ${product.maxGuests} гостей`)] : [text('span', 'Вместимость — уточните у владельца')]),
-    ...(product.bedrooms ? [text('span', `${product.bedrooms} спален`)] : []),
-    ...(product.beds ? [text('span', `${product.beds} спальных мест`)] : []),
+    ...(product.bedrooms ? [text('span', `${product.bedrooms} ${plural(product.bedrooms, ['спальня', 'спальни', 'спален'])}`)] : []),
+    ...(product.beds ? [text('span', `${product.beds} ${plural(product.beds, ['спальное место', 'спальных места', 'спальных мест'])}`)] : []),
   ]);
 
   function mount({ root, apiOrigin, privacyUrl, pagePath = window.location.pathname, testMode = true }) {
@@ -145,7 +146,7 @@
           widget.invalidate();
         });
         chips.append(reset); filters.append(fields, chips); shell.append(filters);
-        counter = text('span', `${products.length} домов в каталоге`, 'count');
+        counter = text('span', `${products.length} ${plural(products.length, ['дом', 'дома', 'домов'])} в каталоге`, 'count');
         const views = el('div', { class: 'view', 'aria-label': 'Вид каталога' });
         for (const [value, title] of [['list', 'Списком'], ['grid', 'Плиткой']]) {
           const button = el('button', { type: 'button', text: title, 'aria-pressed': value === 'list' ? 'true' : 'false' });
@@ -182,13 +183,13 @@
             const product = bySlug.get(house.slug);
             return product && (!selected || selected.slug === house.slug) &&
               product.name.toLocaleLowerCase('ru').includes(filter.query.trim().toLocaleLowerCase('ru')) &&
-              (!filter.bedrooms || (product.bedrooms || 0) >= Number(filter.bedrooms)) &&
+              (!filter.bedrooms || (house.bedrooms ?? product.bedrooms ?? 0) >= Number(filter.bedrooms)) &&
               (!filter.budget || Number(house.quote.total) <= Number(filter.budget)) &&
-              filter.amenities.every(key => product.amenities.includes(key));
+              filter.amenities.every(key => (house.amenities?.length ? house.amenities : product.amenities).includes(key));
           });
         },
         onInvalidate(currentValues) {
-          if (counter) counter.textContent = `${products.length} домов в каталоге`;
+          if (counter) counter.textContent = `${products.length} ${plural(products.length, ['дом', 'дома', 'домов'])} в каталоге`;
           if (empty) empty.hidden = true;
           if (breakdown) breakdown.textContent = '';
           for (const { product, nodes } of cardLinks) for (const node of nodes) node.href = houseUrl(product.productUid, currentValues);

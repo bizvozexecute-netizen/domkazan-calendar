@@ -2744,7 +2744,7 @@
         "bbq"
       ],
       "maxGuests": 15,
-      "bedrooms": 10,
+      "bedrooms": null,
       "beds": 10,
       "publicBaseRates": {
         "weekday": 11000,

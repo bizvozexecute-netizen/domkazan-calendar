@@ -22,7 +22,7 @@
     button:hover:not(:disabled) { filter:brightness(.92); transform:translateY(-1px); }
     button:disabled { opacity:.6; cursor:wait; }
     .message { margin:16px 0 0; color:#345747; font-size:14px; font-weight:700; line-height:1.5; }
-    @media (max-width:1100px) {
+    @media (max-width:900px) {
       form:not(.request-form) { grid-template-columns:repeat(2,minmax(0,1fr)); }
       form:not(.request-form) > button { grid-column:1 / -1; }
     }
@@ -66,6 +66,7 @@
         originalDisplay: element.style.getPropertyValue("display"),
         originalPriority: element.style.getPropertyPriority("display"),
         originalPrice: priceElement ? priceElement.textContent : null,
+        originalPriceNodes: priceElement ? [...priceElement.childNodes].map(node => node.cloneNode(true)) : [],
       };
     });
   }
@@ -239,7 +240,7 @@
       selectedHouse = null; submissionKey = null;
       for (const card of cards) {
         show(card);
-        if (card.priceElement) card.priceElement.textContent = card.originalPrice;
+        if (card.priceElement) card.priceElement.replaceChildren(...card.originalPriceNodes.map(node => node.cloneNode(true)));
       }
       message.textContent = showMessage ? "Параметры изменились. Повторите поиск." : "";
       onInvalidate?.(Object.fromEntries(new FormData(form)));

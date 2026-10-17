@@ -70,8 +70,8 @@ test("Tilda catalog, house page, price changes, occupancy and request use the sa
   await page.getByLabel("С даты", { exact: true }).fill(day(10));
   await page.getByLabel("По дату включительно", { exact: true }).fill(day(11));
   await page.getByLabel("Ручная цена, ₽", { exact: true }).fill("2000");
-  page.once("dialog", dialog => dialog.accept());
   await page.getByRole("button", { name: "Изменить стоимость", exact: true }).click();
+  await page.getByRole("button", { name: "Подтвердить изменение", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("Изменения сохранены");
   await page.goto(path);
   await expect(page.locator(".price")).toHaveText(/4\s900 ₽ за 2 ноч\./);
@@ -79,8 +79,8 @@ test("Tilda catalog, house page, price changes, occupancy and request use the sa
   await page.getByLabel("Дом", { exact: true }).selectOption(slug);
   await page.getByLabel("С даты", { exact: true }).fill(day(10));
   await page.getByLabel("По дату включительно", { exact: true }).fill(day(11));
-  page.once("dialog", dialog => dialog.accept());
   await page.getByRole("button", { name: "Закрыть даты", exact: true }).click();
+  await page.getByRole("button", { name: "Подтвердить изменение", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("Изменения сохранены");
   await page.goto(path);
   await expect(page.getByText("Найдено домов: 0", { exact: true })).toBeVisible();

@@ -41,6 +41,7 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [pending, setPending] = useState<{ action: Action; houseId: string; revision: number; start: string; end: string; price: string; label: string } | null>(null);
   const scrollRegion = useRef<HTMLDivElement>(null);
   const scrollToToday = useRef(false);
 
@@ -96,21 +97,28 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
     setMessage("");
   }
 
-  async function apply(action: Action) {
+  function apply(action: Action) {
     if (!selection || !board) return;
     if (!selection.start || !selection.end || selection.start > selection.end) { setMessage("Проверьте выбранные даты."); return; }
     if (action === "setPrice" && !/^\d{1,8}(?:\.\d{1,2})?$/.test(price)) { setMessage("Укажите цену в рублях."); return; }
     const house = board.houses.find((item) => item.id === selection.houseId);
     if (!house) { setMessage("Дом не найден. Обновите календарь."); return; }
     const labels: Record<Action, string> = { close: "Закрыть", open: "Открыть", setPrice: "Изменить цену", clearPrice: "Убрать ручную цену" };
-    if (!window.confirm(`${labels[action]} даты ${selection.start} — ${selection.end} для дома «${house.name}»?`)) return;
+    setPending({ action, houseId: house.id, revision: house.revision, start: selection.start,
+      end: nextDay(selection.end), price, label: `${labels[action]} даты ${selection.start} — ${selection.end} для дома «${house.name}»?` });
+  }
+
+  async function confirmAction() {
+    if (!pending) return;
+    const input = pending;
+    setPending(null);
     setBusy(true);
     setMessage("");
     let saved = false;
     try {
       await responseJson(await fetch("/api/admin/calendar", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, houseId: house.id, revision: house.revision,
-          start: selection.start, end: nextDay(selection.end), ...(action === "setPrice" && { price }) }) }));
+        body: JSON.stringify({ action: input.action, houseId: input.houseId, revision: input.revision,
+          start: input.start, end: input.end, ...(input.action === "setPrice" && { price: input.price }) }) }));
       saved = true;
       await load(month);
       setMessage("Изменения сохранены. Публичный поиск использует обновлённые данные.");
@@ -155,6 +163,10 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
       </div>
       <p className="mt-3 text-sm text-slate-600">«Открыть» снимает ручное закрытие. Подтверждённые заявки по-прежнему занимают даты.</p>
       <p className="mt-2 min-h-6 text-sm font-medium" role="status" aria-live="polite">{busy ? "Сохраняем…" : message}</p>
+      {pending && <div role="alertdialog" aria-labelledby="calendar-confirm-label" aria-modal="false" className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <p id="calendar-confirm-label" className="font-medium">{pending.label}</p>
+        <div className="mt-3 flex gap-3"><button type="button" onClick={confirmAction} className="rounded-lg bg-emerald-800 px-4 py-2 text-white">Подтвердить изменение</button><button type="button" onClick={() => setPending(null)} className="rounded-lg border bg-white px-4 py-2">Отмена</button></div>
+      </div>}
     </div>
 
     <div ref={scrollRegion} className="max-h-[70vh] overflow-auto rounded-xl border bg-white shadow-sm" aria-busy={loading}>

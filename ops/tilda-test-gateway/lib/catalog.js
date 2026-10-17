@@ -44,7 +44,7 @@ export function publicCatalog(data) {
     return { productUid: uid, slug: `tilda-${uid}`, name: plain(product.title).slice(0, 120),
       description, facts, images, amenities,
       maxGuests: Number(facts.match(/вместимост[ьи]?\s*(?:до\s*)?(\d+)\s*гост/i)?.[1]) || null,
-      bedrooms: Number(facts.match(/(\d+)\s*спал(?:ьн|ен)/i)?.[1]) || null,
+      bedrooms: Number(facts.match(/(\d+)\s*(?:спальня|спальни|спален)(?![а-яё])/i)?.[1]) || null,
       beds: Number(facts.match(/(\d+)\s*спальн[ыо][хе]\s*мест/i)?.[1]) || null,
       publicBaseRates: rates,
       includedGuests: supplement ? Number(supplement[1]) : null,

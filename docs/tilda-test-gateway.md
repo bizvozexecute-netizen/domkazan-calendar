@@ -1,5 +1,21 @@
 # Public gateway for the Tilda test page
 
+## Updated catalog, 17 October 2026
+
+The test page now uses `domkazan-catalog.js` and `/api/catalog`, which serves sanitized
+public Tilda descriptions, photos and features with a one-minute source cache.
+It never forwards `product.text` or the legacy booking URLs. House links use the same
+Tilda test page with `?house=<Product UID>` and carry dates/guest count to a full
+house view instead of opening the shared Tilda popup. List/grid, amenity/bedroom/name/
+budget filters and price sorting run with the database availability result.
+
+The original T778 is hidden only after the new catalog reports ready. On load failure
+the original page remains visible. This update is confined to page `311744409`.
+The test gateway still accepts only fictional requests and has no administrative route.
+See [delivery.md](delivery.md) for the owner walkthrough and go-live prerequisites.
+
+The historical notes below describe the original T778 adapter deployment.
+
 As verified on 17 October 2026, only Tilda page `311744409` is published for
 this integration at `https://domkazan116.ru/calendar-test-311744409`. Its
 HomeReserve T123 is disabled on that page, its T778 contains 63 current

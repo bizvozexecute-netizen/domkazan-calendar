@@ -20,6 +20,7 @@ test('catalog strips markup and private booking links; images stay on Tilda CDN'
   assert.deepEqual(result.products[0].images, ['https://static.tildacdn.com/test.jpg']);
   assert.doesNotMatch(JSON.stringify(result), /homereserve|javascript|evil\.invalid|<b>/);
   assert.throws(() => publicCatalog({ total: 2, products: [] }), /Incomplete/);
+  assert.equal(publicCatalog({ total: 1, products: [{ uid: '111111111111', title: 'Дом', descr: '10 спальных мест' }] }).products[0].bedrooms, null);
 });
 
 test('public detail snapshot covers the existing homes without customer data or old booking HTML', () => {
@@ -54,6 +55,7 @@ test('filters combine with date search, quotes survive in separate house URLs, e
   assert.equal(houseLink.target, '_blank');
   const pool = shadow.querySelector('input[value="pool"]');
   pool.checked = true; pool.dispatchEvent(new win.Event('change', { bubbles: true }));
+  assert.ok(shadow.querySelector('.price small'), 'reset preserves the starting price caption and its formatting');
   assert.equal(widget.querySelector('[name="checkIn"]').value, '2026-11-02');
   widget.querySelector('form').dispatchEvent(new win.Event('submit', { cancelable: true }));
   await flush();
