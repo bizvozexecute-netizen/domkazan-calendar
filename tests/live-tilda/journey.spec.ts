@@ -1,12 +1,24 @@
 import {test,expect} from '@playwright/test';
+import {readFile} from 'node:fs/promises';
 import {selectStay} from '../e2e/stay-helper';
 const path='/calendar-test-311744409';
 const day=(offset:number)=>new Date(Date.now()+offset*86400000).toISOString().slice(0,10);
+
+// Opt-in verification of unshipped code inside the existing test document.
+// The interception affects this browser only; it never writes or publishes Tilda.
+test.beforeEach(async({context})=>{
+  if(process.env.LIVE_TILDA_LOCAL_WIDGET==='true'){
+    for(const name of ['domkazan-search.js','domkazan-catalog.js']){
+      await context.route(`https://domkazan-calendar-tilda-test-gatewa.vercel.app/embed/${name}*`,async route=>route.fulfill({contentType:'application/javascript',body:await readFile(`public/embed/${name}`,'utf8')}));
+    }
+  }
+});
 
 test('published TEST Tilda: search, detail, actual photo, safe request and return',async({page},testInfo)=>{
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   let documents=0;page.on('request',request=>{if(request.isNavigationRequest()&&request.frame()===page.mainFrame()&&new URL(request.url()).pathname===path)documents++;});
   await page.goto(path);await expect(page.locator('.cards article').first()).toBeVisible();
+  if(process.env.LIVE_TILDA_LOCAL_WIDGET==='true')await expect(page.getByRole('heading',{name:'Каталог загородных домов',level:1})).toBeVisible();
   const timeOrigin=await page.evaluate(()=>{
     const state={flashes:0};Object.assign(window,{domkazanHeroCheck:state});
     const check=()=>{const records=document.querySelector('#allrecords');if(records?.classList.contains('dkcal-ready')){for(const node of records.children){if(node.id!=='rec4862390501'&&node.classList.contains('r')&&node.getBoundingClientRect().height>0&&getComputedStyle(node).display!=='none'){state.flashes++;break;}}}else state.flashes++;requestAnimationFrame(check);};
@@ -21,12 +33,14 @@ test('published TEST Tilda: search, detail, actual photo, safe request and retur
   const totals=await cards.locator('.price').allTextContents();
   const prices=totals.map(value=>Number(value.split('₽')[0].replace(/[^\d,]/g,'').replace(',','.')));
   expect(prices).toEqual([...prices].sort((a,b)=>a-b));
+  if(process.env.LIVE_TILDA_LOCAL_WIDGET==='true')for(const cover of await cards.locator('.cover').all().then(items=>items.slice(0,3)))await expect(cover).toHaveClass(/has-photo/,{timeout:30000});
   await page.screenshot({path:testInfo.outputPath('real-catalog.png')});
   const card=cards.first();const uid=(await card.getAttribute('data-domkazan-house'))!.replace('tilda-','');
   await card.getByRole('link',{name:/Подробнее:/}).scrollIntoViewIfNeeded();const catalogY=await page.evaluate(()=>scrollY);
   await card.getByRole('link',{name:/Подробнее:/}).click();await expect(page).toHaveURL(new RegExp(`house=${uid}`));
   expect(await page.evaluate(()=>performance.timeOrigin)).toBe(timeOrigin);
-  await expect(page.getByText('Дом свободен. Стоимость рассчитана сервером.',{exact:true})).toBeVisible({timeout:20000});
+  await expect(page.getByText(/^(?:Дом свободен на выбранные даты\.|Дом свободен\. Стоимость рассчитана сервером\.)$/)).toBeVisible({timeout:20000});
+  if(process.env.LIVE_TILDA_LOCAL_WIDGET==='true')await expect(page.getByText('Дом свободен на выбранные даты.',{exact:true})).toBeVisible();
   const photo=page.locator('.gallery .photo-button img');await expect(photo).toHaveClass('loaded',{timeout:30000});
   expect(await photo.evaluate((img:HTMLImageElement)=>img.naturalWidth)).toBeGreaterThan(0);
   await page.getByRole('button',{name:'Следующее фото',exact:true}).click();await expect(photo).toHaveClass('loaded',{timeout:30000});

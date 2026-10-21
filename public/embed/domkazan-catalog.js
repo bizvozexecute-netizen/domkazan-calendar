@@ -21,6 +21,11 @@
     .contacts a{white-space:nowrap}
     .booking .search{border:1px solid var(--dk-line);border-radius:20px;padding:24px;box-shadow:0 8px 30px #243f6208}
     @media(max-width:760px){.booking .search{padding:20px;border-radius:16px}}
+    .cover img{position:absolute;inset:0;object-fit:cover;opacity:0}.cover.has-photo img{opacity:1}.cover-status{position:absolute;inset:0;display:grid;place-content:center;padding:24px;text-align:center;color:var(--dk-muted);font-size:13px;background:linear-gradient(135deg,#e9eff5,#f5f7fa)}
+    .cover .photo-count{z-index:1}.intro .eyebrow{margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dk-accent)}
+    .house-copy h2{margin-bottom:16px}.copy-section{margin:26px 0}.house-copy h3{font-size:16px;line-height:1.4;letter-spacing:-.2px;margin:0 0 12px;color:var(--dk-ink)}.house-copy ul:not(.amenities){list-style:none;padding:0;margin:0;display:grid;gap:10px}.house-copy ul:not(.amenities)>li{position:relative;padding-left:17px;color:#42576e;line-height:1.7;overflow-wrap:anywhere}.house-copy ul:not(.amenities)>li::before{content:'';position:absolute;left:0;top:.72em;width:5px;height:5px;border-radius:50%;background:#8ba7c6}.house-copy .spaces ul{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 24px}.house-copy .copy-note{font-size:12px;line-height:1.7;color:var(--dk-muted);margin:0 0 16px}.extra-conditions{margin:24px 0;padding:18px 0;border-top:1px solid var(--dk-line);border-bottom:1px solid var(--dk-line)}.extra-conditions summary{font-weight:650;font-size:15px;cursor:pointer;min-height:44px;display:list-item;align-content:center;margin-left:18px;padding-right:10px}.extra-conditions[open] summary{margin-bottom:12px}.extra-conditions li{font-size:13px}.booking-explainer{padding:20px;border-radius:12px;background:#f4f7fb;margin:26px 0 0}.booking-explainer p{font-size:13px;line-height:1.75}.booking-explainer h3{margin-bottom:8px}.price-placeholder{font-size:16px!important;font-weight:600!important;letter-spacing:0!important;line-height:1.5!important}.quote-lines{display:grid;gap:8px;margin:0;padding:0}.quote-lines>div{display:flex;justify-content:space-between;gap:16px;font-size:13px}.quote-lines dt{color:var(--dk-muted)}.quote-lines dd{margin:0;white-space:nowrap;color:var(--dk-ink);font-variant-numeric:tabular-nums}.breakdown .quote-note{margin:12px 0 0;font-size:12px;line-height:1.7}.quote-label{color:var(--dk-muted);font-size:12px;margin:0 0 8px}.booking .search{box-shadow:0 12px 35px #243f620a}.price-area .price-placeholder{max-width:220px}.house-copy .contacts{margin-top:26px}.house-copy .contact-note{overflow-wrap:anywhere}
+    @media(min-width:1051px){.booking{position:sticky;top:24px}}
+    @media(max-width:760px){.cover img{object-fit:cover}.house-copy .spaces ul{grid-template-columns:1fr}.copy-section{margin:24px 0}.booking-explainer{padding:16px}.house-copy h3{font-size:16px}.intro .eyebrow{font-size:10px}.quote-lines>div{font-size:12px}}
   `;
 
   function el(tag, attrs = {}, children = []) {
@@ -53,7 +58,58 @@
   ]);
   const amenities = product => el('ul',{class:'amenities','aria-label':'Удобства дома'},Object.entries(searchLabels).filter(([key])=>product.amenities?.includes(key)).map(([key,label])=>el('li',{},[icon(key),document.createTextNode(label)])));
   function excerptFor(product) {
-    return (product.facts || '').split('\n').map(line=>line.trim()).filter(line=>line && !/вместимость|спальн|спальных мест/i.test(line)).slice(0,3).join(' · ');
+    return descriptionGroups(product).spaces.slice(0, 2).join(' · ');
+  }
+
+  // Presentation only: Tilda remains the source. Hide only complete, recognisable
+  // nightly tariff lines; never discard mixed prose, restrictions or extra fees.
+  function descriptionGroups(product) {
+    const groups = { spaces: [], rules: [], extras: [] };
+    for (const line of (product.description || product.facts || '').split('\n').map(value => value.trim()).filter(Boolean)) {
+      if (/^[—–\-\s]+$/.test(line)) continue;
+      if (/^(?:в\s+)?(?:будни|пятница|суббота|воскресенье|выходные)\s*[-–—:]?\s*\d[\d\s.,]*(?:₽|руб(?:\.|лей)?|р\.?)\s*$/iu.test(line)) continue;
+      // These counts already have dedicated, labelled facts above the gallery.
+      if (/^вместимость\s*до\s*\d+\s*гостей\s*$/i.test(line) && product.maxGuests) continue;
+      if (/^\d+\s*(?:спальня|спальни|спален),?\s*\d+\s*спальных\s*мест\s*$/i.test(line) && product.bedrooms && product.beds) continue;
+      if (/₽|руб|\d\s*р(?:[/.\s]|$)|цен[аы]|стоимость|сбор|оплачива|доплат/i.test(line)) groups.extras.push(line);
+      else if (/возраст|не принима|запре|нельзя|залог|заезд|выезд|тиши|животн|курени|предоплат/i.test(line)) groups.rules.push(line);
+      else groups.spaces.push(line);
+    }
+    return groups;
+  }
+
+  function houseDescription(product) {
+    const groups = descriptionGroups(product);
+    const info = el('div', { class: 'house-copy' }, [text('h2', 'О доме'), amenities(product)]);
+    function section(title, lines, className) {
+      if (!lines.length) return;
+      info.append(el('section', { class: `copy-section ${className}` }, [text('h3', title),
+        el('ul', {}, lines.map(line => text('li', line)))]));
+    }
+    section('Пространство и удобства', groups.spaces, 'spaces');
+    section('Правила проживания', groups.rules, 'rules');
+    if (groups.extras.length) {
+      info.append(el('details', { class: 'extra-conditions' }, [text('summary', 'Доплаты и условия владельца'),
+        text('p', 'Справочные условия из описания дома. Актуальная стоимость проживания — в расчёте по датам. Дополнительные услуги и окончательные условия согласуйте с владельцем.', 'copy-note'),
+        el('ul', {}, groups.extras.map(line => text('li', line)))]));
+    }
+    info.append(el('div', { class: 'booking-explainer' }, [text('h3', 'Как забронировать'),
+      text('p', 'Выберите даты и гостей, проверьте стоимость и оставьте заявку. Владелец уточнит условия, оплату и подтвердит бронирование. Отправка заявки не закрепляет даты за вами.')]));
+    return info;
+  }
+
+  function mountCover(cover, product, index) {
+    const status = text('span', 'Загружаем фото…', 'cover-status');
+    status.setAttribute('aria-hidden', 'true'); cover.append(status);
+    if (!product.images.length) { status.textContent = 'Фото скоро появятся'; return; }
+    const image = el('img', { alt: product.name, loading: index < 6 ? 'eager' : 'lazy', decoding: 'async', width: '600', height: '400' });
+    let attempt = 0;
+    image.addEventListener('load', async () => { try { await image.decode?.(); } catch { /* A loaded image remains usable when decode is unsupported. */ } cover.classList.add('has-photo'); status.remove(); });
+    image.addEventListener('error', () => {
+      if (++attempt < Math.min(product.images.length, 3)) image.src = product.images[attempt];
+      else { image.remove(); status.textContent = 'Фото недоступно · открыть дом'; }
+    });
+    image.src = product.images[0]; cover.append(image);
   }
 
   function mountGallery({ root, rutubeUrl }) {
@@ -66,17 +122,21 @@
       const id = url.pathname.match(/^\/(?:video|play\/embed)\/([a-f0-9]{32})\/?$/i)?.[1];
       if (url.protocol === "https:" && url.hostname === "rutube.ru" && id) video = `https://rutube.ru/play/embed/${id}/`;
     } catch { /* Optional video; unsupported URLs never become iframe content. */ }
-    if (!photos.length && !video) return { destroy() {} };
+    if (!photos.length && !video) {
+      root.replaceChildren(text('p','Фотографии дома уточните у владельца.','subtitle'));
+      return { destroy() { root.replaceChildren(...original); } };
+    }
     const shadow = root.shadowRoot || root.attachShadow({ mode: "open" }); shadow.replaceChildren();
     const style = document.createElement("style"); style.textContent = `
       :host{display:block;min-width:0;--dk-accent:#176bdf;color:#172b42;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}*{box-sizing:border-box}[hidden]{display:none!important}
       button{font:inherit;cursor:pointer;touch-action:manipulation;padding:10px;border:1px solid #dae3ee;border-radius:10px;background:#fff;color:#172b42;min-height:44px;min-width:44px}
       :focus-visible{outline:3px solid var(--dk-accent);outline-offset:3px}.viewer{position:relative;background:#eaf0f6;border:1px solid #e0e7ef;border-radius:18px;overflow:hidden;touch-action:pan-y}
-      .photo-button{display:flex;align-items:center;justify-content:center;width:100%;height:clamp(300px,57vw,610px);border:0;background:transparent;padding:0;cursor:zoom-in}.viewer img{display:block;width:100%;height:100%;object-fit:contain}
+      .photo-button{position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:auto;aspect-ratio:16/9;max-height:600px;border:0;background:transparent;padding:0;cursor:zoom-in}.viewer img{display:block;width:100%;height:100%;object-fit:cover}
       iframe{display:block;width:100%;aspect-ratio:16/9;border:0}.navigation{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0;color:#586b80;font-size:13px;font-variant-numeric:tabular-nums}.navigation button{display:grid;place-items:center;font-size:20px;line-height:1;border-radius:50%;width:44px;height:44px;padding:0}.navigation button:hover{background:#eef5ff;border-color:#b6cdec;color:var(--dk-accent)}
-      .thumbnails{display:flex;gap:9px;overflow-x:auto;padding:4px 3px 10px;scrollbar-width:thin}.thumbnails button{position:relative;padding:3px;min-width:66px;flex:none;border:1px solid #e0e7ef;background:#fff;overflow:hidden;border-radius:9px}.thumbnails img{display:block;width:58px;height:68px;object-fit:contain;background:#f0f3f7}
+      .thumbnails{display:flex;gap:9px;overflow-x:auto;padding:4px 3px 10px;scrollbar-width:thin}.thumbnails button{position:relative;padding:3px;min-width:80px;flex:none;border:1px solid #e0e7ef;background:#fff;overflow:hidden;border-radius:9px}.thumbnails img{display:block;width:78px;height:58px;object-fit:cover;background:#f0f3f7}
       [aria-current=true]{outline:2px solid var(--dk-accent);outline-offset:-1px}.thumbnails button:hover{border-color:var(--dk-accent)}dialog{max-width:96vw;max-height:96vh;padding:12px;border:0;border-radius:16px;background:#fff}dialog::backdrop{background:#101f32d9;backdrop-filter:blur(5px)}dialog img{display:block;max-height:80vh;max-width:90vw;width:auto;object-fit:contain;margin:auto}dialog>button{display:block;margin:0 0 10px auto;font-size:13px}
-      @media(max-width:760px){.viewer{border-radius:14px}.photo-button{height:auto;aspect-ratio:3/4;max-height:72vh}.navigation{margin:10px 0}.thumbnails button{min-width:60px}.thumbnails img{width:52px;height:62px}}
+      .gallery-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 14px}.gallery-heading h2{margin:0;font-size:15px;font-weight:650}.gallery-heading button{min-height:44px;border-radius:100px;font-size:12px;padding:8px 14px;color:#176bdf}.zoom-hint{position:absolute;right:16px;bottom:16px;border:1px solid #ffffff60;border-radius:100px;background:#172b42dd;color:#fff;box-shadow:0 2px 12px #172b4220;padding:9px 14px;font-size:12px;font-weight:600;pointer-events:none}.gallery-note{margin:0 0 12px;color:#586b80;font-size:12px}
+      @media(max-width:760px){.viewer{border-radius:14px}.photo-button{height:auto;aspect-ratio:4/3;max-height:440px}.navigation{margin:10px 0}.thumbnails button{min-width:70px}.thumbnails img{width:64px;height:48px}.zoom-hint{right:12px;bottom:12px;font-size:11px;padding:7px 11px}.gallery-heading{margin-bottom:10px}}
       @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
     `;
     const viewer = document.createElement("div"); viewer.className = "viewer"; viewer.tabIndex = 0; viewer.setAttribute("aria-label", "Галерея дома");
@@ -109,11 +169,12 @@
       if (current < photos.length) {
         const photo = document.createElement("img");photo.alt = photos[current].alt;
         const status=document.createElement('div');status.className='media-status';status.setAttribute('role','status');status.textContent='Загружаем фото…';
-        photo.addEventListener('load',()=>{photo.classList.add('loaded');status.remove();});
+        photo.addEventListener('load',async()=>{try{await photo.decode?.();}catch{/* The browser can still display a loaded photo. */}photo.classList.add('loaded');status.remove();});
         photo.addEventListener('error',()=>{status.replaceChildren(document.createTextNode('Фото временно недоступно.'));const retry=document.createElement('button');retry.type='button';retry.textContent='Повторить загрузку фото';retry.addEventListener('click',()=>render());status.append(retry);});
         photo.src=photos[current].src;
         const zoom = document.createElement("button"); zoom.type = "button"; zoom.className = "photo-button"; zoom.setAttribute("aria-label", "Увеличить фото");
-        zoom.addEventListener("click", () => { if(!photo.complete||!photo.naturalWidth)return;renderZoom();modal.showModal(); }); zoom.append(photo); viewer.append(zoom,status);
+        const hint=text('span','Смотреть весь кадр ↗','zoom-hint');hint.setAttribute('aria-hidden','true');
+        zoom.addEventListener("click", () => { if(!photo.complete||!photo.naturalWidth)return;renderZoom();modal.showModal(); }); zoom.append(photo,hint); viewer.append(zoom,status);
       } else {
         const iframe = document.createElement("iframe"); iframe.src = video; iframe.title = "Видео дома на Rutube";
         iframe.allow = "fullscreen; picture-in-picture"; iframe.allowFullscreen = true; iframe.referrerPolicy = "strict-origin-when-cross-origin";
@@ -131,11 +192,17 @@
     for (let index = 0; index < total; index++) {
       const button = document.createElement("button"); button.type = "button";
       button.setAttribute("aria-label", index < photos.length ? `Фото ${index + 1}` : "Видео Rutube");
-      if (index < photos.length) { const thumb = document.createElement("img"); thumb.src = photos[index].src; thumb.alt = ""; thumb.loading = "lazy"; button.append(thumb); }
+      if (index < photos.length) {
+        const thumb = document.createElement("img"); thumb.alt = ""; thumb.loading = index < 6 ? "eager" : "lazy"; thumb.decoding='async';
+        thumb.addEventListener('error',()=>{thumb.remove();button.textContent=String(index+1);button.style.cssText='width:86px;height:66px';});
+        thumb.src = photos[index].src; button.append(thumb);
+      }
       else button.textContent = "Видео";
       button.addEventListener("click", () => { current = index; render(); }); thumbs.append(button);
     }
-    shadow.append(style,mediaStyle, viewer,videoHelp, navigation, thumbs, modal); render();
+    const galleryHeading=el('div',{class:'gallery-heading'},[text('h2',`${photos.length} ${plural(photos.length,['фотография','фотографии','фотографий'])}`)]);
+    if(video){const videoShortcut=el('button',{type:'button',text:'Смотреть видео', 'aria-label':'Перейти к видео дома'});videoShortcut.addEventListener('click',()=>{current=photos.length;render();viewer.focus({preventScroll:true});});galleryHeading.append(videoShortcut);}
+    shadow.append(style,mediaStyle,galleryHeading, viewer,videoHelp, navigation, thumbs, modal); render();
     return { destroy() { if (modal.open) modal.close(); shadow.replaceChildren(document.createElement("slot")); root.replaceChildren(...original); } };
   }
   function mountPage({ root, apiOrigin, privacyUrl, pagePath = window.location.pathname, testMode = true, catalogData, catalogReturn }) {
@@ -185,7 +252,8 @@
       }
       const returnUrl=selected&&catalogReturn?.uid===selected.productUid?catalogReturn.url:houseUrl(null,values);
       if (selected) shell.append(link('← К результатам поиска', returnUrl, 'back'));
-      const intro = el('div', { class: selected?'intro':'sr-only' }, selected ? [text('h1', selected.name), facts(selected)] : [text('h1','Каталог загородных домов')]);
+      const intro = el('div', { class: 'intro' }, selected ? [text('h1', selected.name), facts(selected)] : [text('h1','Каталог загородных домов')]);
+      if(!selected){intro.prepend(text('p','Отдых в Казани и рядом','eyebrow'));intro.append(text('p','Найдите дом для своей компании — с подходящими датами, удобствами и понятной стоимостью.','subtitle'));}
       shell.append(intro);
       const search = el('div');
       const searchPanel = el('div', { class: 'search' }, selected ? [text('h2', 'Проверить даты и стоимость'), search] : [search]);
@@ -209,23 +277,23 @@
 
       if (selected) {
         document.title = `${selected.name} — DomKazan, тест`;
-        const galleryRoot = el('div', { class:'gallery' }, selected.images.map(src => el('img', { src, alt:selected.name, loading:'lazy' })));
+        const galleryRoot = el('div', { class:'gallery' }, selected.images.map(src => el('img', { 'data-original':src, alt:selected.name })));
         shell.append(galleryRoot); media = mountGallery({root:galleryRoot, rutubeUrl:selected.rutubeUrl});
-        const info = el('div', { class: 'house-copy' }, [text('h2', 'Описание'), amenities(selected), text('p', selected.description)]);
+        const info = houseDescription(selected);
         const contacts = el('div', { class: 'contacts' }, [link('Позвонить', 'tel:+79053106605'),
           link('Telegram ↗', 'https://t.me/viteek_b'), link('WhatsApp ↗', 'https://wa.me/message/OZ7WM2IJUPIXM1')]);
         for (const item of contacts.querySelectorAll('a[href^="https:"]')) { item.target = '_blank'; item.rel = 'noopener noreferrer'; }
         info.append(contacts, text('p', 'Свяжитесь с владельцем, чтобы уточнить условия. На стенде отправляйте только тестовые заявки.', 'contact-note'));
         const price = text('p', 'Выберите даты для расчёта', 'price price-placeholder');detailPrice=price;
         const action = el('div');
-        breakdown = text('p', '', 'breakdown');
+        breakdown = el('div', {class:'breakdown'});
         const quote = el('div', { class: 'booking-quote' }, [price, breakdown, action]);
         detailResult=quote;
         cards.push({ slug: selected.slug, element: quote, priceElement: price, actionElement: action });
         const booking = el('aside', { class: 'booking','aria-label':'Стоимость и заявка' }, [searchPanel, notice]);
         // The booking controls precede long descriptions for mobile and keyboard users.
-        const layout=el('div', { class: 'house-layout' }, [booking,info]);
-        const layoutStyle=el('style',{text:'.house-layout{grid-template-areas:"copy booking"}.house-copy{grid-area:copy}.booking{grid-area:booking}@media(max-width:760px){.house-layout{grid-template-areas:"booking" "copy"}}'});
+        const layout=el('div', { class: 'house-layout' }, [galleryRoot,booking,info]);
+        const layoutStyle=el('style',{text:'.house-layout{grid-template-areas:"gallery booking" "copy booking"}.house-layout>.gallery{grid-area:gallery;margin:0}.house-copy{grid-area:copy}.booking{grid-area:booking}@media(max-width:760px){.house-layout{grid-template-areas:"gallery" "booking" "copy"}}'});
         shell.append(layoutStyle,layout);
       } else {
         document.title='Каталог домов — DomKazan, тест';
@@ -242,18 +310,18 @@
         const toolbar = el('div', { class:'toolbar', tabindex:'-1' }, [el('div',{'aria-live':'polite','aria-atomic':'true'},[el('h2', {}, [counter]),resultsContext]), sortLabel]);
         shell.append(toolbar);
         list = el('div', { class: 'cards grid', 'aria-label': 'Каталог домов' });
-        for (const product of products) {
+        for (const [index, product] of products.entries()) {
           const href = houseUrl(product.productUid, values);
           const cover = el('a', { href, class: 'cover', 'aria-label': `Подробнее: ${product.name}` });
-          if (product.images[0]) cover.append(el('img', { src: product.images[0], alt: product.name, loading: 'lazy', width: '600', height: '440' }));
+          mountCover(cover, product, index);
           cover.append(el('span',{class:'photo-count'},[icon('photos'),document.createTextNode(`${product.images.length} фото`)]));
           const titleLink = link(product.name, href);
           const details = link('Подробнее о доме →', href, 'details-link');
           const excerpt = excerptFor(product);
           const info = el('div', { class: 'info' }, [el('h2', {}, [titleLink]), facts(product), amenities(product), ...(excerpt?[text('p',excerpt,'description-preview')]:[]), details]);
-          const base = Math.min(...Object.values(product.publicBaseRates).filter(value => Number(value) > 0));
-          const price = text('p', Number.isFinite(base) ? `от ${rub(base)} ₽` : 'По запросу', 'price');
-          price.append(text('small', 'за ночь · выберите даты'));
+          // A copied Tilda tariff is not a current database quote.
+          const price = text('p', 'Узнать стоимость', 'price price-placeholder');
+          price.append(text('small', 'выберите даты и гостей'));
           const actions = el('div');
           const card = el('article', { class: 'card', 'data-domkazan-house': product.slug }, [cover, info, el('div', { class: 'price-area' }, [price, actions])]);
           cards.push({ slug: product.slug, element: card, priceElement: price, actionElement: actions });
@@ -279,11 +347,17 @@
           const order=new Set(sorted.map(house=>house.slug));
           for(const house of sorted)list.append(cards.find(card=>card.slug===house.slug).element);
           for(const card of cards)if(!order.has(card.slug))list.append(card.element);
+          // A price sort may reveal houses originally far below the fold.
+          for(const house of sorted.slice(0,6)){const image=cards.find(card=>card.slug===house.slug).element.querySelector('.cover img');if(image)image.loading='eager';}
           if (scroll && !resuming) shadow.querySelector('.toolbar').scrollIntoView?.({behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
         }
         if (breakdown && houses[0]) {
           const quote=houses[0].quote;
-          breakdown.textContent=quote.accommodationTotal?`Проживание ${rub(quote.accommodationTotal)} ₽ · дополнительные гости ${rub(quote.extraGuestTotal)} ₽ · сбор ${rub(quote.serviceFee)} ₽. Включено в итог.`:'Стоимость рассчитана сервером по тарифам календаря.';
+          const lines=el('dl',{class:'quote-lines','aria-label':'Состав стоимости'});
+          for(const [label,value] of [['Проживание',quote.accommodationTotal],['Дополнительные гости',quote.extraGuestTotal],['Сервисный сбор',quote.serviceFee]]){
+            if(value!==undefined&&Number(value)>0)lines.append(el('div',{},[text('dt',label),text('dd',`${rub(value)} ₽`)]));
+          }
+          breakdown.replaceChildren(...(lines.children.length?[lines]:[]),text('p',`${lines.children.length?'Проживание и перечисленные доплаты включены в итог.':'Стоимость за выбранные даты и гостей.'} Дополнительные услуги согласуются с владельцем отдельно.`,'quote-note'));
         }
         lastResult={houses,snapshot}; resuming=false;
       }
@@ -319,7 +393,7 @@
           if (empty) empty.hidden = true;
           if (breakdown) breakdown.textContent = '';
           if (detailPrice) detailPrice.classList.add('price-placeholder');
-          for (const { product, nodes } of cardLinks) for (const node of nodes) node.href = houseUrl(product.productUid, paramsWithFilters(currentValues));
+          for (const { product, nodes } of cardLinks) {for (const node of nodes) node.href = houseUrl(product.productUid, paramsWithFilters(currentValues));cards.find(card=>card.slug===product.slug)?.priceElement.classList.add('price-placeholder');}
         },
         onResults:applyResults,
         onSearchComplete:()=>root.dispatchEvent(new CustomEvent('domkazan:view-ready',{bubbles:true})),

@@ -45,7 +45,7 @@ test("one search, price sorting, house calendar, gallery, receipt and return pre
   await first.scrollIntoViewIfNeeded();const catalogY=await page.evaluate(()=>scrollY);
   await first.click();
   await expect(page.getByRole("heading",{name:"Вымышленный дом 1",level:1})).toBeVisible();
-  await expect(page.getByText("Дом свободен. Стоимость рассчитана сервером.")).toBeVisible();
+  await expect(page.getByText("Дом свободен на выбранные даты.")).toBeVisible();
   await page.screenshot({path:testInfo.outputPath('journey-house-detail.png'),fullPage:true});
   await expect(page.getByText("Свободных домов: 1",{exact:true})).toHaveCount(0);
   await page.getByRole("button",{name:"Следующее фото"}).click();
@@ -63,7 +63,7 @@ test("one search, price sorting, house calendar, gallery, receipt and return pre
   // A house can be requoted independently; return still restores the catalog's search.
   await page.getByLabel('Гостей',{exact:true}).fill('9');
   await page.getByRole('button',{name:'Проверить стоимость',exact:true}).click();
-  await expect(page.getByText('Дом свободен. Стоимость рассчитана сервером.',{exact:true})).toBeVisible();
+  await expect(page.getByText('Дом свободен на выбранные даты.',{exact:true})).toBeVisible();
   await page.getByRole("button",{name:"Оставить заявку: Вымышленный дом 1"}).click();
   await expect(page.getByLabel('Имя',{exact:true})).toBeInViewport();
   await expect(page.locator(".summary")).toContainText(day(2).split('-').reverse().join('.'));

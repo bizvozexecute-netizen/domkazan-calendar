@@ -152,7 +152,8 @@
     @container(max-width:700px){form:not(.request-form){grid-template-columns:1fr 1fr}form:not(.request-form)>button,label:has([name=guests]){grid-column:1/-1}}
     @container(max-width:460px){.request-form{grid-template-columns:1fr;padding:18px}.calendar{padding:12px}.calendar-grid{gap:3px}.calendar-grid small{font-size:9px}.summary div{grid-template-columns:72px minmax(0,1fr);gap:8px}.search-amenities{gap:7px}.search-amenities label{padding:8px 9px;font-size:11px}}
     @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important}}
-    .booking-quote{margin-top:18px;padding-top:18px;border-top:1px solid var(--dk-line)}.booking-quote .price{margin:0;font-size:30px;line-height:1.2;font-weight:750;letter-spacing:-.8px;font-variant-numeric:tabular-nums}.booking-quote .price small{display:block;margin-top:5px;color:var(--dk-muted);font-size:12px;letter-spacing:0;font-weight:400}.booking-quote .price-placeholder{font-size:14px;letter-spacing:0;font-weight:400;color:var(--dk-muted)}.booking-quote .breakdown{margin:12px 0 0;font-size:11px;color:var(--dk-muted);line-height:1.7}.booking-quote .breakdown:empty{display:none}.booking-quote [data-domkazan-action-for] button{width:100%;margin:16px 0 0!important;padding:12px 16px!important;border-radius:10px!important;font:600 14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important}
+    .booking-quote{margin-top:18px;padding-top:18px;border-top:1px solid var(--dk-line)}.booking-quote .price{margin:0;font-size:30px;line-height:1.2;font-weight:750;letter-spacing:-.8px;font-variant-numeric:tabular-nums}.booking-quote .price small{display:block;margin-top:5px;color:var(--dk-muted);font-size:12px;letter-spacing:0;font-weight:400}.booking-quote .price-placeholder{font-size:14px;letter-spacing:0;font-weight:400;color:var(--dk-muted)}.booking-quote .breakdown{margin:12px 0 0;font-size:12px;color:var(--dk-muted);line-height:1.7}.booking-quote .breakdown:empty{display:none}.booking-quote [data-domkazan-action-for] button{width:100%;margin:16px 0 0!important;padding:12px 16px!important;border-radius:10px!important;font:600 14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important}
+    .quote-lines{display:grid;gap:8px;margin:0;padding:0}.quote-lines>div{display:flex;justify-content:space-between;gap:14px;font-size:12px}.quote-lines dt{color:var(--dk-muted)}.quote-lines dd{margin:0;white-space:nowrap;color:var(--dk-ink);font-variant-numeric:tabular-nums}.breakdown .quote-note{margin:12px 0 0;font-size:12px;line-height:1.7}
     .request-options{grid-column:1/-1;border:1px solid var(--dk-line);border-radius:10px;padding:0 13px}.request-options summary{min-height:44px;padding:12px 0;color:var(--dk-muted);font-size:12px;font-weight:500;cursor:pointer}.request-options summary:focus-visible{outline:3px solid var(--dk-accent);outline-offset:3px}.request-options>div{display:grid;gap:14px;padding:4px 0 16px}.consent-copy{min-width:0}.consent-copy a{display:inline}
   `;
 
@@ -345,7 +346,7 @@
         const row = document.createElement("div"); const name = document.createElement("dt"); name.textContent = `${label}:`;
         const description = document.createElement("dd"); description.textContent = value; row.append(name, description); summary.append(row);
       }
-      requestMessage.textContent = `Стоимость по поиску: ${money(house.quote.total)} ₽. Итог будет проверен сервером.`;
+      requestMessage.textContent = `Стоимость проживания: ${money(house.quote.total)} ₽. При отправке проверим актуальную цену и свободные даты. Бронирование подтвердит владелец после согласования условий.`;
       receipt.hidden = true; contacts.hidden = true; contacts.replaceChildren(); requestForm.hidden = false;
       if (testMode) {
         requestForm.elements.clientName.value = 'Тестовый Гость';
@@ -522,12 +523,12 @@
         }
         message.dataset.state='success';
         message.textContent = quietSuccess ? '' : showCount ? `Свободных домов: ${cards.filter((card) => available.has(card.slug)).length}` :
-          currentHouses.length ? "Дом свободен. Стоимость рассчитана сервером." : "Дом недоступен по выбранным датам или условиям. Измените параметры.";
+          currentHouses.length ? "Дом свободен на выбранные даты." : "Дом недоступен по выбранным датам или условиям. Измените параметры.";
         onResults?.(currentHouses, snapshot);
       } catch (error) {
         if (generation !== currentGeneration) return;
         successfulSearch = null; clearActions();
-        message.dataset.state='error';message.textContent = error?.name === "AbortError" ? "Сервер не ответил вовремя. Повторите поиск." : error instanceof Error ? error.message : "Поиск временно недоступен.";
+        message.dataset.state='error';message.textContent = error?.name === "AbortError" ? "Не удалось проверить стоимость вовремя. Повторите поиск." : error instanceof Error ? error.message : "Поиск временно недоступен.";
       } finally { if (generation === currentGeneration) { clearTimeout(searchTimer); searchTimer=null; button.disabled = false;form.setAttribute('aria-busy','false');onSearchComplete?.(); } }
     });
     const controller = { reset, invalidate: () => invalidate(), search: () => {if(!form.checkValidity())return false;form.requestSubmit();return true;}, values:()=>Object.fromEntries(new FormData(form)),

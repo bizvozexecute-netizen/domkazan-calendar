@@ -43,13 +43,14 @@ test('a malformed date link can be corrected without JavaScript errors',async({p
 test('gallery loads full photos, follows active thumbnail, supports zoom keyboard, swipe and safe video exit',async({page},testInfo)=>{
   await openFixtureHouse(page);
   const photo=page.locator('.gallery .photo-button img');
-  await expect(photo).toHaveClass('loaded');await expect(photo).toHaveCSS('object-fit','contain');
+  await expect(photo).toHaveClass('loaded');await expect(photo).toHaveCSS('object-fit','cover');
   await page.getByRole('button',{name:'Фото 14',exact:true}).click();
   await expect(photo).toHaveClass('loaded');
   const thumb=await page.getByRole('button',{name:'Фото 14',exact:true}).boundingBox();const rail=await page.locator('.thumbnails').boundingBox();
   expect(thumb!.x).toBeGreaterThanOrEqual(rail!.x-1);expect(thumb!.x+thumb!.width).toBeLessThanOrEqual(rail!.x+rail!.width+1);
   await page.getByRole('button',{name:'Увеличить фото',exact:true}).click();
   const zoom=page.getByRole('dialog',{name:'Увеличенное фото',exact:true});await expect(zoom).toBeVisible();
+  await expect(zoom.locator('img')).toHaveCSS('object-fit','contain');
   await page.keyboard.press('ArrowRight');await expect(zoom.locator('img')).toHaveAttribute('src',fixtureProduct.images[0]);
   await page.keyboard.press('ArrowLeft');await expect(zoom.locator('img')).toHaveAttribute('src',fixtureProduct.images[13]);
   await page.keyboard.press('Escape');await expect(page.getByRole('button',{name:'Увеличить фото',exact:true})).toBeFocused();

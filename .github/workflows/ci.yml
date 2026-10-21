@@ -59,6 +59,9 @@ jobs:
             test-results/**/journey-house.png
             test-results/**/journey-house-detail.png
             test-results/**/journey-calendar.png
+            test-results/**/catalog-polished.png
+            test-results/**/house-polished.png
+            test-results/**/structured-house.png
             test-results/**/video.webm
           if-no-files-found: ignore
           retention-days: 7

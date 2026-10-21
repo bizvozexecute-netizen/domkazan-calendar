@@ -54,7 +54,8 @@ test("Tilda catalog, house page, price changes, occupancy and request use the sa
   const detailPath = await page.getByRole("link", { name: "Подробнее о доме →" }).getAttribute("href");
   await page.goto(detailPath!);
   await expect(page.getByRole("heading", { level: 1, name: "Проверочный дом" })).toBeVisible();
-  await expect(page.getByText(/дополнительные гости 400 ₽ · сбор 500 ₽/)).toBeVisible();
+  await expect(page.locator('.quote-lines > div').filter({hasText:'Дополнительные гости'})).toHaveText(/Дополнительные гости400 ₽/);
+  await expect(page.locator('.quote-lines > div').filter({hasText:'Сервисный сбор'})).toHaveText(/Сервисный сбор500 ₽/);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
   await page.screenshot({ path: testInfo.outputPath("house.png"), fullPage: true });
   await page.getByRole("button", { name: "Оставить заявку: Проверочный дом" }).click();
