@@ -63,7 +63,8 @@ export async function proxyJson(request, path, method, body, headers) {
       result = { ...result, message: 'Тестовая заявка сохранена. Бронирование и оплата не создаются.',
         contacts: { phone: null, telegram: null, whatsapp: null } };
     }
-    return json(result, response.status, headers);
+    const timing = response.headers.get('server-timing');
+    return json(result, response.status, { ...headers, ...(timing ? {'Server-Timing':timing} : {}) });
   } catch {
     return json({ error: 'Тестовый каталог временно недоступен.' }, 503, headers);
   }

@@ -7,12 +7,14 @@ export type HouseFilters = {
   bedrooms?: number;
   amenities?: string[];
   petsAllowed?: boolean;
+  house?: string;
 };
 
 export async function findAvailableHouses(checkIn: Date, checkOut: Date, filters: HouseFilters) {
   const houses = await db.house.findMany({
     where: {
       isActive: true,
+      ...(filters.house && { slug: filters.house }),
       maxGuests: { gte: filters.guests },
       ...(filters.district && { district: { equals: filters.district, mode: "insensitive" as const } }),
       ...(filters.bedrooms && { bedrooms: { gte: filters.bedrooms } }),

@@ -149,6 +149,8 @@ test("a non-clickable grid item can group its link and separate application slot
     cards: [{ slug: "free", element: doc.getElementById("free"), priceElement: doc.getElementById("price"), actionElement: doc.getElementById("slot") },
       { slug: "busy", element: doc.getElementById("busy") }] });
   const form = doc.getElementById("search").shadowRoot.querySelector("form");
+  form.elements.checkIn.value="2026-11-02";
+  form.elements.checkOut.value="2026-11-04";
   form.dispatchEvent(new dom.window.Event("submit", { cancelable: true })); await tick();
   assert.equal(doc.querySelector("#slot button").closest("a"), null);
   assert.equal(doc.getElementById("busy").style.display, "none");

@@ -36,7 +36,7 @@ async function setup(suffix = '') {
   const win = dom.window;
   const products = details.products.slice(0, 3);
   win.fetch = async url => String(url).includes('/api/catalog') ? { ok: true, json: async () => ({ products }) } :
-    { ok: true, json: async () => ({ houses: products.map((product, index) => ({ id: product.slug, slug: product.slug,
+    { ok: true, json: async () => ({ houses: products.filter(product=>!String(url).includes('amenities=pool')||product.amenities.includes('pool')).map((product, index) => ({ id: product.slug, slug: product.slug,
       name: product.name, maxGuests: product.maxGuests, quote: { total: String(10000 + index * 5000), nights: 2 } })) }) };
   for (const file of ['domkazan-search.js', 'domkazan-catalog.js']) win.eval(readFileSync(new URL(`../public/embed/${file}`, import.meta.url), 'utf8'));
   const root = win.document.getElementById('catalog');
@@ -53,17 +53,18 @@ test('filters combine with date search, quotes survive in separate house URLs, e
   assert.equal(shadow.querySelector('.price small').textContent, 'за 2 ноч.');
   const houseLink = shadow.querySelector('.details-link');
   assert.match(houseLink.href, /house=555240345232&checkIn=2026-11-02&checkOut=2026-11-04&guests=2/);
-  assert.equal(houseLink.target, '_blank');
-  const pool = shadow.querySelector('input[value="pool"]');
+  assert.equal(houseLink.target, '');
+  const pool = widget.querySelector('input[value="pool"]');
   pool.checked = true; pool.dispatchEvent(new win.Event('change', { bubbles: true }));
   assert.ok(shadow.querySelector('.price small'), 'reset preserves the starting price caption and its formatting');
   assert.equal(widget.querySelector('[name="checkIn"]').value, '2026-11-02');
   widget.querySelector('form').dispatchEvent(new win.Event('submit', { cancelable: true }));
   await flush();
   assert.match(shadow.querySelector('.count').textContent, /1$/);
-  const budget = shadow.querySelector('input[placeholder="Любой"]');
-  budget.value = '100'; budget.dispatchEvent(new win.Event('input', { bubbles: true }));
-  widget.querySelector('form').dispatchEvent(new win.Event('submit', { cancelable: true }));
+  assert.equal(widget.querySelectorAll('.search-amenities input').length,3);
+  assert.equal(shadow.querySelector('input[placeholder="Любой"]'),null);
+  win.fetch=async()=>({ok:true,json:async()=>({houses:[]})});
+  widget.querySelector('form').dispatchEvent(new win.Event('submit',{cancelable:true}));
   await flush();
   assert.equal(shadow.querySelector('.empty').hidden, false);
   assert.equal(shadow.querySelectorAll('[data-domkazan-action-for]').length, 0);
@@ -74,7 +75,7 @@ test('direct house URL renders one full page and test request fields use synthet
   const { dom, shadow, controller } = await setup('?house=555240345232&checkIn=2026-11-02&checkOut=2026-11-04&guests=2');
   await flush();
   assert.equal(shadow.querySelector('h1').textContent, 'Казанка большой');
-  assert.ok(shadow.querySelector('.main-photo'));
+  assert.ok(shadow.querySelector('.gallery').shadowRoot.querySelector('img'));
   assert.equal(shadow.querySelectorAll('.card').length, 0);
   assert.ok(shadow.querySelector('a[href="https://t.me/viteek_b"]'));
   shadow.querySelector('[data-domkazan-action-for] button').click();
