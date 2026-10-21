@@ -87,14 +87,33 @@
     const thumbs = document.createElement("div"); thumbs.className = "thumbnails";
     const modal = document.createElement("dialog"); modal.setAttribute("aria-label", "Увеличенное фото");
     const close = document.createElement("button"); close.type = "button"; close.textContent = "Закрыть фото"; close.addEventListener("click", () => modal.close()); modal.append(close);
+    const mediaStyle=document.createElement('style');mediaStyle.textContent=`
+      .media-status{position:absolute;inset:0;display:grid;place-content:center;text-align:center;gap:12px;padding:24px;color:#586b80;background:#eaf0f6;font-size:13px;pointer-events:none}.media-status button{pointer-events:auto}.video-help{margin:10px 0;color:#586b80;font-size:12px}.video-help a{display:inline-flex;align-items:center;min-height:44px;color:#176bdf;text-underline-offset:3px}.zoom-nav{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:12px}.zoom-nav span{min-width:60px;text-align:center}dialog img{min-height:100px}.photo-button img{opacity:0}.photo-button img.loaded{opacity:1}
+    `;
+    const videoHelp=document.createElement('p');videoHelp.className='video-help';videoHelp.hidden=true;
+    if(video){videoHelp.append(document.createTextNode('Если плеер не работает: '));const fallback=document.createElement('a');fallback.href=rutubeUrl;fallback.textContent='Открыть видео в Rutube ↗';fallback.target='_blank';fallback.rel='noopener noreferrer';videoHelp.append(fallback);}
+    const zoomNav=document.createElement('div');zoomNav.className='zoom-nav';
+    const zoomPrevious=previous.cloneNode(true),zoomNext=next.cloneNode(true),zoomCaption=document.createElement('span');
+    zoomCaption.setAttribute('aria-live','polite');zoomNav.append(zoomPrevious,zoomCaption,zoomNext);modal.append(zoomNav);
     let current = 0; const total = photos.length + Number(Boolean(video));
+    previous.disabled=next.disabled=total<2;
+    modal.addEventListener('close',()=>viewer.querySelector('button')?.focus({preventScroll:true}));
+    function renderZoom(){modal.querySelector('img')?.remove();const image=document.createElement('img');image.src=photos[current].src;image.alt=photos[current].alt;modal.insertBefore(image,zoomNav);zoomCaption.textContent=`${current+1} / ${photos.length}`;zoomPrevious.hidden=zoomNext.hidden=photos.length<2;}
+    function moveZoom(delta){current=(current+delta+photos.length)%photos.length;render();renderZoom();}
+    zoomPrevious.addEventListener('click',()=>moveZoom(-1));zoomNext.addEventListener('click',()=>moveZoom(1));
+    modal.addEventListener('keydown',event=>{if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();moveZoom(event.key==='ArrowLeft'?-1:1);}});
     function render() {
-      viewer.replaceChildren(); caption.textContent = `${current + 1} / ${total}`;
+      viewer.replaceChildren(); caption.textContent = `${current + 1} / ${total}`;videoHelp.hidden=current<photos.length;
       [...thumbs.children].forEach((thumb, index) => thumb.setAttribute("aria-current", String(index === current)));
+      const active=thumbs.children[current];if(active){const target=Math.max(0,active.offsetLeft-thumbs.offsetLeft-(thumbs.clientWidth-active.clientWidth)/2);thumbs.scrollLeft=target;}
       if (current < photos.length) {
-        const photo = document.createElement("img"); photo.src = photos[current].src; photo.alt = photos[current].alt;
+        const photo = document.createElement("img");photo.alt = photos[current].alt;
+        const status=document.createElement('div');status.className='media-status';status.setAttribute('role','status');status.textContent='Загружаем фото…';
+        photo.addEventListener('load',()=>{photo.classList.add('loaded');status.remove();});
+        photo.addEventListener('error',()=>{status.replaceChildren(document.createTextNode('Фото временно недоступно.'));const retry=document.createElement('button');retry.type='button';retry.textContent='Повторить загрузку фото';retry.addEventListener('click',()=>render());status.append(retry);});
+        photo.src=photos[current].src;
         const zoom = document.createElement("button"); zoom.type = "button"; zoom.className = "photo-button"; zoom.setAttribute("aria-label", "Увеличить фото");
-        zoom.addEventListener("click", () => { modal.querySelector("img")?.remove(); const image = photo.cloneNode(); modal.append(image); modal.showModal(); }); zoom.append(photo); viewer.append(zoom);
+        zoom.addEventListener("click", () => { if(!photo.complete||!photo.naturalWidth)return;renderZoom();modal.showModal(); }); zoom.append(photo); viewer.append(zoom,status);
       } else {
         const iframe = document.createElement("iframe"); iframe.src = video; iframe.title = "Видео дома на Rutube";
         iframe.allow = "fullscreen; picture-in-picture"; iframe.allowFullscreen = true; iframe.referrerPolicy = "strict-origin-when-cross-origin";
@@ -104,9 +123,10 @@
     function move(delta) { current = (current + delta + total) % total; render(); }
     previous.addEventListener("click", () => move(-1)); next.addEventListener("click", () => move(1));
     shadow.addEventListener("keydown", (event) => { if (modal.open) return; if (event.key === "ArrowLeft" || event.key === "ArrowRight") { event.preventDefault(); move(event.key === "ArrowLeft" ? -1 : 1); } });
-    let start = null;
-    viewer.addEventListener("pointerdown", (event) => { if (event.pointerType === "touch") start = event.clientX; });
-    viewer.addEventListener("pointerup", (event) => { if (start !== null && Math.abs(event.clientX - start) > 45) move(event.clientX < start ? 1 : -1); start = null; });
+    let start = null;let suppressClick=false;
+    viewer.addEventListener('click',event=>{if(suppressClick){event.preventDefault();event.stopImmediatePropagation();suppressClick=false;}},true);
+    viewer.addEventListener("pointerdown", (event) => { suppressClick=false;if (event.pointerType === "touch") start = {x:event.clientX,y:event.clientY}; });
+    viewer.addEventListener("pointerup", (event) => { if (start !== null && Math.abs(event.clientX-start.x)>45&&Math.abs(event.clientX-start.x)>Math.abs(event.clientY-start.y)) {suppressClick=true;move(event.clientX<start.x?1:-1);} start = null; });
     viewer.addEventListener("pointercancel", () => { start = null; });
     for (let index = 0; index < total; index++) {
       const button = document.createElement("button"); button.type = "button";
@@ -115,7 +135,7 @@
       else button.textContent = "Видео";
       button.addEventListener("click", () => { current = index; render(); }); thumbs.append(button);
     }
-    shadow.append(style, viewer, navigation, thumbs, modal); render();
+    shadow.append(style,mediaStyle, viewer,videoHelp, navigation, thumbs, modal); render();
     return { destroy() { if (modal.open) modal.close(); shadow.replaceChildren(document.createElement("slot")); root.replaceChildren(...original); } };
   }
   function mount({ root, apiOrigin, privacyUrl, pagePath = window.location.pathname, testMode = true }) {
@@ -139,8 +159,9 @@
     }
 
     async function load() {
-      const response = await fetch(new URL('/api/catalog', origin), { signal: abort.signal });
-      const data = await response.json();
+      const timer=setTimeout(()=>abort.abort(),10000);
+      let response,data;
+      try{response=await fetch(new URL('/api/catalog', origin), { signal: abort.signal });data=await response.json();}finally{clearTimeout(timer);}
       if (!response.ok || !Array.isArray(data.products)) throw new Error(data.error || 'Каталог временно недоступен.');
       if (!alive) return;
       const products = data.products.filter(product => /^\d{12}$/.test(product.productUid) && product.slug === `tilda-${product.productUid}`);
@@ -197,7 +218,10 @@
         detailResult=quote;
         cards.push({ slug: selected.slug, element: quote, priceElement: price, actionElement: action });
         const booking = el('aside', { class: 'booking','aria-label':'Стоимость и заявка' }, [searchPanel, notice]);
-        shell.append(el('div', { class: 'house-layout' }, [info, booking]));
+        // The booking controls precede long descriptions for mobile and keyboard users.
+        const layout=el('div', { class: 'house-layout' }, [booking,info]);
+        const layoutStyle=el('style',{text:'.house-layout{grid-template-areas:"copy booking"}.house-copy{grid-area:copy}.booking{grid-area:booking}@media(max-width:760px){.house-layout{grid-template-areas:"booking" "copy"}}'});
+        shell.append(layoutStyle,layout);
       } else {
         const sort = el('select', {'aria-label':'Сортировать',title:'Сортировка полной стоимости доступна после поиска'}, [['default', 'Порядок каталога'], ['price', 'Сначала дешевле'], ['price-desc', 'Сначала дороже']].map(([value, label]) => el('option', { value, text: label })));
         sort.disabled=true;sortControl=sort;
@@ -306,9 +330,11 @@
       if (values.checkIn && values.checkOut) {resuming=true;widget.search();}
       root.dispatchEvent(new CustomEvent('domkazan:ready', { bubbles: true, detail: { count: products.length } }));
     }
-    load().catch(error => {
-      if (!alive || error.name === 'AbortError') return;
-      shadow.append(text('p', error.message || 'Не удалось загрузить каталог.', 'error'));
+    load().catch(() => {
+      if (!alive) return;
+      shadow.querySelector('.loading')?.remove();
+      const failure=el('div',{class:'error',role:'status'},[text('p','Не удалось загрузить каталог. Проверьте соединение и попробуйте ещё раз.')]);
+      const retry=el('button',{type:'button',text:'Загрузить каталог повторно'});retry.addEventListener('click',()=>window.location.reload());failure.append(retry);shadow.append(failure);
       root.dispatchEvent(new CustomEvent('domkazan:error', { bubbles: true }));
     });
     function pageShown(event){if(event.persisted&&widget){resuming=true;widget.search();}}

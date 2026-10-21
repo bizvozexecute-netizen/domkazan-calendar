@@ -11,7 +11,7 @@ concurrency:
 jobs:
   checks:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 25
     services:
       postgres:
         image: postgres:16-alpine
@@ -38,7 +38,7 @@ jobs:
       - run: npm test
       - run: npm run test:integration
       - run: npm run build
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps chromium webkit
       - run: npm run test:e2e
       - run: sudo apt-get update && sudo apt-get install -y postgresql-client-16
       - run: npm run test:backup
@@ -60,6 +60,7 @@ jobs:
             test-results/**/journey-house.png
             test-results/**/journey-house-detail.png
             test-results/**/journey-calendar.png
+            test-results/**/video.webm
           if-no-files-found: ignore
           retention-days: 7
   containers:

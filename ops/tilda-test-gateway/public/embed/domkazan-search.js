@@ -208,6 +208,7 @@
     const form = document.createElement("form");
     const dayDetails = new Map();
     let calendarLoad;
+    let calendarTimer;
     let calendarGeneration = 0;
     let destroyed = false;
     const picker = rangeCalendar(form, () => form.dispatchEvent(new Event("input", { bubbles:true })),
@@ -287,7 +288,8 @@
     let retryPayload = null;
 
     async function loadCalendar(month) {
-      calendarLoad?.abort(); calendarLoad = new AbortController();
+      calendarLoad?.abort();clearTimeout(calendarTimer); calendarLoad = new AbortController();
+      calendarTimer=setTimeout(()=>calendarLoad?.abort(),10000);
       const token = ++calendarGeneration;
       try {
         const url = new URL(calendarUrl, apiUrl); url.searchParams.set("month", month);
@@ -297,9 +299,9 @@
         if (!response.ok || !Array.isArray(data.days)) throw new Error("Календарь недоступен.");
         for (const day of data.days) dayDetails.set(day.date, day);
         picker.refresh();
-      } catch (error) {
-        if (!destroyed && token === calendarGeneration && error.name !== "AbortError") {message.dataset.state='error';message.textContent = "Календарь временно недоступен. Неизвестные даты нельзя выбрать. Попробуйте открыть календарь ещё раз.";}
-      }
+      } catch {
+        if (!destroyed && token === calendarGeneration) {message.dataset.state='error';message.textContent = "Календарь временно недоступен. Неизвестные даты нельзя выбрать. Попробуйте открыть календарь ещё раз.";}
+      }finally{if(token===calendarGeneration)clearTimeout(calendarTimer);}
     }
 
     function parameters() {
@@ -325,6 +327,7 @@
     function clearActions() { for (const card of cards) card.action?.remove(); }
     function openRequest(house, snapshot) {
       if (sending) { message.textContent = "Дождитесь результата отправки заявки."; return; }
+      if(retryPayload&&selectedHouse){requestForm.scrollIntoView?.({behavior:'auto',block:'start'});send.focus({preventScroll:true});requestMessage.textContent='Сначала повторите отправку сохранённой заявки. Повторная попытка не создаст дубликат.';return;}
       if (!isCurrent(snapshot)) { invalidate(); return; }
       if (!policy) { message.textContent = "Форма заявки пока недоступна: не настроена политика обработки данных."; return; }
       selectedHouse = { house, snapshot };
@@ -333,6 +336,7 @@
       delete requestForm.dataset.submitted;
       for (const input of requestForm.querySelectorAll('input,select,textarea')) input.disabled=false;
       send.hidden=false; requestMessage.hidden=false;
+      send.textContent='Отправить заявку';
       heading.textContent = "Заявка на проживание";
       summary.replaceChildren();
       for (const [label, value] of [["Дом", house.name], ["Заезд", dateLabel(snapshot.checkIn)], ["Выезд", dateLabel(snapshot.checkOut)], ["Гостей", snapshot.guests], ["Стоимость", `${money(house.quote.total)} ₽`]]) {
@@ -367,13 +371,22 @@
         comment: values.get("comment") || null, consent: values.has("consent"),
         website: values.get("website") || "", idempotencyKey: sentKey, privacyPolicyUrl: policy };
       retryPayload = payload;
+      // After an uncertain network outcome a retry must keep exactly this payload.
+      for(const input of requestForm.querySelectorAll('input,select,textarea'))input.disabled=true;
+      requestForm.setAttribute('aria-busy','true');
+      const submissionController=new AbortController();
+      const submissionTimer=setTimeout(()=>submissionController.abort(),15000);
+      let responseStatus=0;
       try {
         const response = await fetch(requestUrl || new URL("/api/requests", apiUrl).toString(), {
           method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+          signal:submissionController.signal,
         });
+        responseStatus=response.status;
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Заявку не удалось отправить.");
-        if (destroyed || !isCurrent(snapshot)) return;
+        if (destroyed)return;
+        if (!isCurrent(snapshot)){message.textContent=`Заявка ${data.requestId} получена для прежних параметров. Для новых дат выполните поиск заново.`;return;}
         // Retain the filled, read-only form: replacing it with a short receipt
         // would shrink the document and jump the mobile viewport upward.
         requestForm.dataset.submitted='true';
@@ -398,10 +411,15 @@
         else { returnLink.href = "#"; returnLink.addEventListener("click", event => { event.preventDefault(); receipt.hidden = true; }); }
         receipt.append(returnLink);
       } catch (error) {
-        if (isCurrent(snapshot)) requestMessage.textContent = error instanceof Error ? error.message : "Заявку не удалось отправить.";
+        if(destroyed)return;
+        if(responseStatus===409){invalidate(false);message.dataset.state='error';message.textContent='Доступность дома изменилась. Повторите поиск перед новой заявкой.';}
+        else if (isCurrent(snapshot)) {
+          if(responseStatus>=400&&responseStatus<500){retryPayload=null;submissionKey=window.crypto.randomUUID();for(const input of requestForm.querySelectorAll('input,select,textarea'))input.disabled=false;requestMessage.textContent=error.message||'Проверьте данные заявки.';}
+          else {send.textContent='Повторить эту же заявку';requestMessage.textContent='Не удалось получить подтверждение отправки. Повторите эту же заявку: повторная попытка не создаст дубликат. Данные сохранены.';}
+        }
         else message.textContent = "Проверьте результат отправки заявки перед повторной попыткой. Для новых параметров повторите поиск.";
       }
-      finally { sending = false; send.disabled = requestForm.dataset.submitted === 'true'; }
+      finally { clearTimeout(submissionTimer);requestForm.setAttribute('aria-busy','false');sending = false; send.disabled = requestForm.dataset.submitted === 'true'; }
     });
 
     function invalidate(showMessage = true) {
@@ -413,6 +431,7 @@
       delete requestForm.dataset.submitted;
       for (const input of requestForm.querySelectorAll('input,select,textarea')) input.disabled=false;
       send.hidden=false; send.disabled=sending; requestMessage.hidden=false;
+      send.textContent='Отправить заявку';
       for (const card of cards) {
         show(card);
         if (card.priceElement) card.priceElement.replaceChildren(...card.originalPriceNodes.map(node => node.cloneNode(true)));
@@ -507,7 +526,7 @@
       invalidate(Boolean(successfulSearch || button.disabled));
       cards = collectCards(nextCards);
     }, destroy() {
-      destroyed = true; calendarGeneration++; calendarLoad?.abort(); picker.destroy();
+      destroyed = true; calendarGeneration++; calendarLoad?.abort();clearTimeout(calendarTimer); picker.destroy();
       reset(); document.removeEventListener("input", filtersChanged); document.removeEventListener("change", filtersChanged);
       shadow.replaceChildren(); instances.delete(root);
     } };

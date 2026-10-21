@@ -2,6 +2,9 @@ import {readFile} from "node:fs/promises";
 import {test,expect} from "@playwright/test";
 import {selectStay} from "./stay-helper";
 
+// This suite uses synthetic contacts only; admin/auth tests never record video.
+test.use({video:'on'});
+
 const day=(offset:number)=>new Date(Date.now()+offset*86400000).toISOString().slice(0,10);
 const products=["111111111111","222222222222"].map((uid,index)=>({productUid:uid,slug:`tilda-${uid}`,name:`Вымышленный дом ${index+1}`,maxGuests:12,bedrooms:3,beds:6,
   amenities:["pool","sauna"],images:["https://static.tildacdn.com/synthetic-a.svg","https://static.tildacdn.com/synthetic-b.svg"],
