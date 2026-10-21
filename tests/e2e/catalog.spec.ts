@@ -16,7 +16,7 @@ test.afterEach(async () => {
 test.afterAll(async () => { await db.$disconnect(); });
 
 test("Tilda catalog, house page, price changes, occupancy and request use the same database", async ({ page, request, context }, testInfo) => {
-  await db.house.create({ data: { id: slug, slug, name: "Проверочный дом", maxGuests: 20,
+  await db.house.create({ data: { id: slug, slug:`internal-synthetic-${uid}`, tildaProductUid:uid, name: "Проверочный дом", maxGuests: 20,
     amenities:["pool","sauna"],
     includedGuests: 2, extraGuestPrice: "200", serviceFee: "500", isActive: true,
     baseRates: { create: { startsOn: todayInMoscow(), endsOn: new Date(`${day(90)}T00:00:00Z`),
@@ -59,15 +59,20 @@ test("Tilda catalog, house page, price changes, occupancy and request use the sa
   await page.screenshot({ path: testInfo.outputPath("house.png"), fullPage: true });
   await page.getByRole("button", { name: "Оставить заявку: Проверочный дом" }).click();
   await page.getByRole("checkbox", { name: /Согласен на обработку/ }).check();
+  // An administrator may update tariffs after search, before submission.
+  await db.house.update({where:{id:slug},data:{serviceFee:"900"}});
   const sent = page.waitForResponse(response => response.url() === `${origin}/api/requests`);
   await page.getByRole("button", { name: "Отправить заявку", exact: true }).click();
   const sentResponse = await sent;
   expect(sentResponse.status(), await sentResponse.text()).toBe(201);
   await expect(page.locator('.receipt > p')).toHaveText(/Заявка .*Проверочный дом/);
+  await expect(page.locator('.summary div:last-child dd')).toHaveText(/3\s300 ₽/);
+  await expect(page.locator('.receipt')).toContainText('Цена обновилась');
   const booking = await db.bookingRequest.findFirstOrThrow({ where: { houseId: slug } });
-  expect(booking.quotedTotal?.toString()).toBe("2900");
+  expect(booking.quotedTotal?.toString()).toBe("3300");
   expect(booking.status).toBe("NEW");
   expect(await db.telegramNotification.count({ where: { bookingRequestId: booking.id } })).toBe(1);
+  await db.house.update({where:{id:slug},data:{serviceFee:"500"}});
 
   await page.goto("/admin/login");
   await page.getByLabel("Email", { exact: true }).fill("browser-tester@example.invalid");

@@ -6,7 +6,8 @@ import {db} from "../src/lib/db.ts";
 import {dateKey,todayInMoscow} from "../src/lib/dates.ts";
 import {GET as calendar} from "../src/app/api/houses/[slug]/calendar/route.ts";
 import {GET as previewCalendar} from "../src/app/api/house-calendar/route.ts";
-import {createHouse,updateHouse} from "../src/lib/admin-mutations.ts";
+import {createHouse,updateHouse,saveRate} from "../src/lib/admin-mutations.ts";
+import {GET as availability} from "../src/app/api/availability/route.ts";
 
 after(async()=>{await db.$disconnect();});
 test("public calendar distinguishes occupancy and absent tariffs without revealing customer records",async()=>{
@@ -45,4 +46,26 @@ test("house short name and Product UID survive edits; duplicate UID is rejected"
     assert.equal(changed.calendarName,"НС В1");assert.equal(changed.tildaProductUid,uid);
     await assert.rejects(createHouse({...fields,slug:`other-${randomUUID()}`}));
   }finally{await db.house.delete({where:{id:house.id}});}
+});
+
+test("Tilda UID keeps search and calendar mapped after slug edits and cannot fall back to an unrelated slug",async()=>{
+  const uid=String(Date.now()).slice(-12),alias=`tilda-${uid}`,slug=`mapped-${randomUUID()}`;
+  const fields={name:"Synthetic UID house",slug,tildaProductUid:uid,calendarName:null,maxGuests:8,tildaUrl:null,district:null,bedrooms:null,bathrooms:null,amenities:[],petsAllowed:null,isActive:true};
+  const house=await createHouse(fields);
+  const shadow=await createHouse({...fields,slug:alias,tildaProductUid:null});
+  const start=todayInMoscow(),key=(n:number)=>dateKey(new Date(start.getTime()+n*86400000));
+  const rates={startsOn:key(0),endsOn:key(40),weekdayPrice:"1000",fridayPrice:"1000",saturdayPrice:"1000",sundayPrice:"1000",minNights:1};
+  const search=()=>availability(new NextRequest(`http://localhost/api/availability?house=${alias}&checkIn=${key(1)}&checkOut=${key(3)}&guests=2`));
+  const readCalendar=()=>calendar(new NextRequest(`http://localhost/api/houses/${alias}/calendar?month=${key(0).slice(0,7)}`),{params:Promise.resolve({slug:alias})});
+  try{
+    const tariff=await saveRate(house.id,0,rates);await saveRate(shadow.id,0,rates);
+    const renamed=await updateHouse(house.id,tariff.revision,{...fields,slug:`renamed-${randomUUID()}`});
+    const response=await search();assert.equal(response.status,200);
+    const result=await response.json();assert.equal(result.houses.length,1);
+    assert.equal(result.houses[0].id,house.id);assert.equal(result.houses[0].slug,renamed.slug);assert.equal(result.houses[0].tildaProductUid,uid);
+    assert.equal(Number(result.houses[0].quote.total),2000);
+    const calendarResponse=await readCalendar();assert.equal(calendarResponse.status,200);assert.equal((await calendarResponse.json()).house.id,house.id);
+    await updateHouse(house.id,renamed.revision,{...fields,slug:renamed.slug,tildaProductUid:null});
+    assert.deepEqual((await (await search()).json()).houses,[]);assert.equal((await readCalendar()).status,404);
+  }finally{await db.house.deleteMany({where:{id:{in:[house.id,shadow.id]}}});}
 });

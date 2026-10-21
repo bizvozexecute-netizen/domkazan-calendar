@@ -41,7 +41,7 @@ test("widget submits selected house without trusting a browser price and shows o
   dom.window.fetch = async (_url, options) => {
     if (!options || options.method === "GET") return { ok: true, json: async () => ({ houses: [{ id: "house-1", slug: "free", name: "Дом А", quote: { total: "12000.00", nights: 2 } }] }) };
     calls.push(JSON.parse(options.body));
-    return { ok: true, json: async () => ({ requestId: "request-1", message: "Заявка получена.",
+    return { ok: true, json: async () => ({ requestId: "request-1", total:"13500.00", message: "Заявка получена.",
       contacts: { phone: "tel:+70000000000", telegram: "https://t.me/example_owner", whatsapp: null } }) };
   };
   dom.window.eval(script);
@@ -66,6 +66,9 @@ test("widget submits selected house without trusting a browser price and shows o
   assert.equal(Object.hasOwn(calls[0], "total"), false);
   assert.equal(calls[0].privacyPolicyUrl, "https://domkazan116.ru/privacy");
   assert.equal(shadow.querySelector(".contacts a").getAttribute("href"), "tel:+70000000000");
+  assert.match(shadow.querySelector('.summary div:last-child dd').textContent,/13\s500 ₽/);
+  assert.match(shadow.querySelector('.receipt').textContent,/Цена обновилась/);
+  assert.match(shadow.querySelector('.receipt').textContent,/13\s500 ₽/);
 });
 
 function fixture(fetch, getFilters) {

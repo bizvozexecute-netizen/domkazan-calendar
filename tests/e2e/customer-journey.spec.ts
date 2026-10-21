@@ -60,6 +60,10 @@ test("one search, price sorting, house calendar, gallery, receipt and return pre
   await expect(page.locator(`[data-day="${day(5)}"]`)).toBeDisabled();await expect(page.locator(`[data-day="${day(6)}"]`)).toBeDisabled();
   await page.screenshot({path:testInfo.outputPath('journey-calendar.png'),fullPage:true});
   await page.keyboard.press("Escape");
+  // A house can be requoted independently; return still restores the catalog's search.
+  await page.getByLabel('Гостей',{exact:true}).fill('9');
+  await page.getByRole('button',{name:'Проверить стоимость',exact:true}).click();
+  await expect(page.getByText('Дом свободен. Стоимость рассчитана сервером.',{exact:true})).toBeVisible();
   await page.getByRole("button",{name:"Оставить заявку: Вымышленный дом 1"}).click();
   await expect(page.getByLabel('Имя',{exact:true})).toBeInViewport();
   await expect(page.locator(".summary")).toContainText(day(2).split('-').reverse().join('.'));

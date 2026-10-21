@@ -37,16 +37,17 @@ test('gateway sends only a Vercel identity to Preview and exposes Tilda houses',
   const previousFetch = globalThis.fetch;
   const previousOrigin = process.env.GATEWAY_UPSTREAM_ORIGIN;
   process.env.GATEWAY_UPSTREAM_ORIGIN = upstream;
+  const mappedHouse={...tildaHouse,id:'mapped-id',slug:'renamed-internal-code',tildaProductUid:'111111111111'};
   globalThis.fetch = async (url, options) => {
     assert.equal(new URL(url).origin, upstream);
     assert.equal(options.headers['x-vercel-trusted-oidc-idp-token'], 'test-oidc');
-    return Response.json({ houses: [tildaHouse, { id: 'demo', slug: 'demo-house-01' }] });
+    return Response.json({ houses: [tildaHouse,mappedHouse,{...tildaHouse,id:'unlinked',tildaProductUid:null}, { id: 'demo', slug: 'demo-house-01' }] });
   };
   try {
     const response = await GET(new Request(`${gateway}/api/availability?${query}`, { headers }));
     assert.equal(response.status, 200);
     assert.equal(response.headers.get('access-control-allow-origin'), headers.origin);
-    assert.deepEqual((await response.json()).houses, [tildaHouse]);
+    assert.deepEqual((await response.json()).houses, [tildaHouse,mappedHouse]);
   } finally {
     globalThis.fetch = previousFetch;
     if (previousOrigin === undefined) delete process.env.GATEWAY_UPSTREAM_ORIGIN;

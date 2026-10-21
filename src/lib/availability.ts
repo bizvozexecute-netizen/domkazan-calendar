@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { quoteStay } from "@/lib/pricing";
+import { publicHouseIdentity } from "./public-house-identity";
 
 export type HouseFilters = {
   guests: number;
@@ -14,7 +15,7 @@ export async function findAvailableHouses(checkIn: Date, checkOut: Date, filters
   const houses = await db.house.findMany({
     where: {
       isActive: true,
-      ...(filters.house && { slug: filters.house }),
+      ...(filters.house && publicHouseIdentity(filters.house)),
       maxGuests: { gte: filters.guests },
       ...(filters.district && { district: { equals: filters.district, mode: "insensitive" as const } }),
       ...(filters.bedrooms && { bedrooms: { gte: filters.bedrooms } }),
@@ -39,6 +40,7 @@ export async function findAvailableHouses(checkIn: Date, checkOut: Date, filters
     return [{
       id: house.id,
       slug: house.slug,
+      tildaProductUid: house.tildaProductUid,
       name: house.name,
       maxGuests: house.maxGuests,
       district: house.district,

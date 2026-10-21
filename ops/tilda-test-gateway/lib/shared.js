@@ -57,7 +57,8 @@ export async function proxyJson(request, path, method, body, headers) {
     if (response.status >= 500 || !Number.isInteger(response.status)) throw new Error('Upstream unavailable');
     if (response.ok && path.startsWith('/api/availability')) {
       if (!Array.isArray(result.houses)) throw new Error('Invalid availability');
-      result = { ...result, houses: result.houses.filter(house => /^tilda-\d{12}$/.test(house.slug)) };
+      result = { ...result, houses: result.houses.filter(house => Object.hasOwn(house,'tildaProductUid')
+        ? /^\d{12}$/.test(house.tildaProductUid ?? '') : /^tilda-\d{12}$/.test(house.slug)) };
     }
     if (response.ok && path === '/api/requests') {
       result = { ...result, message: 'Тестовая заявка сохранена. Бронирование и оплата не создаются.',

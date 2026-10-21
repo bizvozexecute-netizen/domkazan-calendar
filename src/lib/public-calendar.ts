@@ -2,6 +2,7 @@ import { db } from "./db";
 import { eachNight, dateKey, todayInMoscow } from "./dates";
 import { monthBounds } from "./calendar-board";
 import { priceForNight } from "./pricing";
+import { publicHouseIdentity } from "./public-house-identity";
 
 // A public DTO contains no reservation IDs, reasons, contacts or customer data.
 export async function getPublicHouseCalendar(slug: string, month: string) {
@@ -9,7 +10,7 @@ export async function getPublicHouseCalendar(slug: string, month: string) {
   if (!first) return null;
   const end = new Date(first.end);
   end.setUTCMonth(end.getUTCMonth() + 1);
-  const house = await db.house.findFirst({ where: { slug, isActive: true }, select: {
+  const house = await db.house.findFirst({ where: { ...publicHouseIdentity(slug), isActive: true }, select: {
     id: true, name: true, slug: true, maxGuests: true,
     baseRates: { where: { startsOn: { lt: end }, endsOn: { gt: first.start } } },
     dateOverrides: { where: { date: { gte: first.start, lt: end } } },

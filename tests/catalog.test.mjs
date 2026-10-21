@@ -38,13 +38,13 @@ test('public detail snapshot covers the existing homes without customer data or 
   }
 });
 
-async function setup(suffix = '') {
+async function setup(suffix = '', mapHouse = house => house) {
   const dom = new JSDOM('<div id="catalog"></div>', { url: `https://domkazan116.ru/calendar-test-311744409${suffix}`, runScripts: 'outside-only' });
   const win = dom.window;
   const products = details.products.slice(0, 3);
   win.fetch = async url => String(url).includes('/api/catalog') ? { ok: true, json: async () => ({ products }) } :
     { ok: true, json: async () => ({ houses: products.filter(product=>!String(url).includes('amenities=pool')||product.amenities.includes('pool')).map((product, index) => ({ id: product.slug, slug: product.slug,
-      name: product.name, maxGuests: product.maxGuests, quote: { total: String(10000 + index * 5000), nights: 2 } })) }) };
+      name: product.name, maxGuests: product.maxGuests, quote: { total: String(10000 + index * 5000), nights: 2 } })).map(mapHouse) }) };
   for (const file of ['domkazan-search.js', 'domkazan-catalog.js']) win.eval(readFileSync(new URL(`../public/embed/${file}`, import.meta.url), 'utf8'));
   const root = win.document.getElementById('catalog');
   const controller = win.DomKazanCatalog.mount({ root, apiOrigin: 'https://gateway.example.invalid' });
@@ -93,4 +93,20 @@ test('direct house URL renders one full page and test request fields use synthet
   assert.equal(request.elements.clientPhone.value, '+70000000000');
   assert.equal(request.elements.consent.checked, false);
   controller.destroy(); dom.window.close();
+});
+
+test('catalog maps by explicit Product UID after slug rename and submits the database ID; an unlinked UID never falls back',async()=>{
+  const first=details.products[0];
+  const {dom,win,shadow,controller}=await setup('?checkIn=2026-11-02&checkOut=2026-11-04&guests=2',house=>house.slug===first.slug
+    ? {...house,id:'synthetic-database-id',slug:'renamed-internal-code',tildaProductUid:first.productUid}
+    : {...house,tildaProductUid:null});
+  await flush();assert.match(shadow.querySelector('.count').textContent,/Найдено домов: 1/);
+  const widget=shadow.querySelector('.search > div').shadowRoot;
+  let sent;
+  win.fetch=async(_url,options)=>{sent=JSON.parse(options.body);return{ok:true,json:async()=>({requestId:'synthetic',total:'10000',message:'Test'})};};
+  shadow.querySelector('[data-domkazan-action-for] button').click();
+  const form=widget.querySelector('.request-form');form.elements.clientName.value='Synthetic';form.elements.clientPhone.value='+70000000000';form.elements.consent.checked=true;
+  form.dispatchEvent(new win.Event('submit',{cancelable:true}));await flush();
+  assert.equal(sent.houseId,'synthetic-database-id');assert.equal(Object.hasOwn(sent,'total'),false);
+  controller.destroy();dom.window.close();
 });

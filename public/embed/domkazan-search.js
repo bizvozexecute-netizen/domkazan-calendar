@@ -395,7 +395,10 @@
         send.hidden=true; requestMessage.hidden=true; heading.textContent='Заявка отправлена';
         requestForm.append(receipt);
         selectedHouse = null; submissionKey = null; retryPayload = null;
-        receiptText.textContent = `Заявка ${data.requestId}: ${house.name}, ${dateLabel(snapshot.checkIn)} — ${dateLabel(snapshot.checkOut)}. ${data.message}`;
+        const serverTotal=/^\d+(?:\.\d{1,2})?$/.test(String(data.total))&&Number.isFinite(Number(data.total))?String(data.total):null;
+        if(serverTotal!==null)summary.lastElementChild.querySelector('dd').textContent=`${money(serverTotal)} ₽`;
+        const priceNotice=serverTotal===null?'':`${Number(serverTotal)!==Number(house.quote.total)?'Цена обновилась. ':''}Стоимость заявки по актуальным тарифам: ${money(serverTotal)} ₽. `;
+        receiptText.textContent = `Заявка ${data.requestId}: ${house.name}, ${dateLabel(snapshot.checkIn)} — ${dateLabel(snapshot.checkOut)}. ${priceNotice}${data.message}`;
         receipt.hidden = false;
         contacts.replaceChildren();
         for (const [name, title, prefix] of [["phone", "Позвонить", "tel:"], ["telegram", "Telegram", "https://t.me/"], ["whatsapp", "WhatsApp", "https://wa.me/"]]) {

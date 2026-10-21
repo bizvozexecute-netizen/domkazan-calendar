@@ -44,14 +44,16 @@ try {
       includedGuests: detail.includedGuests && detail.includedGuests <= (product.maxGuests ?? 12) ? detail.includedGuests : null,
       extraGuestPrice: detail.includedGuests && detail.includedGuests <= (product.maxGuests ?? 12) ? detail.extraGuestPrice : 0,
       serviceFee: detail.serviceFee } : {};
-    const existing = await db.house.findUnique({ where: { slug } });
+    const existing = await db.house.findUnique({ where: { tildaProductUid: uid } }) ?? await db.house.findUnique({ where: { slug } });
     if (existing) {
       // Upgrade untouched test fixtures only. Owner/tester edits always win.
-      if (existing.revision === 0) await db.house.updateMany({ where: { id: existing.id, revision: 0 }, data: metadata });
+      if (existing.revision === 0 && (!existing.tildaProductUid || existing.tildaProductUid === uid)) await db.house.updateMany({ where: { id: existing.id, revision: 0 }, data: {
+        ...metadata, ...(!existing.tildaProductUid && existing.slug === slug ? { tildaProductUid: uid } : {}),
+      } });
       continue;
     }
     await db.house.create({ data: {
-      id: slug, slug, name: product.name, tildaUrl: product.tildaUrl,
+      id: slug, slug, tildaProductUid: uid, name: product.name, tildaUrl: product.tildaUrl,
       ...metadata,
       // Chebaksa allows 6 adults and 6 children. A single guest count cannot enforce that rule.
       maxGuests: product.maxGuests ?? 12, isActive: product.maxGuests !== null,

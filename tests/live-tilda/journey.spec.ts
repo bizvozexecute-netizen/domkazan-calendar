@@ -23,6 +23,7 @@ test('published TEST Tilda: search, detail, actual photo, safe request and retur
   expect(prices).toEqual([...prices].sort((a,b)=>a-b));
   await page.screenshot({path:testInfo.outputPath('real-catalog.png')});
   const card=cards.first();const uid=(await card.getAttribute('data-domkazan-house'))!.replace('tilda-','');
+  await card.getByRole('link',{name:/Подробнее:/}).scrollIntoViewIfNeeded();const catalogY=await page.evaluate(()=>scrollY);
   await card.getByRole('link',{name:/Подробнее:/}).click();await expect(page).toHaveURL(new RegExp(`house=${uid}`));
   expect(await page.evaluate(()=>performance.timeOrigin)).toBe(timeOrigin);
   await expect(page.getByText('Дом свободен. Стоимость рассчитана сервером.',{exact:true})).toBeVisible({timeout:20000});
@@ -55,6 +56,7 @@ test('published TEST Tilda: search, detail, actual photo, safe request and retur
   }
   await expect(page.locator('.count')).toHaveText(/Найдено домов: [1-9]\d*/,{timeout:20000});
   await expect(page.getByLabel('Сортировать',{exact:true})).toHaveValue('price');await expect(page.getByRole('checkbox',{name:'Бассейн',exact:true})).toBeChecked();
+  await expect(page.locator('[data-domkazan-transition]')).toHaveCount(0);expect(Math.abs(await page.evaluate(()=>scrollY)-catalogY)).toBeLessThan(3);
   expect(documents).toBe(1);expect(await page.evaluate(()=>performance.timeOrigin)).toBe(timeOrigin);
   expect(await page.evaluate(()=>(window as Window&{domkazanHeroCheck?:{flashes:number}}).domkazanHeroCheck?.flashes)).toBe(0);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);expect(errors).toEqual([]);

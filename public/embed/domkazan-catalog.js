@@ -138,7 +138,7 @@
     shadow.append(style,mediaStyle, viewer,videoHelp, navigation, thumbs, modal); render();
     return { destroy() { if (modal.open) modal.close(); shadow.replaceChildren(document.createElement("slot")); root.replaceChildren(...original); } };
   }
-  function mountPage({ root, apiOrigin, privacyUrl, pagePath = window.location.pathname, testMode = true, catalogData }) {
+  function mountPage({ root, apiOrigin, privacyUrl, pagePath = window.location.pathname, testMode = true, catalogData, catalogReturn }) {
     if (!root || !window.DomKazanCalendar) throw new Error('Модуль поиска не загружен.');
     const origin = new URL(apiOrigin);
     if (origin.protocol !== 'https:') throw new Error('Требуется HTTPS API.');
@@ -166,6 +166,7 @@
       if (!alive) return;
       const products = data.products.filter(product => /^\d{12}$/.test(product.productUid) && product.slug === `tilda-${product.productUid}`);
       const bySlug = new Map(products.map(product => [product.slug, product]));
+      const byUid = new Map(products.map(product => [product.productUid, product]));
       const query = new URLSearchParams(window.location.search);
       const houseUid = query.get('house');
       const selected = products.find(product => product.productUid === houseUid);
@@ -182,7 +183,8 @@
         root.dispatchEvent(new CustomEvent('domkazan:view-ready',{bubbles:true}));
         return;
       }
-      if (selected) shell.append(link('← К результатам поиска', houseUrl(null, values), 'back'));
+      const returnUrl=selected&&catalogReturn?.uid===selected.productUid?catalogReturn.url:houseUrl(null,values);
+      if (selected) shell.append(link('← К результатам поиска', returnUrl, 'back'));
       const intro = el('div', { class: selected?'intro':'sr-only' }, selected ? [text('h1', selected.name), facts(selected)] : [text('h1','Каталог загородных домов')]);
       shell.append(intro);
       const search = el('div');
@@ -256,9 +258,6 @@
           const card = el('article', { class: 'card', 'data-domkazan-house': product.slug }, [cover, info, el('div', { class: 'price-area' }, [price, actions])]);
           cards.push({ slug: product.slug, element: card, priceElement: price, actionElement: actions });
           cardLinks.push({ product, nodes: [cover, titleLink, details] }); list.append(card);
-          for (const node of [cover,titleLink,details]) node.addEventListener('click', () => {
-            try { sessionStorage.setItem('domkazan.catalog.return.v1', JSON.stringify({url:houseUrl(null, paramsWithFilters(widget.values())), y:window.scrollY})); } catch { /* Optional position restoration. */ }
-          });
         }
         empty = el('div', { class: 'empty', hidden: '' }, [text('h2', 'Подходящих домов не нашлось'), text('p', 'Попробуйте другие даты, уменьшите число гостей или снимите часть фильтров.')]);
         shell.append(list, empty, text('p', 'Вы выбираете дом на нашем сайте. Детали заезда и оплату согласуем лично.', 'footer-note'));
@@ -281,9 +280,6 @@
           for(const house of sorted)list.append(cards.find(card=>card.slug===house.slug).element);
           for(const card of cards)if(!order.has(card.slug))list.append(card.element);
           if (scroll && !resuming) shadow.querySelector('.toolbar').scrollIntoView?.({behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
-          if (resuming) {
-            try { const saved = JSON.parse(sessionStorage.getItem('domkazan.catalog.return.v1')); if (saved?.url === houseUrl(null,params) && Number.isFinite(saved.y)) window.scrollTo?.({top:Math.max(0,saved.y),behavior:'instant'}); } catch { /* Optional. */ }
-          }
         }
         if (breakdown && houses[0]) {
           const quote=houses[0].quote;
@@ -296,7 +292,7 @@
         houseSlug:selected?.slug, showCount:!selected,quietSuccess:!selected,
         resultElement:detailResult,
         calendarUrl:selected?new URL(`/api/house-calendar?house=${selected.slug}`,origin).href:undefined,
-        resultsUrl:()=>houseUrl(null,paramsWithFilters(widget.values())),
+        resultsUrl:()=>selected?returnUrl:houseUrl(null,paramsWithFilters(widget.values())),
         ownerContacts:{phone:'tel:+79053106605',telegram:'https://t.me/viteek_b',whatsapp:'https://wa.me/message/OZ7WM2IJUPIXM1'},
         getFilters:()=>({amenities:filter.amenities.join(',')}),
         renderPrice(target, house) {
@@ -305,9 +301,14 @@
         },
         getViewState: filterState,
         transformHouses(houses) {
-          return houses.filter(house => {
-            const product = bySlug.get(house.slug);
-            return product && (!selected || selected.slug === house.slug);
+          return houses.flatMap(house => {
+            // Older test Previews have no UID field. Explicit null means that
+            // the administrator removed the mapping: never guess from a slug.
+            const product = Object.hasOwn(house,'tildaProductUid')
+              ? byUid.get(house.tildaProductUid)
+              : bySlug.get(house.slug);
+            return product && (!selected || selected.productUid === product.productUid)
+              ? [{...house,slug:product.slug}] : [];
           });
         },
         onInvalidate(currentValues) {
@@ -362,21 +363,32 @@
       .finally(()=>clearTimeout(timer));
     let current,overlay,alive=true,revision=0,navigating=false;
     function removeOverlay(){overlay?.remove();overlay=null;root.inert=false;}
+    function readReturn(){
+      try{
+        const fromHistory=history.state?.domkazanCatalogReturn;
+        const value=fromHistory||JSON.parse(sessionStorage.getItem('domkazan.catalog.return.v1'));
+        if(!value||!Number.isFinite(value.y)||!/^\d{12}$/.test(value.uid))return null;
+        const url=new URL(value.url,location.origin);
+        if(url.origin!==location.origin||url.pathname!==pagePath||url.searchParams.has('house')||url.hash)return null;
+        if(!fromHistory){const currentUrl=new URL(location.href);currentUrl.searchParams.delete('house');if(currentUrl.pathname+currentUrl.search!==url.pathname+url.search)return null;}
+        return{...value,url:url.pathname+url.search};
+      }catch{return null;}
+    }
     function ready(){
       const token=revision;
       const isCatalog=!new URL(location.href).searchParams.has('house');
       let saved;
-      if(isCatalog)try{const value=JSON.parse(sessionStorage.getItem('domkazan.catalog.return.v1'));if(value?.url===location.pathname+location.search&&Number.isFinite(value.y))saved=value;}catch{/* Optional position restoration. */}
+      if(isCatalog){const value=readReturn();if(value?.url===location.pathname+location.search)saved=value;}
       let focus;
-      if(navigating){
+      if(navigating||saved){
         window.scrollTo?.({top:isCatalog?Math.max(0,saved?.y||0):0,behavior:'instant'});
-        focus=root.shadowRoot?.querySelector(saved?.uid&&/^\d{12}$/.test(saved.uid)?`[data-domkazan-house="tilda-${saved.uid}"] h2 a`:'h1');
+        if(navigating)focus=root.shadowRoot?.querySelector(saved?.uid?`[data-domkazan-house="tilda-${saved.uid}"] h2 a`:'h1');
       }
       (window.requestAnimationFrame||((callback)=>setTimeout(callback,0)))(()=>{if(alive&&revision===token){removeOverlay();navigating=false;if(focus){if(focus.tagName==='H1')focus.tabIndex=-1;focus.focus({preventScroll:true});}}});
     }
     function render(){
       revision++;current?.destroy();
-      current=mountPage({...options,pagePath,catalogData});
+      current=mountPage({...options,pagePath,catalogData,catalogReturn:readReturn()});
     }
     function showTransition(isCatalog){
       navigating=true;root.inert=true;
@@ -390,13 +402,15 @@
       let target;try{target=new URL(anchor.href,location.href);}catch{return;}
       if(target.origin!==location.origin||target.pathname!==pagePath||target.hash)return;
       event.preventDefault();
+      let catalogReturn=readReturn();
       if(!new URL(location.href).searchParams.has('house')&&target.searchParams.has('house')){
         const back=new URL(target);back.searchParams.delete('house');
-        history.replaceState(history.state,'',back.pathname+back.search);
-        try{sessionStorage.setItem('domkazan.catalog.return.v1',JSON.stringify({url:back.pathname+back.search,y:scrollY,uid:target.searchParams.get('house')}));}catch{/* Optional. */}
+        catalogReturn={url:back.pathname+back.search,y:scrollY,uid:target.searchParams.get('house')};
+        history.replaceState({...history.state,domkazanCatalogReturn:catalogReturn},'',catalogReturn.url);
+        try{sessionStorage.setItem('domkazan.catalog.return.v1',JSON.stringify(catalogReturn));}catch{/* History retains the return point when storage is unavailable. */}
       }
       showTransition(!target.searchParams.has('house'));
-      history.pushState(history.state,'',target.pathname+target.search);render();
+      history.pushState({...history.state,domkazanCatalogReturn:catalogReturn},'',target.pathname+target.search);render();
     }
     function popped(){if(location.pathname===pagePath){showTransition(!new URL(location.href).searchParams.has('house'));render();}}
     root.addEventListener('click',clicked);
