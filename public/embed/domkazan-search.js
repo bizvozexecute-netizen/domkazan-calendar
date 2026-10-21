@@ -196,7 +196,7 @@
 
   function mount({ root, apiUrl, requestUrl, privacyUrl, cards: explicitCards, getFilters,
     initialValues = {}, getViewState, transformHouses, onResults, onInvalidate, renderPrice, testMode = false,
-    calendarUrl, houseSlug, resultsUrl, ownerContacts, showCount = true, quietSuccess = false, resultElement }) {
+    calendarUrl, houseSlug, resultsUrl, ownerContacts, showCount = true, quietSuccess = false, resultElement, onSearchComplete }) {
     if (!root || !apiUrl) throw new Error("Укажите root и apiUrl для DomKazanCalendar.");
     if (root.closest("a,button")) throw new Error("Форма поиска должна находиться вне ссылки или кнопки.");
     instances.get(root)?.destroy();
@@ -454,11 +454,11 @@
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       invalidate(false);
-      if (!cards.length) { message.dataset.state='error';message.textContent = "Каталог ещё не готов к поиску. Дождитесь загрузки и проверки карточек."; return; }
+      if (!cards.length) { message.dataset.state='error';message.textContent = "Каталог ещё не готов к поиску. Дождитесь загрузки и проверки карточек.";onSearchComplete?.(); return; }
       const values = parameters();
       if (!validDate(values.get("checkIn")) || !validDate(values.get("checkOut")) || values.get("checkIn") < today || values.get("checkOut") <= values.get("checkIn") ||
           (Date.parse(values.get("checkOut")) - Date.parse(values.get("checkIn"))) / DAY > 60 || !/^([1-9]|[1-4][0-9]|50)$/.test(values.get("guests"))) {
-        message.dataset.state='error';message.textContent = "Выберите период от 1 до 60 ночей и укажите от 1 до 50 гостей."; return;
+        message.dataset.state='error';message.textContent = "Выберите период от 1 до 60 ночей и укажите от 1 до 50 гостей.";onSearchComplete?.(); return;
       }
       const currentGeneration = generation;
       searchController = new AbortController();
@@ -514,9 +514,9 @@
         if (generation !== currentGeneration) return;
         successfulSearch = null; clearActions();
         message.dataset.state='error';message.textContent = error?.name === "AbortError" ? "Сервер не ответил вовремя. Повторите поиск." : error instanceof Error ? error.message : "Поиск временно недоступен.";
-      } finally { if (generation === currentGeneration) { clearTimeout(searchTimer); searchTimer=null; button.disabled = false;form.setAttribute('aria-busy','false'); } }
+      } finally { if (generation === currentGeneration) { clearTimeout(searchTimer); searchTimer=null; button.disabled = false;form.setAttribute('aria-busy','false');onSearchComplete?.(); } }
     });
-    const controller = { reset, invalidate: () => invalidate(), search: () => form.requestSubmit(), values:()=>Object.fromEntries(new FormData(form)),
+    const controller = { reset, invalidate: () => invalidate(), search: () => {if(!form.checkValidity())return false;form.requestSubmit();return true;}, values:()=>Object.fromEntries(new FormData(form)),
       request(slug) {
         const house = currentHouses.find(item => item.slug === slug);
         if (house) openRequest(house, successfulSearch);

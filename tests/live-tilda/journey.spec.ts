@@ -5,7 +5,13 @@ const day=(offset:number)=>new Date(Date.now()+offset*86400000).toISOString().sl
 
 test('published TEST Tilda: search, detail, actual photo, safe request and return',async({page},testInfo)=>{
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+  let documents=0;page.on('request',request=>{if(request.isNavigationRequest()&&request.frame()===page.mainFrame()&&new URL(request.url()).pathname===path)documents++;});
   await page.goto(path);await expect(page.locator('.cards article').first()).toBeVisible();
+  const timeOrigin=await page.evaluate(()=>{
+    const state={flashes:0};Object.assign(window,{domkazanHeroCheck:state});
+    const check=()=>{const records=document.querySelector('#allrecords');if(records?.classList.contains('dkcal-ready')){for(const node of records.children){if(node.id!=='rec4862390501'&&node.classList.contains('r')&&node.getBoundingClientRect().height>0&&getComputedStyle(node).display!=='none'){state.flashes++;break;}}}else state.flashes++;requestAnimationFrame(check);};
+    requestAnimationFrame(check);return performance.timeOrigin;
+  });
   await selectStay(page,day(2),day(4));await page.getByLabel('Гостей',{exact:true}).fill('8');
   await page.getByRole('checkbox',{name:'Бассейн',exact:true}).check();await page.getByRole('checkbox',{name:'Баня / сауна',exact:true}).check();
   await page.getByRole('button',{name:'Показать свободные дома',exact:true}).click();
@@ -18,6 +24,7 @@ test('published TEST Tilda: search, detail, actual photo, safe request and retur
   await page.screenshot({path:testInfo.outputPath('real-catalog.png')});
   const card=cards.first();const uid=(await card.getAttribute('data-domkazan-house'))!.replace('tilda-','');
   await card.getByRole('link',{name:/Подробнее:/}).click();await expect(page).toHaveURL(new RegExp(`house=${uid}`));
+  expect(await page.evaluate(()=>performance.timeOrigin)).toBe(timeOrigin);
   await expect(page.getByText('Дом свободен. Стоимость рассчитана сервером.',{exact:true})).toBeVisible({timeout:20000});
   const photo=page.locator('.gallery .photo-button img');await expect(photo).toHaveClass('loaded',{timeout:30000});
   expect(await photo.evaluate((img:HTMLImageElement)=>img.naturalWidth)).toBeGreaterThan(0);
@@ -48,5 +55,7 @@ test('published TEST Tilda: search, detail, actual photo, safe request and retur
   }
   await expect(page.locator('.count')).toHaveText(/Найдено домов: [1-9]\d*/,{timeout:20000});
   await expect(page.getByLabel('Сортировать',{exact:true})).toHaveValue('price');await expect(page.getByRole('checkbox',{name:'Бассейн',exact:true})).toBeChecked();
+  expect(documents).toBe(1);expect(await page.evaluate(()=>performance.timeOrigin)).toBe(timeOrigin);
+  expect(await page.evaluate(()=>(window as Window&{domkazanHeroCheck?:{flashes:number}}).domkazanHeroCheck?.flashes)).toBe(0);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);expect(errors).toEqual([]);
 });

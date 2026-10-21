@@ -3,6 +3,26 @@ import {fixtureOrigin,fixtureProduct,fixtureHouses,fixtureDay,journeyFixture,ope
 
 test.beforeEach(async({context})=>journeyFixture(context));
 
+test('catalog and detail navigation never reloads Tilda or flashes its hero, including browser history',async({context,page})=>{
+  const products=Array.from({length:5},(_,i)=>({...fixtureProduct,productUid:String(111111111111+i),slug:`tilda-${111111111111+i}`,name:`Вымышленный дом ${i+1}`}));
+  await context.route(`${fixtureOrigin}/api/catalog`,route=>route.fulfill({json:{products}}));
+  let documents=0;
+  await context.route('**/navigation-fixture*',route=>{documents++;return route.fulfill({contentType:'text/html; charset=utf-8',body:`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0}#hero{height:500px;background:red}.ready #hero{display:none}</style><div id="original-tilda"><div id="hero">Original Tilda hero</div><div id="catalog"></div></div><script src="/embed/domkazan-search.js"></script><script src="/embed/domkazan-catalog.js"></script><script>document.getElementById('catalog').addEventListener('domkazan:ready',()=>document.getElementById('original-tilda').classList.add('ready'));DomKazanCatalog.mount({root:document.getElementById('catalog'),apiOrigin:'${fixtureOrigin}',pagePath:'/navigation-fixture'});</script>`});});
+  await page.goto('/navigation-fixture');await expect(page.locator('.cards article')).toHaveCount(5);await expect(page.locator('#hero')).toBeHidden();
+  const title=page.getByRole('link',{name:'Вымышленный дом 5',exact:true});await title.scrollIntoViewIfNeeded();
+  const before=await page.evaluate(()=>scrollY);
+  await title.click();await expect(page.getByRole('heading',{name:'Вымышленный дом 5',level:1})).toBeVisible();
+  await expect(page.locator('[data-domkazan-transition]')).toHaveCount(0);expect(await page.evaluate(()=>scrollY)).toBe(0);
+  await page.getByRole('link',{name:'← К результатам поиска',exact:true}).click();
+  await expect(page.locator('.cards article')).toHaveCount(5);await expect(page.locator('[data-domkazan-transition]')).toHaveCount(0);
+  expect(Math.abs(await page.evaluate(()=>scrollY)-before)).toBeLessThan(3);await expect(title).toBeFocused();
+  await expect(page).toHaveTitle('Каталог домов — DomKazan, тест');
+  await page.goBack();await expect(page.getByRole('heading',{name:'Вымышленный дом 5',level:1})).toBeVisible();
+  await page.goBack();await expect(page.locator('.cards article')).toHaveCount(5);await expect(page.locator('[data-domkazan-transition]')).toHaveCount(0);
+  await page.goForward();await expect(page.getByRole('heading',{name:'Вымышленный дом 5',level:1})).toBeVisible();
+  await expect(page.locator('#hero')).toBeHidden();expect(documents).toBe(1);
+});
+
 test('gallery loads full photos, follows active thumbnail, supports zoom keyboard, swipe and safe video exit',async({page},testInfo)=>{
   await openFixtureHouse(page);
   const photo=page.locator('.gallery .photo-button img');

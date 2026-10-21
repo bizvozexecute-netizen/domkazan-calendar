@@ -138,7 +138,7 @@
     shadow.append(style,mediaStyle, viewer,videoHelp, navigation, thumbs, modal); render();
     return { destroy() { if (modal.open) modal.close(); shadow.replaceChildren(document.createElement("slot")); root.replaceChildren(...original); } };
   }
-  function mount({ root, apiOrigin, privacyUrl, pagePath = window.location.pathname, testMode = true }) {
+  function mountPage({ root, apiOrigin, privacyUrl, pagePath = window.location.pathname, testMode = true, catalogData }) {
     if (!root || !window.DomKazanCalendar) throw new Error('Модуль поиска не загружен.');
     const origin = new URL(apiOrigin);
     if (origin.protocol !== 'https:') throw new Error('Требуется HTTPS API.');
@@ -159,10 +159,10 @@
     }
 
     async function load() {
-      const timer=setTimeout(()=>abort.abort(),10000);
       let response,data;
-      try{response=await fetch(new URL('/api/catalog', origin), { signal: abort.signal });data=await response.json();}finally{clearTimeout(timer);}
-      if (!response.ok || !Array.isArray(data.products)) throw new Error(data.error || 'Каталог временно недоступен.');
+      if(catalogData)data=await catalogData;
+      else {const timer=setTimeout(()=>abort.abort(),10000);try{response=await fetch(new URL('/api/catalog', origin), { signal: abort.signal });data=await response.json();}finally{clearTimeout(timer);}if(!response.ok)throw new Error('Каталог временно недоступен.');}
+      if (!Array.isArray(data.products)) throw new Error('Каталог временно недоступен.');
       if (!alive) return;
       const products = data.products.filter(product => /^\d{12}$/.test(product.productUid) && product.slug === `tilda-${product.productUid}`);
       const bySlug = new Map(products.map(product => [product.slug, product]));
@@ -176,7 +176,10 @@
       const brand = link('DOM', houseUrl(null), 'brand'); brand.append(text('span', 'KAZAN'), text('small', 'Казань и рядом', 'city'));
       shell.append(el('div', { class: 'top' }, [brand, link('+7 905 310-66-05', 'tel:+79053106605', 'top-contact')]));
       if (houseUid && !selected) {
+        document.title='Дом не найден — DomKazan';
         shell.append(link('← Все дома', houseUrl(null), 'back'), text('h1', 'Дом не найден'), text('p', 'Возможно, он был удалён из каталога. Выберите другой вариант.', 'subtitle'));
+        root.dispatchEvent(new CustomEvent('domkazan:ready',{bubbles:true}));
+        root.dispatchEvent(new CustomEvent('domkazan:view-ready',{bubbles:true}));
         return;
       }
       if (selected) shell.append(link('← К результатам поиска', houseUrl(null, values), 'back'));
@@ -223,6 +226,7 @@
         const layoutStyle=el('style',{text:'.house-layout{grid-template-areas:"copy booking"}.house-copy{grid-area:copy}.booking{grid-area:booking}@media(max-width:760px){.house-layout{grid-template-areas:"booking" "copy"}}'});
         shell.append(layoutStyle,layout);
       } else {
+        document.title='Каталог домов — DomKazan, тест';
         const sort = el('select', {'aria-label':'Сортировать',title:'Сортировка полной стоимости доступна после поиска'}, [['default', 'Порядок каталога'], ['price', 'Сначала дешевле'], ['price-desc', 'Сначала дороже']].map(([value, label]) => el('option', { value, text: label })));
         sort.disabled=true;sortControl=sort;
         sort.value = filter.sort;
@@ -317,6 +321,7 @@
           for (const { product, nodes } of cardLinks) for (const node of nodes) node.href = houseUrl(product.productUid, paramsWithFilters(currentValues));
         },
         onResults:applyResults,
+        onSearchComplete:()=>root.dispatchEvent(new CustomEvent('domkazan:view-ready',{bubbles:true})),
       });
       if (!selected) {
         const chips = el('fieldset',{class:'search-amenities'},[el('legend',{text:'Удобства',class:'sr-only'})]);
@@ -327,8 +332,9 @@
         }
         search.shadowRoot.querySelector('form').append(chips);
       }
-      if (values.checkIn && values.checkOut) {resuming=true;widget.search();}
       root.dispatchEvent(new CustomEvent('domkazan:ready', { bubbles: true, detail: { count: products.length } }));
+      if (values.checkIn && values.checkOut) {resuming=true;if(widget.search()===false)root.dispatchEvent(new CustomEvent('domkazan:view-ready',{bubbles:true}));}
+      else root.dispatchEvent(new CustomEvent('domkazan:view-ready',{bubbles:true}));
     }
     load().catch(() => {
       if (!alive) return;
@@ -340,6 +346,65 @@
     function pageShown(event){if(event.persisted&&widget){resuming=true;widget.search();}}
     window.addEventListener('pageshow',pageShown);
     return { destroy() { alive = false; abort.abort(); widget?.destroy(); media?.destroy(); window.removeEventListener('pageshow',pageShown); shadow.replaceChildren(); } };
+  }
+  function mount(options) {
+    const root=options.root;
+    if(!root||!window.DomKazanCalendar)throw new Error('Модуль поиска не загружен.');
+    if(new URL(options.apiOrigin).protocol!=='https:')throw new Error('Требуется HTTPS API.');
+    const pagePath=new URL(options.pagePath||location.pathname,location.origin).pathname;
+    const previousRestoration=history.scrollRestoration;
+    history.scrollRestoration='manual';
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),10000);
+    // Content is reused within this visit; every view still rechecks availability.
+    const catalogData=fetch(new URL('/api/catalog',options.apiOrigin),{signal:controller.signal})
+      .then(async response=>{if(!response.ok)throw new Error('Каталог временно недоступен.');return response.json();})
+      .finally(()=>clearTimeout(timer));
+    let current,overlay,alive=true,revision=0,navigating=false;
+    function removeOverlay(){overlay?.remove();overlay=null;root.inert=false;}
+    function ready(){
+      const token=revision;
+      const isCatalog=!new URL(location.href).searchParams.has('house');
+      let saved;
+      if(isCatalog)try{const value=JSON.parse(sessionStorage.getItem('domkazan.catalog.return.v1'));if(value?.url===location.pathname+location.search&&Number.isFinite(value.y))saved=value;}catch{/* Optional position restoration. */}
+      let focus;
+      if(navigating){
+        window.scrollTo?.({top:isCatalog?Math.max(0,saved?.y||0):0,behavior:'instant'});
+        focus=root.shadowRoot?.querySelector(saved?.uid&&/^\d{12}$/.test(saved.uid)?`[data-domkazan-house="tilda-${saved.uid}"] h2 a`:'h1');
+      }
+      (window.requestAnimationFrame||((callback)=>setTimeout(callback,0)))(()=>{if(alive&&revision===token){removeOverlay();navigating=false;if(focus){if(focus.tagName==='H1')focus.tabIndex=-1;focus.focus({preventScroll:true});}}});
+    }
+    function render(){
+      revision++;current?.destroy();
+      current=mountPage({...options,pagePath,catalogData});
+    }
+    function showTransition(isCatalog){
+      navigating=true;root.inert=true;
+      if(!overlay){overlay=document.createElement('div');overlay.setAttribute('data-domkazan-transition','');overlay.setAttribute('role','status');overlay.style.cssText='position:fixed;inset:0;z-index:2147483000;display:grid;place-content:center;padding:24px;background:#f5f7fa;color:#172b42;text-align:center;font:500 15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';document.body.append(overlay);}
+      overlay.textContent=isCatalog?'Возвращаемся к каталогу…':'Открываем дом…';
+    }
+    function clicked(event){
+      if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
+      const anchor=event.composedPath().find(node=>node?.tagName==='A'&&node.hasAttribute('href'));
+      if(!anchor||anchor.hasAttribute('download')||(anchor.target&&anchor.target!=='_self'))return;
+      let target;try{target=new URL(anchor.href,location.href);}catch{return;}
+      if(target.origin!==location.origin||target.pathname!==pagePath||target.hash)return;
+      event.preventDefault();
+      if(!new URL(location.href).searchParams.has('house')&&target.searchParams.has('house')){
+        const back=new URL(target);back.searchParams.delete('house');
+        history.replaceState(history.state,'',back.pathname+back.search);
+        try{sessionStorage.setItem('domkazan.catalog.return.v1',JSON.stringify({url:back.pathname+back.search,y:scrollY,uid:target.searchParams.get('house')}));}catch{/* Optional. */}
+      }
+      showTransition(!target.searchParams.has('house'));
+      history.pushState(history.state,'',target.pathname+target.search);render();
+    }
+    function popped(){if(location.pathname===pagePath){showTransition(!new URL(location.href).searchParams.has('house'));render();}}
+    root.addEventListener('click',clicked);
+    root.addEventListener('domkazan:view-ready',ready);
+    root.addEventListener('domkazan:error',removeOverlay);
+    window.addEventListener('popstate',popped);
+    render();
+    return{destroy(){alive=false;controller.abort();clearTimeout(timer);current?.destroy();removeOverlay();root.removeEventListener('click',clicked);root.removeEventListener('domkazan:view-ready',ready);root.removeEventListener('domkazan:error',removeOverlay);window.removeEventListener('popstate',popped);history.scrollRestoration=previousRestoration;}};
   }
   window.DomKazanCatalog = { mount };
 })();

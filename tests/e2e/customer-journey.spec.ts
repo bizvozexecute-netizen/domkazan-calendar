@@ -42,6 +42,7 @@ test("one search, price sorting, house calendar, gallery, receipt and return pre
   await expect(page.locator('.cards > article').first()).toHaveAttribute('data-domkazan-house','tilda-222222222222');
   const first=page.getByRole("link",{name:"Вымышленный дом 1",exact:true});
   const target=new URL((await first.getAttribute("href"))!,page.url());expect(target.searchParams.get("amenities")).toBe("pool,sauna");expect(target.searchParams.get("sort")).toBe("price-desc");
+  await first.scrollIntoViewIfNeeded();const catalogY=await page.evaluate(()=>scrollY);
   await first.click();
   await expect(page.getByRole("heading",{name:"Вымышленный дом 1",level:1})).toBeVisible();
   await expect(page.getByText("Дом свободен. Стоимость рассчитана сервером.")).toBeVisible();
@@ -78,6 +79,12 @@ test("one search, price sorting, house calendar, gallery, receipt and return pre
   await page.screenshot({path:testInfo.outputPath("journey-house.png"),fullPage:true});
   await page.getByRole("link",{name:"Вернуться к результатам",exact:true}).click();
   await expect(page.getByText("Найдено домов: 2",{exact:true})).toBeVisible();
+  await expect(page.locator('[data-domkazan-transition]')).toHaveCount(0);
+  expect(Math.abs(await page.evaluate(()=>scrollY)-catalogY)).toBeLessThan(3);
   await expect(page.getByLabel("Сортировать",{exact:true})).toHaveValue("price-desc");
-  await expect(page.getByRole("checkbox",{name:"Бассейн",exact:true})).toBeChecked();expect(errors).toEqual([]);
+  await expect(page.getByRole("checkbox",{name:"Бассейн",exact:true})).toBeChecked();
+  await expect(page.getByRole("checkbox",{name:"Баня / сауна",exact:true})).toBeChecked();
+  await expect(page.getByLabel('Гостей',{exact:true})).toHaveValue('8');
+  const returned=new URL(page.url());expect(returned.searchParams.get('checkIn')).toBe(day(2));expect(returned.searchParams.get('checkOut')).toBe(day(4));
+  expect(errors).toEqual([]);
 });
