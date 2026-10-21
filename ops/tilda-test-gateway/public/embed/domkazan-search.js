@@ -445,8 +445,16 @@
     }
 
     function reset() { invalidate(false); }
-    form.addEventListener("input", () => { invalidate(); picker.refresh(); });
-    form.addEventListener("change", () => { invalidate(); picker.refresh(); });
+    let formSignature=signature();
+    function formChanged(){
+      const next=signature();
+      // WebKit may commit change on blur after input and the search click.
+      // An unchanged commit must not cancel a quote for the same parameters.
+      if(next===formSignature)return;
+      formSignature=next;invalidate();picker.refresh();
+    }
+    form.addEventListener("input", formChanged);
+    form.addEventListener("change", formChanged);
     function filtersChanged(event) {
       if (!getFilters || event.composedPath().includes(root) || !successfulSearch) return;
       if (!isCurrent(successfulSearch)) invalidate();
@@ -457,6 +465,7 @@
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       invalidate(false);
+      formSignature=signature();
       if (!cards.length) { message.dataset.state='error';message.textContent = "Каталог ещё не готов к поиску. Дождитесь загрузки и проверки карточек.";onSearchComplete?.(); return; }
       const values = parameters();
       if (!validDate(values.get("checkIn")) || !validDate(values.get("checkOut")) || values.get("checkIn") < today || values.get("checkOut") <= values.get("checkIn") ||

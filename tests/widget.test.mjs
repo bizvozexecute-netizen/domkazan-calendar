@@ -90,6 +90,18 @@ function fixture(fetch, getFilters) {
 const found = () => ({ ok: true, json: async () => ({ houses: [{ id: "house-1", slug: "free", name: "Дом", quote: { total: "10000", nights: 2 } }] }) });
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 
+test('late unchanged change on blur cannot cancel an in-flight search or clear its current application',async()=>{
+  let finish;
+  const f=fixture(()=>new Promise(resolve=>{finish=resolve;}));
+  const guests=f.form.elements.guests;guests.value='3';guests.dispatchEvent(new f.dom.window.Event('input',{bubbles:true}));
+  f.submit();guests.dispatchEvent(new f.dom.window.Event('change',{bubbles:true}));
+  finish(found());await tick();assert.ok(f.action());f.action().click();
+  guests.dispatchEvent(new f.dom.window.Event('change',{bubbles:true}));assert.equal(f.shadow.querySelector('.request-form').hidden,false);
+  guests.value='4';guests.dispatchEvent(new f.dom.window.Event('input',{bubbles:true}));
+  assert.equal(f.action(),null);assert.equal(f.shadow.querySelector('.request-form').hidden,true);
+  f.controller.destroy();f.dom.window.close();
+});
+
 test("date, guest and filter changes invalidate the chosen house and require another search", async () => {
   let filter = "";
   let posts = 0;
