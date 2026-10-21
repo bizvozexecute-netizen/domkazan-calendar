@@ -11,9 +11,9 @@ export async function POST(request: NextRequest) {
   try {
     const catalog = await loadCatalog();
     const result = await db.house.createMany({ skipDuplicates: true, data: catalog.products.map((product: {
-      slug: string; name: string; maxGuests: number | null; bedrooms: number | null; amenities: string[];
+      slug: string; productUid: string; name: string; maxGuests: number | null; bedrooms: number | null; amenities: string[];
     }) => ({
-      id: product.slug, slug: product.slug, name: product.name,
+      id: product.slug, slug: product.slug, tildaProductUid: product.productUid, name: product.name,
       maxGuests: product.maxGuests ?? 1, bedrooms: product.bedrooms, amenities: product.amenities,
       isActive: false,
     })) });

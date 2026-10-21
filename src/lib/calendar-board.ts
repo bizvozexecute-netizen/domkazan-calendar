@@ -17,7 +17,7 @@ export async function getCalendarBoard(month: string) {
   const houses = await db.house.findMany({
     orderBy: { name: "asc" },
     select: {
-      id: true, name: true, slug: true, isActive: true, revision: true,
+      id: true, name: true, slug: true, calendarName: true, isActive: true, revision: true,
       baseRates: { where: { startsOn: { lt: bounds.end }, endsOn: { gt: bounds.start } } },
       dateOverrides: { where: { date: { gte: bounds.start, lt: bounds.end } } },
       blockedPeriods: { where: { startsOn: { lt: bounds.end }, endsOn: { gt: bounds.start } } },
@@ -29,7 +29,7 @@ export async function getCalendarBoard(month: string) {
     month,
     dates: bounds.dates,
     houses: houses.map((house) => ({
-      id: house.id, name: house.name, slug: house.slug, isActive: house.isActive, revision: house.revision,
+      id: house.id, name: house.name, slug: house.slug, calendarName: house.calendarName, isActive: house.isActive, revision: house.revision,
       cells: bounds.dates.map((key) => {
         const day = new Date(`${key}T00:00:00.000Z`);
         const manual = house.dateOverrides.find((item) => dateKey(item.date) === key);
