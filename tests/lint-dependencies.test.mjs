@@ -77,4 +77,7 @@ test('lockfile removes vulnerable braces and micromatch instead of hiding their 
   const lock=JSON.parse(readFileSync(new URL('../package-lock.json',import.meta.url),'utf8'));
   assert.equal(Object.keys(lock.packages).some(path=>/node_modules\/(braces|micromatch)$/.test(path)),false);
   assert.deepEqual(Object.entries(lock.packages).filter(([,pkg])=>pkg.dependencies?.['fast-glob']).map(([path])=>path),['node_modules/@next/eslint-plugin-next']);
+  // Windows npm can prune these optional cross-platform records even during a
+  // lock-only update. Their absence breaks clean Linux/Node 22 installations.
+  for(const name of ['core','runtime'])assert.ok(lock.packages[`node_modules/@emnapi/${name}`]?.version,`Retain @emnapi/${name} for Linux installs`);
 });
