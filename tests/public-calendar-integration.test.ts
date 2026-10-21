@@ -5,6 +5,7 @@ import {NextRequest} from "next/server";
 import {db} from "../src/lib/db.ts";
 import {dateKey,todayInMoscow} from "../src/lib/dates.ts";
 import {GET as calendar} from "../src/app/api/houses/[slug]/calendar/route.ts";
+import {GET as previewCalendar} from "../src/app/api/house-calendar/route.ts";
 import {createHouse,updateHouse} from "../src/lib/admin-mutations.ts";
 
 after(async()=>{await db.$disconnect();});
@@ -27,6 +28,9 @@ test("public calendar distinguishes occupancy and absent tariffs without reveali
     const find=(offset:number)=>result.days.find((item:{date:string})=>item.date===dateKey(day(offset)));
     assert.equal(find(1).price,"7777");assert.equal(find(2).status,"occupied");assert.equal(find(3).status,"occupied");assert.equal(find(4).status,"unpriced");
     assert.doesNotMatch(JSON.stringify(result),/Private Synthetic|private synthetic|clientPhone|bookingRequests|\+70000000000/);
+    const preview=await previewCalendar(new NextRequest(`http://localhost/api/house-calendar?house=${slug}&month=${dateKey(start).slice(0,7)}`));
+    assert.equal(preview.status,200);assert.deepEqual(await preview.json(),result);
+    assert.equal((await previewCalendar(new NextRequest(`http://localhost/api/house-calendar?month=${dateKey(start).slice(0,7)}`))).status,400);
     await db.house.update({where:{id:house.id},data:{isActive:false}});
     const unavailable=await calendar(new NextRequest(`http://localhost/api/houses/${slug}/calendar?month=${dateKey(start).slice(0,7)}`),{params:Promise.resolve({slug})});
     assert.equal(unavailable.status,404);
