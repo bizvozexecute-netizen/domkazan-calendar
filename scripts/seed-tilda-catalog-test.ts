@@ -44,7 +44,10 @@ try {
       includedGuests: detail.includedGuests && detail.includedGuests <= (product.maxGuests ?? 12) ? detail.includedGuests : null,
       extraGuestPrice: detail.includedGuests && detail.includedGuests <= (product.maxGuests ?? 12) ? detail.extraGuestPrice : 0,
       serviceFee: detail.serviceFee } : {};
-    const existing = await db.house.findUnique({ where: { tildaProductUid: uid } }) ?? await db.house.findUnique({ where: { slug } });
+    // The imported ID remains stable after an administrator renames the slug
+    // and deliberately removes the mapping. Do not recreate or relink that row.
+    const existing = await db.house.findUnique({ where: { tildaProductUid: uid } }) ??
+      await db.house.findUnique({ where: { id: slug } }) ?? await db.house.findUnique({ where: { slug } });
     if (existing) {
       // Upgrade untouched test fixtures only. Owner/tester edits always win.
       if (existing.revision === 0 && (!existing.tildaProductUid || existing.tildaProductUid === uid)) await db.house.updateMany({ where: { id: existing.id, revision: 0 }, data: {

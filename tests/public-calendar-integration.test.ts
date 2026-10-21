@@ -1,6 +1,8 @@
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
+import {readFileSync} from "node:fs";
+import {spawnSync} from "node:child_process";
 import {NextRequest} from "next/server";
 import {db} from "../src/lib/db.ts";
 import {dateKey,todayInMoscow} from "../src/lib/dates.ts";
@@ -68,4 +70,29 @@ test("Tilda UID keeps search and calendar mapped after slug edits and cannot fal
     await updateHouse(house.id,renamed.revision,{...fields,slug:renamed.slug,tildaProductUid:null});
     assert.deepEqual((await (await search()).json()).houses,[]);assert.equal((await readCalendar()).status,404);
   }finally{await db.house.deleteMany({where:{id:{in:[house.id,shadow.id]}}});}
+});
+
+test("repeated Tilda test seed preserves a renamed, unlinked imported house and its calendar",async(context)=>{
+  assert.ok(new URL(process.env.DATABASE_URL!).pathname.endsWith('_test'));
+  const snapshot=JSON.parse(readFileSync(new URL('../data/tilda-catalog-public.json',import.meta.url),'utf8')) as {products:{productUid:string}[]};
+  const ids=snapshot.products.map(product=>`tilda-${product.productUid}`),uids=snapshot.products.map(product=>product.productUid);
+  if(await db.house.count({where:{OR:[{id:{in:ids}},{slug:{in:ids}},{tildaProductUid:{in:uids}}]}})){
+    context.skip('Existing imported test houses must not be modified by this isolated fixture.');return;
+  }
+  await db.house.createMany({data:snapshot.products.map(product=>({id:`tilda-${product.productUid}`,slug:`tilda-${product.productUid}`,tildaProductUid:product.productUid,name:'Synthetic seed placeholder',maxGuests:2,isActive:false,revision:1}))});
+  try{
+    const id=ids[0],slug=`edited-import-${randomUUID()}`,start=todayInMoscow(),end=new Date(start.getTime()+86400000);
+    await db.house.update({where:{id},data:{slug,tildaProductUid:null,name:'Synthetic edited import',calendarName:'Edited',revision:2}});
+    await db.baseRate.create({data:{houseId:id,startsOn:start,endsOn:end,weekdayPrice:'1234',fridayPrice:'1234',saturdayPrice:'1234',sundayPrice:'1234'}});
+    await db.dateOverride.create({data:{houseId:id,date:start,pricePerNight:'5678'}});
+    await db.blockedPeriod.create({data:{houseId:id,startsOn:start,endsOn:end,reason:'Synthetic seed fixture'}});
+    const read=()=>db.house.findUniqueOrThrow({where:{id},include:{baseRates:true,dateOverrides:true,blockedPeriods:true}});
+    const before=await read();
+    for(let run=0;run<2;run++){
+      const result=spawnSync(process.execPath,['--import','tsx','scripts/seed-tilda-catalog-test.ts'],{env:{...process.env,ALLOW_TEST_SEED:'true'},encoding:'utf8',timeout:30000});
+      assert.equal(result.status,0,result.stderr);
+      assert.equal(await db.house.count({where:{id:{in:ids}}}),ids.length);
+      assert.deepEqual(await read(),before);
+    }
+  }finally{await db.house.deleteMany({where:{id:{in:ids}}});}
 });

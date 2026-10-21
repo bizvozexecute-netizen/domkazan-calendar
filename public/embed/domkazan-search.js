@@ -6,6 +6,8 @@
   const addDays = (value, days) => new Date(Date.parse(`${value}T00:00:00Z`) + days * DAY).toISOString().slice(0, 10);
   const today = () => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Moscow" }).format(new Date());
   const dateLabel = (value) => validDate(value) ? value.split("-").reverse().join(".") : "Выберите дату";
+  const reachableDate = value => validDate(value) && value >= today() && value.slice(0,7) <= addDays(today(),730).slice(0,7);
+  const visibleMonth = value => (reachableDate(value) ? value : today()).slice(0,7);
   function rangeCalendar(form, onChange, options = {}) {
     const fields = {};
     const triggers = [];
@@ -103,8 +105,8 @@
     }
     previous.addEventListener("click", () => shift(-1)); next.addEventListener("click", () => shift(1));
     function open(button, end) {
-      opener = button; choosingEnd = end && validDate(fields.checkIn.value);
-      month = (fields.checkIn.value || today()).slice(0, 7); focusDay = choosingEnd ? addDays(fields.checkIn.value, 1) : fields.checkIn.value || today();
+      opener = button; choosingEnd = end && reachableDate(fields.checkIn.value);
+      month = visibleMonth(fields.checkIn.value); focusDay = choosingEnd ? addDays(fields.checkIn.value, 1) : reachableDate(fields.checkIn.value) ? fields.checkIn.value : today();
       container.hidden = false; triggers.forEach((trigger) => trigger.setAttribute("aria-expanded", "true"));
       render(); options.onMonth?.(month);
       (grid.querySelector(`button[data-day="${focusDay}"]:not(:disabled)`) || grid.querySelector("button:not(:disabled)") || next).focus();
@@ -543,7 +545,7 @@
       shadow.replaceChildren(); instances.delete(root);
     } };
     instances.set(root, controller);
-    if (calendarUrl) loadCalendar((initialValues.checkIn || today).slice(0,7));
+    if (calendarUrl) loadCalendar(visibleMonth(form.elements.checkIn.value));
     return controller;
   }
 

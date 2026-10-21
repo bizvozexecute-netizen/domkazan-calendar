@@ -38,6 +38,22 @@ test('escape restores focus; impossible ranges do not reach API',async()=>{
   assert.equal(calls,0);assert.match(shadow.querySelector('.message').textContent,/Выберите период/);
   controller.destroy();dom.window.close();
 });
+
+test('malformed, impossible, expired and distant link dates keep the picker usable in the current month',()=>{
+  const current=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Moscow'}).format(new Date());
+  for(const checkIn of ['not-a-date','2026-02-31','2000-01-01','9999-12-01']){
+    const {dom,controller,shadow}=setup({initialValues:{checkIn,checkOut:'9999-12-03'}});
+    const errors=[];dom.window.addEventListener('error',event=>{errors.push(event.message);event.preventDefault();});
+    try{
+      shadow.querySelector('[aria-label="Заезд"]').click();
+      assert.deepEqual(errors,[],checkIn);
+      const day=shadow.querySelector(`[data-day="${current}"]`);
+      assert.ok(day,`current month remains reachable for ${checkIn}`);assert.equal(day.disabled,false);
+      day.click();assert.equal(shadow.querySelector('[name="checkIn"]').value,current);
+      assert.equal(shadow.querySelector('[name="checkOut"]').value,'');
+    }finally{controller.destroy();dom.window.close();}
+  }
+});
 test('refreshing a cached house calendar preserves keyboard focus; accessible outside clicks close it',async()=>{
   const start=new Date(Date.now()+86400000).toISOString().slice(0,10);
   const {dom,controller,shadow}=setup({calendarUrl:'https://example.invalid/api/house-calendar',houseSlug:'free',initialValues:{checkIn:start,checkOut:new Date(Date.parse(start)+86400000).toISOString().slice(0,10)}});

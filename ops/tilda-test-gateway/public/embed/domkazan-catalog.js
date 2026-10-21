@@ -361,7 +361,7 @@
     const catalogData=fetch(new URL('/api/catalog',options.apiOrigin),{signal:controller.signal})
       .then(async response=>{if(!response.ok)throw new Error('Каталог временно недоступен.');return response.json();})
       .finally(()=>clearTimeout(timer));
-    let current,overlay,alive=true,revision=0,navigating=false;
+    let current,overlay,alive=true,revision=0,navigating=false,restorePending=false;
     function removeOverlay(){overlay?.remove();overlay=null;root.inert=false;}
     function readReturn(){
       try{
@@ -375,6 +375,9 @@
       }catch{return null;}
     }
     function ready(){
+      // Restore once per navigation, not on the next explicit search in this view.
+      if(!restorePending)return;
+      restorePending=false;
       const token=revision;
       const isCatalog=!new URL(location.href).searchParams.has('house');
       let saved;
@@ -387,7 +390,7 @@
       (window.requestAnimationFrame||((callback)=>setTimeout(callback,0)))(()=>{if(alive&&revision===token){removeOverlay();navigating=false;if(focus){if(focus.tagName==='H1')focus.tabIndex=-1;focus.focus({preventScroll:true});}}});
     }
     function render(){
-      revision++;current?.destroy();
+      revision++;restorePending=true;current?.destroy();
       current=mountPage({...options,pagePath,catalogData,catalogReturn:readReturn()});
     }
     function showTransition(isCatalog){
