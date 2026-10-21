@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { db } from "../../src/lib/db";
 import { dateKey, todayInMoscow } from "../../src/lib/dates";
+import { selectStay } from "./stay-helper";
 
 const day = (offset: number) => dateKey(new Date(todayInMoscow().getTime() + offset * 86_400_000));
 const created: string[] = [];
@@ -23,8 +24,7 @@ test("catalog search, stale form reset, application and manual confirmation work
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/test-catalog");
-  await page.getByLabel("Заезд", { exact: true }).fill(day(2));
-  await page.getByLabel("Выезд", { exact: true }).fill(day(4));
+  await selectStay(page,day(2),day(4));
   const search = page.getByRole("button", { name: "Показать свободные дома" });
   await search.click();
   const action = page.locator('[data-domkazan-action-for="demo-house-01"] button');

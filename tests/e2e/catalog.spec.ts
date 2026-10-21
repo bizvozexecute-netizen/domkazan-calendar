@@ -15,6 +15,7 @@ test.afterAll(async () => { await db.$disconnect(); });
 
 test("Tilda catalog, house page, price changes, occupancy and request use the same database", async ({ page, request, context }, testInfo) => {
   await db.house.create({ data: { id: slug, slug, name: "Проверочный дом", maxGuests: 20,
+    amenities:["pool","sauna"],
     includedGuests: 2, extraGuestPrice: "200", serviceFee: "500", isActive: true,
     baseRates: { create: { startsOn: todayInMoscow(), endsOn: new Date(`${day(90)}T00:00:00Z`),
       weekdayPrice: "1000", fridayPrice: "1000", saturdayPrice: "1000", sundayPrice: "1000" } } } });
@@ -25,6 +26,11 @@ test("Tilda catalog, house page, price changes, occupancy and request use the sa
   await context.route(`${origin}/api/availability?*`, async route => {
     const response = await request.get(`/api/availability${new URL(route.request().url()).search}`);
     await route.fulfill({ json: await response.json(), status: response.status() });
+  });
+  await context.route(`${origin}/api/house-calendar?*`,async route=>{
+    const month=new URL(route.request().url()).searchParams.get('month');
+    const response=await request.get(`/api/houses/${slug}/calendar?month=${month}`);
+    await route.fulfill({json:await response.json(),status:response.status()});
   });
   await context.route(`${origin}/api/requests`, async route => {
     const response = await request.post("/api/requests", { data: route.request().postDataJSON(),
