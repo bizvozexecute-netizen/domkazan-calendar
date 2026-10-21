@@ -38,6 +38,21 @@ test('escape restores focus; impossible ranges do not reach API',async()=>{
   assert.equal(calls,0);assert.match(shadow.querySelector('.message').textContent,/Выберите период/);
   controller.destroy();dom.window.close();
 });
+test('refreshing a cached house calendar preserves keyboard focus; accessible outside clicks close it',async()=>{
+  const start=new Date(Date.now()+86400000).toISOString().slice(0,10);
+  const {dom,controller,shadow}=setup({calendarUrl:'https://example.invalid/api/house-calendar',houseSlug:'free',initialValues:{checkIn:start,checkOut:new Date(Date.parse(start)+86400000).toISOString().slice(0,10)}});
+  dom.window.fetch=async()=>({ok:true,json:async()=>({days:[{date:start,status:'available',price:'1000',minNights:1}]})});
+  const trigger=shadow.querySelector('[aria-label="Заезд"]');
+  trigger.click();await flush();
+  shadow.querySelector('.calendar').dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+  trigger.click();await flush();
+  assert.equal(shadow.activeElement?.dataset.day,start);
+  // Assistive technology can synthesize click without a preceding pointerdown.
+  dom.window.document.getElementById('search').after(dom.window.document.createElement('button'));
+  dom.window.document.querySelector('#search + button').click();
+  assert.equal(shadow.querySelector('.calendar').hidden,true);
+  controller.destroy();dom.window.close();
+});
 test('house calendar distinguishes occupied and missing rate, and never crosses a blocked night',async()=>{
   const start=new Date(Date.now()+3*86400000).toISOString().slice(0,10);
   const middle=new Date(Date.parse(start)+86400000).toISOString().slice(0,10);

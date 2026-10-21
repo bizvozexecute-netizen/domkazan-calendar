@@ -51,6 +51,7 @@
       return true;
     }
     function render() {
+      const focusedDay = container.getRootNode().activeElement?.dataset?.day;
       refreshLabels(); grid.replaceChildren();
       caption.textContent = choosingEnd ? "Выберите выезд" : "Выберите заезд";
       title.textContent = new Intl.DateTimeFormat("ru-RU", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${month}-01T00:00:00Z`));
@@ -82,6 +83,7 @@
       }
       const buttons = [...grid.querySelectorAll("button:not(:disabled)")];
       if (!buttons.some((button) => button.tabIndex === 0) && buttons.length) buttons[0].tabIndex = 0;
+      if (focusedDay) (grid.querySelector(`[data-day="${focusedDay}"]:not(:disabled)`) || buttons[0] || next).focus({preventScroll:true});
       if(options.getDay) status.textContent='Цена за ночь без доплат. Синий — занято, «—» — нет тарифа. Итог рассчитывается отдельно.';
     }
     function choose(day) {
@@ -128,8 +130,9 @@
     });
     const outside = (event) => { if (!container.hidden && !event.composedPath().some((element) => element === container || triggers.includes(element))) { container.hidden = true; triggers.forEach((trigger) => trigger.setAttribute("aria-expanded", "false")); } };
     document.addEventListener("pointerdown", outside);
+    document.addEventListener("click", outside);
     refreshLabels();
-    return { refresh: render, set(start, end) { fields.checkIn.value = start || ""; fields.checkOut.value = end || ""; render(); }, destroy() { document.removeEventListener("pointerdown", outside); } };
+    return { refresh: render, set(start, end) { fields.checkIn.value = start || ""; fields.checkOut.value = end || ""; render(); }, destroy() { document.removeEventListener("pointerdown", outside); document.removeEventListener("click", outside); } };
   }
   const css = `
     :host { display:block; container-type:inline-size; font:16px Arial,sans-serif; color:#1d3028; }
