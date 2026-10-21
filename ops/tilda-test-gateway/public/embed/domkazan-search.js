@@ -153,7 +153,7 @@
     .summary div { display:flex; flex-wrap:wrap; gap:8px; margin:6px 0; }
     .summary dd { margin:0; overflow-wrap:anywhere; }
     .summary dt { font-weight:600; }
-    .receipt { display:flex; flex-direction:column; justify-content:flex-end; padding:16px; border:1px solid #dce6df; border-radius:12px; margin-top:16px; }
+    .receipt { grid-column:1/-1; padding:12px; border:1px solid #dce6df; border-radius:12px; }
     .return-link { display:inline-block; margin:12px 0; color:var(--dk-accent,#1c6047); }
     form { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)) auto; gap:14px; align-items:end; }
     form > * { min-width:0; }
@@ -360,6 +360,9 @@
       selectedHouse = { house, snapshot };
       submissionKey = window.crypto.randomUUID();
       retryPayload = null;
+      delete requestForm.dataset.submitted;
+      for (const input of requestForm.querySelectorAll('input,select,textarea')) input.disabled=false;
+      send.hidden=false; requestMessage.hidden=false;
       heading.textContent = "Заявка на проживание";
       summary.replaceChildren();
       for (const [label, value] of [["Дом", house.name], ["Заезд", dateLabel(snapshot.checkIn)], ["Выезд", dateLabel(snapshot.checkOut)], ["Гостей", snapshot.guests], ["Стоимость", `${money(house.quote.total)} ₽`]]) {
@@ -398,11 +401,13 @@
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Заявку не удалось отправить.");
         if (destroyed || !isCurrent(snapshot)) return;
-        // Keep the action's space occupied so shortening the page cannot clamp
-        // the viewport upward after a mobile submission near the bottom.
-        receipt.style.minHeight = `${requestForm.getBoundingClientRect().height}px`;
-        requestForm.hidden = true;
-        selectedHouse = null; submissionKey = null; retryPayload = null; requestForm.reset();
+        // Retain the filled, read-only form: replacing it with a short receipt
+        // would shrink the document and jump the mobile viewport upward.
+        requestForm.dataset.submitted='true';
+        for (const input of requestForm.querySelectorAll('input,select,textarea')) input.disabled=true;
+        send.hidden=true; requestMessage.hidden=true; heading.textContent='Заявка отправлена';
+        requestForm.append(receipt);
+        selectedHouse = null; submissionKey = null; retryPayload = null;
         receiptText.textContent = `Заявка ${data.requestId}: ${house.name}, ${dateLabel(snapshot.checkIn)} — ${dateLabel(snapshot.checkOut)}. ${data.message}`;
         receipt.hidden = false;
         contacts.replaceChildren();
@@ -422,7 +427,7 @@
         if (isCurrent(snapshot)) requestMessage.textContent = error instanceof Error ? error.message : "Заявку не удалось отправить.";
         else message.textContent = "Проверьте результат отправки заявки перед повторной попыткой. Для новых параметров повторите поиск.";
       }
-      finally { sending = false; send.disabled = false; }
+      finally { sending = false; send.disabled = requestForm.dataset.submitted === 'true'; }
     });
 
     function invalidate(showMessage = true) {
@@ -431,6 +436,9 @@
       currentHouses = [];
       clearActions(); requestForm.hidden = true; requestForm.reset(); contacts.hidden = true; contacts.replaceChildren(); receipt.hidden = true;
       selectedHouse = null; submissionKey = null; retryPayload = null;
+      delete requestForm.dataset.submitted;
+      for (const input of requestForm.querySelectorAll('input,select,textarea')) input.disabled=false;
+      send.hidden=false; send.disabled=sending; requestMessage.hidden=false;
       for (const card of cards) {
         show(card);
         if (card.priceElement) card.priceElement.replaceChildren(...card.originalPriceNodes.map(node => node.cloneNode(true)));

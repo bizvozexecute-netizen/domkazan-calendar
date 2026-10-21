@@ -2,9 +2,11 @@ import { test, expect } from "@playwright/test";
 import { db } from "../../src/lib/db";
 import { dateKey, todayInMoscow } from "../../src/lib/dates";
 import { selectStay } from "./stay-helper";
+import {resetTestThrottle} from "./reset-throttle";
 
 const day = (offset: number) => dateKey(new Date(todayInMoscow().getTime() + offset * 86_400_000));
 const created: string[] = [];
+test.beforeEach(resetTestThrottle);
 test.afterEach(async () => {
   if (created.length) await db.bookingRequest.deleteMany({ where: { id: { in: created.splice(0) } } });
 });

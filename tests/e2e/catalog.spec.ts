@@ -2,10 +2,12 @@ import { readFile } from "node:fs/promises";
 import { test, expect } from "@playwright/test";
 import { db } from "../../src/lib/db";
 import { dateKey, todayInMoscow } from "../../src/lib/dates";
+import {resetTestThrottle} from "./reset-throttle";
 
 const uid = "111111111111";
 const slug = `tilda-${uid}`;
 const day = (offset: number) => dateKey(new Date(todayInMoscow().getTime() + offset * 86400000));
+test.beforeEach(resetTestThrottle);
 
 test.afterEach(async () => {
   await db.bookingRequest.deleteMany({ where: { houseId: slug } });
@@ -61,7 +63,7 @@ test("Tilda catalog, house page, price changes, occupancy and request use the sa
   await page.getByRole("button", { name: "Отправить заявку", exact: true }).click();
   const sentResponse = await sent;
   expect(sentResponse.status(), await sentResponse.text()).toBe(201);
-  await expect(page.getByText(/Заявка .*Проверочный дом/)).toBeVisible();
+  await expect(page.locator('.receipt > p')).toHaveText(/Заявка .*Проверочный дом/);
   const booking = await db.bookingRequest.findFirstOrThrow({ where: { houseId: slug } });
   expect(booking.quotedTotal?.toString()).toBe("2900");
   expect(booking.status).toBe("NEW");
