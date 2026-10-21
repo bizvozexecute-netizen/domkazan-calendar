@@ -57,6 +57,7 @@ test("one search, price sorting, house calendar, gallery, receipt and return pre
   await page.screenshot({path:testInfo.outputPath('journey-calendar.png'),fullPage:true});
   await page.keyboard.press("Escape");
   await page.getByRole("button",{name:"Оставить заявку: Вымышленный дом 1"}).click();
+  await expect(page.getByLabel('Имя',{exact:true})).toBeInViewport();
   await expect(page.locator(".summary")).toContainText(day(2).split('-').reverse().join('.'));
   await expect(page.getByLabel('Контакт мессенджера',{exact:true})).toBeHidden();
   await page.getByText('Мессенджер и комментарий · необязательно',{exact:true}).click();

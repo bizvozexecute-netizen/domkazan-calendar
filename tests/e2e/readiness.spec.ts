@@ -79,6 +79,9 @@ test("catalog search, stale form reset, application and manual confirmation work
   await page.getByLabel('Дом',{exact:true}).press('Escape');
   await expect(page.getByRole('button',{name:'Выбрать даты вручную',exact:true})).toBeFocused();
   await page.getByRole("button", { name: "Сегодня", exact: true }).click();
+  const visibleToday=await page.locator(`[data-calendar-date="${day(0)}"]`).boundingBox();
+  const stickyHouse=await page.locator('.calendar-grid-scroll thead th').first().boundingBox();
+  expect(visibleToday!.x).toBeGreaterThanOrEqual(stickyHouse!.x+stickyHouse!.width-1);
   await page.screenshot({ path: testInfo.outputPath("admin-calendar.png"), fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
   await page.getByRole("link", { name: "Дома", exact: true }).click();

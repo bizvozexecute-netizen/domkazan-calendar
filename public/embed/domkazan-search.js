@@ -345,6 +345,9 @@
         requestForm.elements.clientName.value = 'Тестовый Гость';
         requestForm.elements.clientPhone.value = '+70000000000';
       }
+      // This scroll follows an explicit request action. Without it the one
+      // shared form can open above a long catalog, outside the user's viewport.
+      requestForm.scrollIntoView?.({behavior:'auto',block:'start'});
       requestForm.querySelector('[name="clientName"]').focus({preventScroll:true});
     }
 

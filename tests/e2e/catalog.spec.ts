@@ -74,6 +74,7 @@ test("Tilda catalog, house page, price changes, occupancy and request use the sa
   await page.getByLabel("Пароль", { exact: true }).fill(process.env.E2E_ADMIN_PASSWORD!);
   await page.getByRole("button", { name: "Войти", exact: true }).click();
   await expect(page).toHaveURL(/\/admin$/);
+  await page.getByRole('button',{name:'Выбрать даты вручную',exact:true}).click();
   await page.getByLabel("Дом", { exact: true }).selectOption(slug);
   await page.getByLabel("С даты", { exact: true }).fill(day(10));
   await page.getByLabel("По дату включительно", { exact: true }).fill(day(11));
@@ -84,6 +85,7 @@ test("Tilda catalog, house page, price changes, occupancy and request use the sa
   await page.goto(path);
   await expect(page.locator(".price")).toHaveText(/4\s900 ₽ за 2 ноч\./);
   await page.goto(`/admin?month=${day(10).slice(0, 7)}`);
+  await page.getByRole('button',{name:'Выбрать даты вручную',exact:true}).click();
   await page.getByLabel("Дом", { exact: true }).selectOption(slug);
   await page.getByLabel("С даты", { exact: true }).fill(day(10));
   await page.getByLabel("По дату включительно", { exact: true }).fill(day(11));

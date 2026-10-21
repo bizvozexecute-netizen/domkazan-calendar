@@ -16,6 +16,15 @@ function shiftedMonth(month: string, delta: number) {
   return new Date(Date.UTC(year, number - 1 + delta, 1)).toISOString().slice(0, 7);
 }
 
+function revealDate(region:HTMLDivElement|null,date:string){
+  const cell=region?.querySelector<HTMLElement>(`[data-calendar-date="${date}"]`);
+  if(!region||!cell)return;
+  const width=region.querySelector('thead th')?.getBoundingClientRect().width||0;
+  // Center inside the visible dates, excluding the sticky house column.
+  const freeWidth=Math.max(0,region.clientWidth-width);
+  region.scrollLeft+=cell.getBoundingClientRect().left-region.getBoundingClientRect().left-width-Math.max(0,(freeWidth-cell.getBoundingClientRect().width)/2);
+}
+
 async function responseJson(response: Response) {
   let data;
   try { data = await response.json(); }
@@ -78,11 +87,11 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
       return;
     }
     if (!initialScrollDone.current && initialFrom && board?.month === initialFrom.slice(0, 7)) {
-      scrollRegion.current?.querySelector<HTMLElement>(`[data-calendar-date="${initialFrom}"]`)?.scrollIntoView({ block: "nearest", inline: "center" });
+      revealDate(scrollRegion.current,initialFrom);
       initialScrollDone.current = true;
     }
     if (scrollToToday.current && board?.month === today().slice(0, 7)) {
-      scrollRegion.current?.querySelector<HTMLElement>(`[data-calendar-date="${today()}"]`)?.scrollIntoView({ block: "nearest", inline: "center" });
+      revealDate(scrollRegion.current,today());
       scrollToToday.current = false;
     }
   }, [board, initialFrom]);
@@ -98,7 +107,7 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
     scrollToToday.current = true;
     const currentMonth = today().slice(0, 7);
     if (currentMonth === month && board?.month === month) {
-      scrollRegion.current?.querySelector<HTMLElement>(`[data-calendar-date="${today()}"]`)?.scrollIntoView({ block: "nearest", inline: "center" });
+      revealDate(scrollRegion.current,today());
       scrollToToday.current = false;
     } else changeMonth(currentMonth);
   }
@@ -155,7 +164,7 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
   return <section className="space-y-6">
     <div className="calendar-heading">
       <div><h1 className="text-3xl font-bold">Шахматка занятости</h1><p className="mt-2 text-slate-600">Выберите дом и одну дату, затем вторую для диапазона. Цена указана за ночь.</p></div>
-      <Link className="rounded-lg bg-emerald-800 px-4 py-2 font-medium text-white" href="/admin/houses/new">Добавить дом</Link>
+      <Link className="rounded-lg border bg-white px-4 py-2 font-medium text-blue-700" href="/admin/houses/new">Добавить дом</Link>
     </div>
 
     <div className="calendar-tools" aria-label="Навигация по календарю">
