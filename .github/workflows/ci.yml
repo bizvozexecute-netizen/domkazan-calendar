@@ -58,6 +58,8 @@ jobs:
             test-results/**/house.png
             test-results/**/journey-catalog.png
             test-results/**/journey-house.png
+            test-results/**/journey-house-detail.png
+            test-results/**/journey-calendar.png
           if-no-files-found: ignore
           retention-days: 7
   containers:

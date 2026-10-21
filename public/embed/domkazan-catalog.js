@@ -4,16 +4,22 @@
   const rub = value => new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format(Number(value));
   const plural = (value, forms) => forms[value % 100 >= 11 && value % 100 <= 14 ? 2 : value % 10 === 1 ? 0 : value % 10 >= 2 && value % 10 <= 4 ? 1 : 2];
   const css = `
-    :host{display:block;--dk-accent:#218df1;color:#192a3a;font:16px/1.5 Arial,sans-serif;background:#f6f8fb}
-    *{box-sizing:border-box} [hidden]{display:none!important} a{color:inherit;text-decoration:none} button,input,select{font:inherit} button,a,input,select,summary{-webkit-tap-highlight-color:transparent} button,a{touch-action:manipulation} button{cursor:pointer} button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid #9cd0ff;outline-offset:3px}
-    .shell{max-width:1200px;margin:auto;padding:36px 24px 64px}.top{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:32px}.brand{font-size:23px;font-weight:800;letter-spacing:-1px}.brand span{color:var(--dk-accent)}.city{margin-left:16px;color:#7b8795;font-size:14px;font-weight:400;letter-spacing:0}.top-contact{font-size:15px;font-weight:700}.intro{margin:0 0 24px}.eyebrow{font-size:12px;letter-spacing:.12em;color:#637b90;text-transform:uppercase;font-weight:700}h1{margin:8px 0 10px;font-size:clamp(28px,3.7vw,42px);line-height:1.16;letter-spacing:-1px}.subtitle{margin:0;color:#708091;font-size:16px}.search{padding:22px 24px;border:1px solid #e6ecf1;border-radius:16px;background:#fff;box-shadow:0 8px 24px #233d5810}.test-note{display:flex;align-items:baseline;gap:10px;margin:15px 0 28px;color:#7a8795;font-size:12px}.test-note b{flex-shrink:0;color:#486c94;background:#eaf2fb;border-radius:5px;padding:3px 7px;font-size:11px}.toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:26px 0 16px}.count{font-size:20px;font-weight:700}.view{display:flex;border:1px solid #e1e7ee;border-radius:9px;padding:3px;background:#fff}.view button{border:0;background:transparent;border-radius:6px;padding:7px 12px;color:#728193;font-size:13px}.view button[aria-pressed=true]{background:#eaf3ff;color:#1769b6;font-weight:700}.filters{border:1px solid #e2e8ef;background:#fff;border-radius:12px;margin-bottom:20px;padding:16px 20px}.filters summary{font-size:14px;font-weight:700;cursor:pointer}.filter-fields{display:grid;grid-template-columns:2fr 1fr 1fr 1.4fr;gap:14px;margin-top:16px}.filter-fields label{display:grid;gap:5px;color:#768494;font-size:12px}.filter-fields input,.filter-fields select{width:100%;min-width:0;height:42px;border:1px solid #e1e6ec;border-radius:7px;padding:8px 10px;background:#fff;color:#23384c;font-size:14px}.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}.chip{display:flex;align-items:center;gap:7px;border:1px solid #e1e8f0;border-radius:7px;padding:7px 11px;font-size:13px;color:#536579;cursor:pointer}.chip:has(input:checked){background:#edf5ff;border-color:#85baff;color:#1769b6}.chip input{accent-color:var(--dk-accent)}.reset{border:0;background:transparent;color:#2486df;font-size:13px;padding:8px}.cards{display:grid;gap:18px}.card{display:grid;grid-template-columns:300px minmax(0,1fr) 225px;background:#fff;border:1px solid #e9edf2;border-radius:15px;overflow:hidden;box-shadow:0 5px 18px #233d5807}.cover{display:block;min-height:235px;background:#e9eef4;position:relative}.cover img{width:100%;height:100%;min-height:235px;max-height:280px;object-fit:cover;display:block;transition:transform .2s}.cover:hover img{transform:scale(1.025)}.photo-count{position:absolute;bottom:12px;left:14px;border-radius:5px;padding:3px 8px;background:#14222eaa;color:white;font-size:11px}.info{padding:26px 25px}.info h2{margin:0 0 14px;font-size:23px;line-height:1.2;letter-spacing:-.4px}.info h2 a:hover{color:#218df1}.facts{display:flex;gap:8px 16px;flex-wrap:wrap;color:#5b6b7d;font-size:13px;margin-bottom:16px}.facts span{white-space:nowrap}.amenities{display:flex;gap:6px;flex-wrap:wrap;list-style:none;padding:0;margin:0 0 19px}.amenities li{background:#f3f6f9;border-radius:5px;padding:4px 8px;font-size:11px;color:#66788a}.details-link{font-size:14px;font-weight:700;color:#2288e6}.price-area{padding:26px 22px;border-left:1px solid #edf0f4;display:flex;flex-direction:column;justify-content:space-between;gap:16px}.price{margin:0;font-size:24px;font-weight:700;letter-spacing:-.5px;line-height:1.2;color:#172c40}.price small{display:block;font-size:12px;font-weight:400;letter-spacing:0;color:#7d8b9b;margin-top:7px}.price-area [data-domkazan-action-for] button{width:100%;font-size:13px!important;font-weight:700!important;margin:0!important;min-height:44px}.empty{padding:48px 20px;text-align:center;background:white;border:1px dashed #d5e0eb;border-radius:14px}.empty h2{margin:0 0 8px;font-size:22px}.empty p{color:#758496;margin:0 0 18px}.cards.grid{grid-template-columns:repeat(3,minmax(0,1fr))}.grid .card{grid-template-columns:1fr}.grid .cover{min-height:210px}.grid .cover img{height:210px;min-height:210px}.grid .info{padding:20px}.grid .price-area{border-left:0;border-top:1px solid #edf0f4;padding:18px 20px}.grid .info h2{font-size:21px}.back{display:inline-flex;align-items:center;gap:8px;color:#66809a;font-size:14px;margin-bottom:18px}.gallery{display:grid;grid-template-columns:minmax(0,1fr) 165px;gap:10px;margin:26px 0}.main-photo{width:100%;height:480px;object-fit:cover;border-radius:16px;background:#e7edf4}.thumbs{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:start;max-height:480px;overflow:auto}.thumbs button{padding:0;border:2px solid transparent;border-radius:8px;background:none;overflow:hidden}.thumbs button[aria-pressed=true]{border-color:var(--dk-accent)}.thumbs img{display:block;width:100%;height:77px;object-fit:cover}.house-layout{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:32px;align-items:start}.house-copy{background:white;border:1px solid #e5ebf1;border-radius:16px;padding:30px}.house-copy h2{margin:0 0 18px;font-size:23px}.house-copy p{white-space:pre-line;color:#5f7183;margin:0;line-height:1.9}.house-copy .amenities{margin-bottom:24px}.booking{position:sticky;top:20px}.booking .search{padding:22px}.booking h2{margin:0 0 18px;font-size:21px}.booking-quote{background:white;padding:0 22px 22px;border:1px solid #e6ecf1;border-top:0;border-radius:0 0 16px 16px;margin-top:-12px}.breakdown{color:#7b8896;font-size:12px;margin-top:12px}.contacts{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}.contacts a{padding:10px 13px;border:1px solid #dce6ef;border-radius:8px;font-size:13px;font-weight:700;color:#2884d5}.contacts a:hover{background:#eff6ff}.contact-note{font-size:12px;color:#7e8b98;margin:13px 0 0}.footer-note{font-size:13px;color:#7e8c9b;text-align:center;margin:36px 0 0}.error{background:#fff0ed;border:1px solid #f6d2c8;padding:18px;border-radius:12px;color:#8d422c}.loading{padding:60px;text-align:center;color:#718297}
-    @media(max-width:1050px){.card{grid-template-columns:245px minmax(0,1fr) 200px}.info{padding:22px 18px}.price-area{padding:22px 18px}.cards.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.house-layout{grid-template-columns:minmax(0,1fr) 350px}.main-photo{height:400px}.filter-fields{grid-template-columns:1fr 1fr}}
-    @media(max-width:760px){.shell{padding:24px 16px 40px}.top{margin-bottom:26px}.brand{font-size:21px}.city{display:none}.top-contact{font-size:12px}.intro{margin-bottom:20px}h1{font-size:30px;letter-spacing:-.6px}.subtitle{font-size:14px}.search{padding:18px 16px}.test-note{align-items:start;margin-bottom:20px}.filters{padding:14px}.filter-fields{gap:10px}.filter-fields label:first-child{grid-column:1/-1}.chip{font-size:12px;padding:6px 8px}.toolbar{margin-top:20px}.count{font-size:18px}.card,.cards.grid .card{grid-template-columns:1fr}.cards.grid{grid-template-columns:1fr}.cover,.cover img,.grid .cover,.grid .cover img{height:220px;min-height:220px;max-height:none}.info{padding:20px 20px 14px}.info h2{font-size:23px;margin-bottom:12px}.amenities{margin-bottom:16px}.price-area{border-left:0;border-top:1px solid #edf0f4;padding:18px 20px;display:grid;grid-template-columns:1fr 1fr;align-items:center}.price{font-size:22px}.price-area [data-domkazan-action-for] button{font-size:12px!important;padding:12px!important}.view{display:none}.house-layout{grid-template-columns:1fr;gap:20px}.booking{position:static;grid-row:1}.gallery{grid-template-columns:1fr;margin:20px 0}.main-photo{height:280px;border-radius:12px}.thumbs{grid-template-columns:repeat(6,90px);overflow:auto;max-height:90px}.thumbs img{height:65px}.house-copy{padding:22px}.house-copy h2{font-size:21px}.booking .search{padding:20px}.booking-quote{display:block}.contacts a{flex:1;text-align:center}.empty{padding:32px 20px}}
-    .view{display:none}.intro:empty{display:none}.gallery{display:block}.booking{position:static}.house-layout .booking{grid-row:auto}
-    .description-preview{font-size:14px;line-height:1.6;color:#5b6b7d;margin:0 0 14px;white-space:pre-line}
-    .toolbar h2{font:inherit;margin:0}.sort-control{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:14px}
-    .sort-control select{padding:10px;border:1px solid #dce6ef;border-radius:8px;background:white;max-width:100%}
-    @media(max-width:760px){.toolbar{align-items:flex-start;flex-direction:column}.cover img,.grid .cover img{object-fit:contain;background:#eef2f6}.shell{padding:16px 12px 32px}}
+    :host{display:block;--dk-accent:#176bdf;--dk-accent-hover:#1054b7;--dk-ink:#172b42;--dk-muted:#586b80;--dk-line:#e0e7ef;color:var(--dk-ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f7fa;-webkit-font-smoothing:antialiased}
+    *{box-sizing:border-box}[hidden]{display:none!important}a{color:inherit;text-decoration:none}button,input,select{font:inherit}button,a,input,select,summary{-webkit-tap-highlight-color:transparent}button,a{touch-action:manipulation}button{cursor:pointer}button:disabled,select:disabled{cursor:default}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid #176bdf;outline-offset:4px}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+    .shell{max-width:1248px;margin:auto;padding:32px 32px 56px}.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-bottom:25px;margin-bottom:28px;border-bottom:1px solid var(--dk-line)}.brand{display:inline-flex;align-items:baseline;flex-wrap:wrap;font-size:23px;line-height:1.1;font-weight:850;letter-spacing:-1.1px}.brand span{color:var(--dk-accent)}.city{margin-left:18px;color:var(--dk-muted);font-size:13px;font-weight:400;letter-spacing:0}.top-contact{display:inline-flex;align-items:center;gap:8px;min-height:42px;border:1px solid var(--dk-line);background:#fff;border-radius:100px;padding:9px 15px;font-size:14px;font-weight:650;white-space:nowrap}.top-contact:hover{border-color:#a9c6ed;color:var(--dk-accent)}
+    .intro{margin:0 0 22px}.intro:empty{display:none}h1{margin:0 0 14px;font-size:clamp(28px,3.5vw,40px);line-height:1.15;letter-spacing:-1px;font-weight:750}.subtitle{margin:0;color:var(--dk-muted)}.search{padding:24px;border:1px solid var(--dk-line);border-radius:20px;background:#fff;box-shadow:0 8px 30px #243f6210}.test-note{display:flex;align-items:baseline;gap:10px;margin:14px 4px 25px;color:#637386;font-size:11px;line-height:1.5}.test-note b{flex-shrink:0;color:#536a82;background:#e8edf3;border-radius:5px;padding:3px 7px;font-size:10px;letter-spacing:.03em;font-weight:650}
+    .toolbar{display:flex;align-items:center;justify-content:space-between;gap:20px;margin:30px 0 20px;scroll-margin-top:20px}.toolbar h2{margin:0}.count{font-size:23px;line-height:1.25;letter-spacing:-.5px;font-weight:700}.results-context{color:var(--dk-muted);font-size:13px;margin:6px 0 0}.sort-control{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--dk-muted)}.sort-control select{min-height:44px;padding:9px 30px 9px 12px;border:1px solid var(--dk-line);border-radius:10px;background:#fff;color:var(--dk-ink);max-width:100%}.sort-control select:disabled{background:#eef2f6;color:#6b7787}.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;align-items:stretch}
+    .card{min-width:0;display:flex;flex-direction:column;background:#fff;border:1px solid var(--dk-line);border-radius:18px;overflow:hidden;box-shadow:0 3px 12px #243f6205;transition:box-shadow .2s,border-color .2s}.card:focus-within{border-color:#a1c1ec}.cover{display:block;aspect-ratio:16/10;background:#eaf0f5;position:relative;overflow:hidden}.cover img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .35s}.photo-count{position:absolute;bottom:12px;right:12px;display:flex;align-items:center;gap:5px;border:1px solid #ffffff38;border-radius:7px;padding:4px 8px;background:#172b42c9;color:#fff;font-size:11px;font-weight:600;backdrop-filter:blur(6px)}.photo-count svg{width:13px;height:13px}.info{padding:21px 22px 17px;flex:1}.info h2{margin:0 0 12px;font-size:22px;line-height:1.2;letter-spacing:-.55px;font-weight:700}.info h2 a:hover{color:var(--dk-accent)}.facts{display:flex;gap:7px 14px;flex-wrap:wrap;color:var(--dk-muted);font-size:12px;line-height:1.5;margin:0 0 14px}.facts span{display:inline-flex;align-items:center;gap:5px}.facts svg{width:15px;height:15px;color:#71849a;flex:none}.amenities{display:flex;gap:6px;flex-wrap:wrap;list-style:none;padding:0;margin:0 0 12px}.amenities li{display:inline-flex;align-items:center;gap:5px;background:#f1f5f9;border-radius:6px;padding:5px 8px;font-size:11px;line-height:1.2;color:#435b73}.amenities svg{width:13px;height:13px;flex:none;color:#587ba2}.description-preview{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-size:13px;line-height:1.6;color:var(--dk-muted);margin:0 0 14px}.details-link{display:inline-flex;align-items:center;min-height:36px;font-size:13px;font-weight:650;color:var(--dk-accent)}.details-link:hover{text-decoration:underline;text-underline-offset:4px}
+    .price-area{padding:18px 22px 20px;border-top:1px solid #edf1f5;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:91px}.price{margin:0;min-width:0;font-size:25px;letter-spacing:-.8px;font-weight:750;line-height:1.15;font-variant-numeric:tabular-nums;color:var(--dk-ink)}.price small{display:block;font-size:11px;line-height:1.5;font-weight:400;letter-spacing:0;color:var(--dk-muted);margin-top:6px}.price-area [data-domkazan-action-for] button,.booking-quote [data-domkazan-action-for] button{display:flex;justify-content:center;align-items:center;gap:8px;min-height:46px;padding:11px 13px!important;border-radius:10px!important;margin:0!important;background:var(--dk-accent)!important;font:600 13px/1.3 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;transition:background .15s}.price-area [data-domkazan-action-for] button:hover,.booking-quote [data-domkazan-action-for] button:hover{background:var(--dk-accent-hover)!important}.empty{padding:50px 24px;text-align:center;background:#fff;border:1px solid var(--dk-line);border-radius:18px}.empty h2{margin:0 0 10px;font-size:24px;letter-spacing:-.5px}.empty p{color:var(--dk-muted);max-width:460px;margin:0 auto;line-height:1.7}
+    .back{display:inline-flex;align-items:center;gap:8px;min-height:40px;color:var(--dk-muted);font-size:13px;margin:0 0 16px}.back:hover{color:var(--dk-accent)}.gallery{min-width:0;margin:24px 0 30px}.house-layout{display:grid;grid-template-columns:minmax(0,1fr) 390px;gap:26px;align-items:start}.house-copy{background:#fff;border:1px solid var(--dk-line);border-radius:20px;padding:30px 32px}.house-copy h2{margin:0 0 20px;font-size:24px;letter-spacing:-.5px;font-weight:700}.house-copy p{white-space:pre-line;color:#42576e;margin:0;line-height:1.85;font-size:15px}.booking{min-width:0}.booking .search{border-radius:20px 20px 0 0;border-bottom:0;box-shadow:none;padding:24px 24px 12px}.booking h2{margin:0 0 20px;font-size:21px;line-height:1.25;letter-spacing:-.4px}.booking-quote{background:#fff;padding:18px 24px 24px;border:1px solid var(--dk-line);border-top:0;border-radius:0 0 20px 20px;box-shadow:0 10px 30px #243f6208}.booking-quote .price{font-size:32px}.booking-quote [data-domkazan-action-for] button{width:100%;margin-top:20px!important;font-size:15px!important;min-height:50px}.breakdown{color:var(--dk-muted);font-size:12px;line-height:1.6;margin:14px 0 0}.breakdown:empty{display:none}.contacts{display:flex;flex-wrap:wrap;gap:8px;margin-top:28px;padding-top:24px;border-top:1px solid var(--dk-line)}.contacts a{display:flex;align-items:center;justify-content:center;min-height:44px;padding:10px 14px;border:1px solid var(--dk-line);border-radius:9px;font-size:13px;font-weight:600;color:var(--dk-accent)}.contacts a:hover{background:#eef5ff;border-color:#b7d0f2}.house-copy .contact-note{font-size:12px;color:var(--dk-muted);margin:14px 0 0;line-height:1.6}.footer-note{font-size:12px;color:var(--dk-muted);text-align:center;margin:36px 0 0}.error{background:#fff2ef;border:1px solid #f2d0c8;padding:18px;border-radius:12px;color:#9b3424}.loading{padding:64px 24px;text-align:center;color:var(--dk-muted)}
+    @media(hover:hover){.card:hover{box-shadow:0 12px 30px #243f6212;border-color:#c9d7e7}.cover:hover img{transform:scale(1.035)}}
+    @media(max-width:1050px){.cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}.house-layout{grid-template-columns:minmax(0,1fr) 350px;gap:20px}.house-copy{padding:24px}.booking .search{padding:20px 20px 12px}.booking-quote{padding:16px 20px 22px}}
+    @media(max-width:760px){.shell{padding:20px 18px 36px}.top{margin-bottom:22px;padding-bottom:20px}.brand{font-size:22px}.city{display:none}.top-contact{font-size:12px;min-height:40px;padding:8px 11px}.search{padding:18px;border-radius:16px}.test-note{align-items:flex-start;gap:8px;margin:12px 0 24px;font-size:10px}.test-note b{font-size:9px;margin-top:1px}.toolbar{align-items:flex-start;flex-direction:column;gap:14px;margin:24px 0 18px}.count{font-size:22px}.sort-control{width:100%;justify-content:space-between}.sort-control select{font-size:13px;max-width:72%}.cards{grid-template-columns:1fr;gap:20px}.cover{aspect-ratio:16/10}.cover img{object-fit:contain}.info{padding:20px 20px 14px}.info h2{font-size:23px}.facts{font-size:12px}.price-area{padding:17px 20px 20px}.price{font-size:25px}.house-layout{grid-template-columns:1fr;gap:20px}.house-copy{padding:24px 22px;border-radius:16px}.house-copy h2{font-size:23px}.booking .search{border-radius:16px 16px 0 0}.booking-quote{border-radius:0 0 16px 16px}.gallery{margin:20px 0 24px}.intro .facts{font-size:13px}.contacts a{flex:1}.footer-note{margin-top:28px;line-height:1.7}}
+    @media(max-width:380px){.shell{padding:18px 14px 32px}.brand{font-size:20px}.top-contact{font-size:11px;padding:8px 9px}.search{padding:16px}.price-area{flex-wrap:wrap}.price-area>div:has([data-domkazan-action-for]){width:100%}.price-area [data-domkazan-action-for] button{width:100%}.info{padding:18px 18px 12px}.house-copy{padding:22px 18px}.test-note{gap:6px}.facts{column-gap:10px}}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+    .booking .search{border:1px solid var(--dk-line);border-radius:20px;padding:24px;box-shadow:0 8px 30px #243f6208}
+    @media(max-width:760px){.booking .search{padding:20px;border-radius:16px}}
   `;
 
   function el(tag, attrs = {}, children = []) {
@@ -28,11 +34,26 @@
   }
   const text = (tag, value, className) => el(tag, { text: value, ...(className && { class: className }) });
   const link = (value, href, className) => el('a', { href, text: value, ...(className && { class: className }) });
+  function icon(name) {
+    const paths = { guests:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M16 3a4 4 0 0 1 0 8M22 21v-2a4 4 0 0 0-3-3.87M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
+      rooms:'M3 21V3h13v18M3 21h18V9h-5M7 7h4M7 11h4M7 15h4M8 21v-3h3v3',beds:'M3 18v3M21 18v3M3 18h18V8H3v10M3 13h18M7 8V5h10v3',
+      pool:'M2 19q2-2 4 0t4 0 4 0 4 0 4 0M2 23q2-2 4 0t4 0 4 0 4 0 4 0M6 15V5a3 3 0 0 1 6 0M16 15V5a3 3 0 0 1 6 0M6 8h10M6 12h10',
+      sauna:'M5 17h14v4H5zM7 13c-3-4 3-4 0-8M12 13c-3-4 3-4 0-8M17 13c-3-4 3-4 0-8',billiards:'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0',
+      photos:'M4 7h3l2-3h6l2 3h3v13H4zM15 13a3 3 0 1 1-6 0 3 3 0 0 1 6 0' };
+    const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    for(const [key,value] of Object.entries({viewBox:'0 0 24 24',fill:'none',stroke:'currentColor','stroke-width':'1.6','stroke-linecap':'round','stroke-linejoin':'round','aria-hidden':'true',focusable:'false'}))svg.setAttribute(key,value);
+    const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d',paths[name]);svg.append(path);return svg;
+  }
+  function fact(value, symbol) { return el('span',{},[icon(symbol),document.createTextNode(value)]); }
   const facts = product => el('div', { class: 'facts' }, [
-    ...(product.maxGuests ? [text('span', `До ${product.maxGuests} гостей`)] : [text('span', 'Вместимость — уточните у владельца')]),
-    ...(product.bedrooms ? [text('span', `${product.bedrooms} ${plural(product.bedrooms, ['спальня', 'спальни', 'спален'])}`)] : []),
-    ...(product.beds ? [text('span', `${product.beds} ${plural(product.beds, ['спальное место', 'спальных места', 'спальных мест'])}`)] : []),
+    ...(product.maxGuests ? [fact(`До ${product.maxGuests} гостей`,'guests')] : [text('span', 'Вместимость — уточните у владельца')]),
+    ...(product.bedrooms ? [fact(`${product.bedrooms} ${plural(product.bedrooms, ['спальня', 'спальни', 'спален'])}`,'rooms')] : []),
+    ...(product.beds ? [fact(`${product.beds} ${plural(product.beds, ['спальное место', 'спальных места', 'спальных мест'])}`,'beds')] : []),
   ]);
+  const amenities = product => el('ul',{class:'amenities','aria-label':'Удобства дома'},Object.entries(searchLabels).filter(([key])=>product.amenities?.includes(key)).map(([key,label])=>el('li',{},[icon(key),document.createTextNode(label)])));
+  function excerptFor(product) {
+    return (product.facts || '').split('\n').map(line=>line.trim()).filter(line=>line && !/вместимость|спальн|спальных мест/i.test(line)).slice(0,3).join(' · ');
+  }
 
   function mountGallery({ root, rutubeUrl }) {
     const original = [...root.childNodes];
@@ -47,13 +68,15 @@
     if (!photos.length && !video) return { destroy() {} };
     const shadow = root.shadowRoot || root.attachShadow({ mode: "open" }); shadow.replaceChildren();
     const style = document.createElement("style"); style.textContent = `
-      :host{display:block;min-width:0}*{box-sizing:border-box}[hidden]{display:none!important}
-      button{font:inherit;cursor:pointer;padding:10px;border:1px solid #b9c9bd;border-radius:8px;background:white;color:#20342b}
-      :focus-visible{outline:3px solid #176348;outline-offset:2px}.viewer{position:relative;background:#f4f6f5;border-radius:10px;overflow:hidden;touch-action:pan-y}
-      .photo-button{display:block;width:100%;border:0;background:transparent;padding:0}img{display:block;width:100%;height:auto;max-height:65vh;object-fit:contain}
-      iframe{display:block;width:100%;aspect-ratio:16/9;border:0}.navigation{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 0}
-      .thumbnails{display:flex;gap:8px;overflow-x:auto;padding:4px}.thumbnails button{padding:2px;min-width:56px;flex:none}.thumbnails img{width:48px;height:64px;object-fit:contain}
-      [aria-current=true]{outline:3px solid #176348;outline-offset:-2px}dialog{max-width:96vw;max-height:96vh;padding:8px;border:0;border-radius:8px}dialog::backdrop{background:#000b}dialog img{max-height:85vh;max-width:90vw;width:auto}
+      :host{display:block;min-width:0;--dk-accent:#176bdf;color:#172b42;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}*{box-sizing:border-box}[hidden]{display:none!important}
+      button{font:inherit;cursor:pointer;touch-action:manipulation;padding:10px;border:1px solid #dae3ee;border-radius:10px;background:#fff;color:#172b42;min-height:44px;min-width:44px}
+      :focus-visible{outline:3px solid var(--dk-accent);outline-offset:3px}.viewer{position:relative;background:#eaf0f6;border:1px solid #e0e7ef;border-radius:18px;overflow:hidden;touch-action:pan-y}
+      .photo-button{display:flex;align-items:center;justify-content:center;width:100%;height:clamp(300px,57vw,610px);border:0;background:transparent;padding:0;cursor:zoom-in}.viewer img{display:block;width:100%;height:100%;object-fit:contain}
+      iframe{display:block;width:100%;aspect-ratio:16/9;border:0}.navigation{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0;color:#586b80;font-size:13px;font-variant-numeric:tabular-nums}.navigation button{display:grid;place-items:center;font-size:20px;line-height:1;border-radius:50%;width:44px;height:44px;padding:0}.navigation button:hover{background:#eef5ff;border-color:#b6cdec;color:var(--dk-accent)}
+      .thumbnails{display:flex;gap:9px;overflow-x:auto;padding:4px 3px 10px;scrollbar-width:thin}.thumbnails button{position:relative;padding:3px;min-width:66px;flex:none;border:1px solid #e0e7ef;background:#fff;overflow:hidden;border-radius:9px}.thumbnails img{display:block;width:58px;height:68px;object-fit:contain;background:#f0f3f7}
+      [aria-current=true]{outline:2px solid var(--dk-accent);outline-offset:-1px}.thumbnails button:hover{border-color:var(--dk-accent)}dialog{max-width:96vw;max-height:96vh;padding:12px;border:0;border-radius:16px;background:#fff}dialog::backdrop{background:#101f32d9;backdrop-filter:blur(5px)}dialog img{display:block;max-height:80vh;max-width:90vw;width:auto;object-fit:contain;margin:auto}dialog>button{display:block;margin:0 0 10px auto;font-size:13px}
+      @media(max-width:760px){.viewer{border-radius:14px}.photo-button{height:auto;aspect-ratio:3/4;max-height:72vh}.navigation{margin:10px 0}.thumbnails button{min-width:60px}.thumbnails img{width:52px;height:62px}}
+      @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
     `;
     const viewer = document.createElement("div"); viewer.className = "viewer"; viewer.tabIndex = 0; viewer.setAttribute("aria-label", "Галерея дома");
     const navigation = document.createElement("div"); navigation.className = "navigation";
@@ -135,7 +158,7 @@
         return;
       }
       if (selected) shell.append(link('← К результатам поиска', houseUrl(null, values), 'back'));
-      const intro = el('div', { class: 'intro' }, selected ? [text('h1', selected.name), facts(selected)] : []);
+      const intro = el('div', { class: selected?'intro':'sr-only' }, selected ? [text('h1', selected.name), facts(selected)] : [text('h1','Каталог загородных домов')]);
       shell.append(intro);
       const search = el('div');
       const searchPanel = el('div', { class: 'search' }, selected ? [text('h2', 'Проверить даты и стоимость'), search] : [search]);
@@ -150,27 +173,33 @@
       const cardLinks = [];
       let list;
       let counter;
+      let resultsContext;
+      let sortControl;
       let empty;
       let breakdown;
+      let detailResult;
+      let detailPrice;
 
       if (selected) {
         document.title = `${selected.name} — DomKazan, тест`;
         const galleryRoot = el('div', { class:'gallery' }, selected.images.map(src => el('img', { src, alt:selected.name, loading:'lazy' })));
         shell.append(galleryRoot); media = mountGallery({root:galleryRoot, rutubeUrl:selected.rutubeUrl});
-        const info = el('div', { class: 'house-copy' }, [text('h2', 'Описание'), text('p', selected.description)]);
+        const info = el('div', { class: 'house-copy' }, [text('h2', 'Описание'), amenities(selected), text('p', selected.description)]);
         const contacts = el('div', { class: 'contacts' }, [link('Позвонить', 'tel:+79053106605'),
           link('Telegram ↗', 'https://t.me/viteek_b'), link('WhatsApp ↗', 'https://wa.me/message/OZ7WM2IJUPIXM1')]);
         for (const item of contacts.querySelectorAll('a[href^="https:"]')) { item.target = '_blank'; item.rel = 'noopener noreferrer'; }
         info.append(contacts, text('p', 'Свяжитесь с владельцем, чтобы уточнить условия. На стенде отправляйте только тестовые заявки.', 'contact-note'));
-        const price = text('p', 'Выберите даты для расчёта', 'price');
+        const price = text('p', 'Выберите даты для расчёта', 'price price-placeholder');detailPrice=price;
         const action = el('div');
         breakdown = text('p', '', 'breakdown');
         const quote = el('div', { class: 'booking-quote' }, [price, breakdown, action]);
+        detailResult=quote;
         cards.push({ slug: selected.slug, element: quote, priceElement: price, actionElement: action });
-        const booking = el('aside', { class: 'booking' }, [searchPanel, quote, notice]);
+        const booking = el('aside', { class: 'booking','aria-label':'Стоимость и заявка' }, [searchPanel, notice]);
         shell.append(el('div', { class: 'house-layout' }, [info, booking]));
       } else {
-        const sort = el('select', {'aria-label':'Сортировать'}, [['default', 'По умолчанию'], ['price', 'Сначала дешевле'], ['price-desc', 'Сначала дороже']].map(([value, label]) => el('option', { value, text: label })));
+        const sort = el('select', {'aria-label':'Сортировать',title:'Сортировка полной стоимости доступна после поиска'}, [['default', 'Порядок каталога'], ['price', 'Сначала дешевле'], ['price-desc', 'Сначала дороже']].map(([value, label]) => el('option', { value, text: label })));
+        sort.disabled=true;sortControl=sort;
         sort.value = filter.sort;
         const sortLabel = text('label', 'Сортировать', 'sort-control'); sortLabel.append(sort);
         sort.addEventListener('change', () => {
@@ -178,18 +207,19 @@
           if (lastResult) applyResults(lastResult.houses, lastResult.snapshot, false);
         });
         counter = text('span', `${products.length} ${plural(products.length, ['дом', 'дома', 'домов'])} в каталоге`, 'count');
-        const toolbar = el('div', { class:'toolbar', tabindex:'-1' }, [el('h2', {}, [counter]), sortLabel]);
+        resultsContext=text('p','Выберите даты — покажем свободные дома и стоимость поездки.','results-context');
+        const toolbar = el('div', { class:'toolbar', tabindex:'-1' }, [el('div',{'aria-live':'polite','aria-atomic':'true'},[el('h2', {}, [counter]),resultsContext]), sortLabel]);
         shell.append(toolbar);
         list = el('div', { class: 'cards grid', 'aria-label': 'Каталог домов' });
         for (const product of products) {
           const href = houseUrl(product.productUid, values);
           const cover = el('a', { href, class: 'cover', 'aria-label': `Подробнее: ${product.name}` });
           if (product.images[0]) cover.append(el('img', { src: product.images[0], alt: product.name, loading: 'lazy', width: '600', height: '440' }));
-          cover.append(text('span', `${product.images.length} фото`, 'photo-count'));
+          cover.append(el('span',{class:'photo-count'},[icon('photos'),document.createTextNode(`${product.images.length} фото`)]));
           const titleLink = link(product.name, href);
           const details = link('Подробнее о доме →', href, 'details-link');
-          const excerpt = product.facts.slice(0,180);
-          const info = el('div', { class: 'info' }, [el('h2', {}, [titleLink]), facts(product), text('p', excerpt + (product.facts.length > 180 ? '…' : ''), 'description-preview'), details]);
+          const excerpt = excerptFor(product);
+          const info = el('div', { class: 'info' }, [el('h2', {}, [titleLink]), facts(product), amenities(product), ...(excerpt?[text('p',excerpt,'description-preview')]:[]), details]);
           const base = Math.min(...Object.values(product.publicBaseRates).filter(value => Number(value) > 0));
           const price = text('p', Number.isFinite(base) ? `от ${rub(base)} ₽` : 'По запросу', 'price');
           price.append(text('small', 'за ночь · выберите даты'));
@@ -210,11 +240,17 @@
         window.history.replaceState(window.history.state, '', houseUrl(selected?.productUid, params));
         for (const {product,nodes} of cardLinks) for (const node of nodes) node.href = houseUrl(product.productUid, params);
         if (counter) counter.textContent = `Найдено домов: ${houses.length}`;
+        if (resultsContext) resultsContext.textContent=`${snapshot.checkIn.split('-').reverse().join('.')} — ${snapshot.checkOut.split('-').reverse().join('.')} · ${snapshot.guests} ${plural(Number(snapshot.guests),['гость','гостя','гостей'])} · цена за весь период`;
+        if (sortControl) sortControl.disabled=false;
         if (empty) empty.hidden = houses.length > 0;
         if (list) {
           const sorted = [...houses].sort((a,b) => filter.sort === 'default' ? products.indexOf(bySlug.get(a.slug)) - products.indexOf(bySlug.get(b.slug)) :
             (Number(a.quote.total)-Number(b.quote.total)) * (filter.sort === 'price-desc' ? -1 : 1));
           for (const [index, house] of sorted.entries()) cards.find(card => card.slug === house.slug).element.style.order = String(index);
+          // Visual order and keyboard/screen-reader order must agree.
+          const order=new Set(sorted.map(house=>house.slug));
+          for(const house of sorted)list.append(cards.find(card=>card.slug===house.slug).element);
+          for(const card of cards)if(!order.has(card.slug))list.append(card.element);
           if (scroll && !resuming) shadow.querySelector('.toolbar').scrollIntoView?.({behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
           if (resuming) {
             try { const saved = JSON.parse(sessionStorage.getItem('domkazan.catalog.return.v1')); if (saved?.url === houseUrl(null,params) && Number.isFinite(saved.y)) window.scrollTo?.({top:Math.max(0,saved.y),behavior:'instant'}); } catch { /* Optional. */ }
@@ -228,12 +264,14 @@
       }
       widget = window.DomKazanCalendar.mount({ root: search, apiUrl: new URL('/api/availability', origin).href,
         privacyUrl: privacyUrl || new URL('/test-policy', origin).href, cards, initialValues: values, testMode,
-        houseSlug:selected?.slug, showCount:!selected,
+        houseSlug:selected?.slug, showCount:!selected,quietSuccess:!selected,
+        resultElement:detailResult,
         calendarUrl:selected?new URL(`/api/house-calendar?house=${selected.slug}`,origin).href:undefined,
         resultsUrl:()=>houseUrl(null,paramsWithFilters(widget.values())),
         ownerContacts:{phone:'tel:+79053106605',telegram:'https://t.me/viteek_b',whatsapp:'https://wa.me/message/OZ7WM2IJUPIXM1'},
         getFilters:()=>({amenities:filter.amenities.join(',')}),
         renderPrice(target, house) {
+          target.classList.remove('price-placeholder');
           target.replaceChildren(document.createTextNode(`${rub(house.quote.total)} ₽ `), text('small', `за ${house.quote.nights} ноч.`));
         },
         getViewState: filterState,
@@ -246,8 +284,11 @@
         onInvalidate(currentValues) {
           lastResult=null;
           if (counter) counter.textContent = `${products.length} ${plural(products.length, ['дом', 'дома', 'домов'])} в каталоге`;
+          if (resultsContext) resultsContext.textContent='Условия изменены — выполните поиск заново.';
+          if (sortControl) sortControl.disabled=true;
           if (empty) empty.hidden = true;
           if (breakdown) breakdown.textContent = '';
+          if (detailPrice) detailPrice.classList.add('price-placeholder');
           for (const { product, nodes } of cardLinks) for (const node of nodes) node.href = houseUrl(product.productUid, paramsWithFilters(currentValues));
         },
         onResults:applyResults,
@@ -261,7 +302,6 @@
         }
         search.shadowRoot.querySelector('form').append(chips);
       }
-      if (selected) search.style.cssText = '--dk-accent:#218df1';
       if (values.checkIn && values.checkOut) {resuming=true;widget.search();}
       root.dispatchEvent(new CustomEvent('domkazan:ready', { bubbles: true, detail: { count: products.length } }));
     }

@@ -44,6 +44,9 @@ test("calendar cells are keyboard buttons and selected range reaches the admin A
   const write = calls.find((item) => item.url === "/api/admin/calendar" && item.body?.action === "close");
   assert.equal(write?.body?.start, first);
   assert.equal(write?.body?.end, third);
+  await act(async()=>{container.querySelector<HTMLButtonElement>('[aria-label="Закрыть панель действий"]')!.click();});
+  assert.equal(dom.window.document.activeElement,cells[1]);
+  assert.equal(container.querySelector<HTMLElement>('[aria-label="Действия с выбранными датами"]')?.hidden,true);
   await act(async () => { root.unmount(); });
   dom.window.close();
 });

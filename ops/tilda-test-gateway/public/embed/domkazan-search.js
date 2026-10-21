@@ -66,6 +66,7 @@
       for (let day = start; day.slice(0, 7) === month; day = addDays(day, 1)) {
         const cell = document.createElement("button"); cell.type = "button"; cell.dataset.day = day;
         const details = options.getDay?.(day);
+        if (details) cell.dataset.status=details.status;
         const blocked = details && details.status !== "available";
         cell.disabled = day < today() || (choosingEnd ? !canEnd(day) : Boolean(options.getDay && (!details || blocked)));
         cell.textContent = String(Number(day.slice(8)));
@@ -135,65 +136,22 @@
     return { refresh: render, set(start, end) { fields.checkIn.value = start || ""; fields.checkOut.value = end || ""; render(); }, destroy() { document.removeEventListener("pointerdown", outside); document.removeEventListener("click", outside); } };
   }
   const css = `
-    :host { display:block; container-type:inline-size; font:16px Arial,sans-serif; color:#1d3028; }
-    * { box-sizing:border-box; }
-    [hidden] { display:none !important; }
-    .date-field { display:grid; gap:8px; font-size:14px; font-weight:700; }
-    .date-trigger { text-align:left; border:1px solid #d5ded7; background:#f8faf8; color:#1d3028; font-weight:400; }
-    .calendar { position:relative; grid-column:1/-1; background:white; border:1px solid #d5ded7; border-radius:12px; padding:12px; width:min(100%,390px); }
-    .calendar-caption { margin:0 0 8px; }
-    .calendar-nav { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px; }
-    .calendar-nav button { min-height:40px; padding:8px 14px; }
-    .calendar-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:3px; text-align:center; }
-    .calendar-grid button { min-height:40px; padding:8px 0; color:#1d3028; background:#f1f6f3; font-size:13px; font-weight:400; }
-    .calendar-grid button[aria-pressed=true] { background:var(--dk-accent,#1c6047); color:white; }
-    .calendar-grid .in-range { background:#dceefe; }
-    .calendar-grid .unavailable { background:#dbeafe; }
-    .calendar-grid .unpriced { background:#f1f1f1; color:#737373; }
-    .calendar-grid small { display:block; font-size:9px; }
-    .search-amenities { grid-column:1/-1; display:flex; flex-wrap:wrap; gap:12px; border:0; margin:0; padding:0; }
-    .search-amenities label { display:flex; align-items:center; font-weight:400; }
-    .search-amenities input { width:auto; min-height:0; }
-    .summary { grid-column:1/-1; margin:0; }
-    .summary div { display:flex; flex-wrap:wrap; gap:8px; margin:6px 0; }
-    .summary dd { margin:0; overflow-wrap:anywhere; }
-    .summary dt { font-weight:600; }
-    .receipt { grid-column:1/-1; padding:12px; border:1px solid #dce6df; border-radius:12px; }
-    .return-link { display:inline-block; margin:12px 0; color:var(--dk-accent,#1c6047); }
-    form { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)) auto; gap:14px; align-items:end; }
-    form > * { min-width:0; }
-    .request-form { grid-template-columns:repeat(2,minmax(0,1fr)); margin-top:24px; padding:24px; border:1px solid #dce6df; border-radius:16px; background:#f9fbf9; }
-    .request-form[hidden], .contacts[hidden] { display:none; }
-    .request-form h2 { margin:0 0 4px; font-size:23px; line-height:1.25; }
-    .request-form textarea, .request-form select { width:100%; min-height:54px; padding:14px 16px; border:1px solid #d5ded7; border-radius:11px; background:#fff; font:inherit; }
-    .request-form .wide { grid-column:1 / -1; }
-    .consent { display:flex; align-items:flex-start; gap:8px; }
-    .consent input { width:auto; min-height:auto; }
-    .honeypot { position:absolute; left:-10000px; }
-    .contacts { display:flex; flex-wrap:wrap; gap:12px; margin-top:12px; }
-    label { display:grid; gap:8px; color:#31473b; font-size:14px; font-weight:700; }
-    input { width:100%; min-height:54px; padding:14px 16px; border:1px solid #d5ded7; border-radius:11px; background:#f8faf8; color:#1d3028; font:16px Arial,sans-serif; }
-    input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible { outline:3px solid #a9d2b7; outline-offset:2px; }
-    button { min-height:54px; padding:13px 20px; border:0; border-radius:11px; background:var(--dk-accent,#1c6047); color:white; font:700 15px Arial,sans-serif; cursor:pointer; transition:filter .15s ease,transform .15s ease; }
-    button:hover:not(:disabled) { filter:brightness(.92); transform:translateY(-1px); }
-    button:disabled { opacity:.6; cursor:wait; }
-    .message { margin:16px 0 0; color:#345747; font-size:14px; font-weight:700; line-height:1.5; }
-    @media (max-width:900px) {
-      form:not(.request-form) { grid-template-columns:repeat(2,minmax(0,1fr)); }
-      form:not(.request-form) > button { grid-column:1 / -1; }
-    }
-    @media (max-width:600px) {
-      form, form:not(.request-form) { grid-template-columns:1fr; }
-      form:not(.request-form) > button { grid-column:1; }
-    }
-    @container (max-width:700px) {
-      form:not(.request-form) { grid-template-columns:repeat(2,minmax(0,1fr)); }
-      form:not(.request-form) > button { grid-column:1 / -1; }
-    }
-    @container (max-width:460px) {
-      form, form:not(.request-form), .request-form { grid-template-columns:1fr; }
-      .request-form { padding:16px; }
-    }
+    :host{display:block;container-type:inline-size;--dk-accent:#176bdf;--dk-accent-hover:#1054b7;--dk-ink:#172b42;--dk-muted:#586b80;--dk-line:#dce5ef;font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--dk-ink);-webkit-font-smoothing:antialiased}
+    *{box-sizing:border-box}[hidden]{display:none!important}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+    form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;gap:16px;align-items:end}form>*{min-width:0}label,.date-field{display:grid;gap:8px;font-size:12px;line-height:1.4;font-weight:600;color:#42576e}.date-trigger{text-align:left;border:1px solid var(--dk-line);background:#f7f9fc;color:var(--dk-ink);font-size:15px;font-weight:500}.date-trigger:hover:not(:disabled){background:#eef4fc;transform:none;filter:none;border-color:#a8c6ec}.date-trigger[aria-expanded=true]{border-color:var(--dk-accent);background:#fff;box-shadow:0 0 0 3px #176bdf10}
+    input,textarea,select{width:100%;min-width:0;min-height:50px;padding:12px 14px;border:1px solid var(--dk-line);border-radius:10px;background:#f7f9fc;color:var(--dk-ink);font:400 16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;transition:border-color .15s,box-shadow .15s}input:hover,textarea:hover,select:hover{border-color:#b4c7dd}input:focus-visible,textarea:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid #176bdf;outline-offset:3px}input:focus-visible,textarea:focus-visible,select:focus-visible{background:#fff}input:disabled,textarea:disabled,select:disabled{opacity:1;color:#586b80;background:#f1f5f9}
+    button{min-height:50px;padding:12px 20px;border:1px solid transparent;border-radius:10px;background:var(--dk-accent);color:#fff;font:600 14px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;cursor:pointer;touch-action:manipulation;transition:background .15s,border-color .15s}button:hover:not(:disabled){background:var(--dk-accent-hover)}button:disabled{cursor:default;opacity:.55}form[aria-busy=true]>button{cursor:progress}
+    .search-amenities{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;border:0;margin:2px 0 0;padding:16px 0 0;border-top:1px solid #edf1f6}.search-amenities label{display:flex;align-items:center;gap:7px;min-height:38px;padding:8px 12px;border:1px solid #e0e7ef;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;background:#fff;transition:background .15s,border-color .15s}.search-amenities label:hover{border-color:#a8c6ec}.search-amenities label:has(input:checked){border-color:#aac9f2;background:#edf5ff;color:#1056b5}.search-amenities input{appearance:auto;accent-color:var(--dk-accent);width:14px;height:14px;min-height:0;margin:0;padding:0;border-radius:3px;flex:none}
+    .calendar{position:relative;grid-column:1/-1;background:#fff;border:1px solid var(--dk-line);border-radius:14px;padding:16px;width:min(100%,390px);box-shadow:0 8px 24px #243f620c}.calendar-caption{margin:0 0 12px;color:#586b80;font-size:12px}.calendar-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:16px}.calendar-nav strong{font-size:15px;font-weight:650;color:var(--dk-ink)}.calendar-nav button{min-height:40px;min-width:40px;padding:8px;background:#f0f5fb;color:var(--dk-ink);font-size:17px;border:1px solid #e0e7ef}.calendar-nav button:hover:not(:disabled){background:#e1edfc;border-color:#a8c6ec}.calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center}.calendar-grid>span{padding:0 0 6px;color:#718399;font-size:11px}.calendar-grid button{min-height:44px;padding:7px 0;color:var(--dk-ink);background:#f4f7fb;border:1px solid transparent;border-radius:8px;font-size:13px;font-weight:550;font-variant-numeric:tabular-nums}.calendar-grid button:hover:not(:disabled){border-color:#85afe8;background:#e7f0fd}.calendar-grid small{display:block;font-size:9px;line-height:1.3;font-weight:400;letter-spacing:-.25px}.calendar-grid .in-range{background:#e4eefc;color:#174e91}.calendar-grid button[aria-pressed=true]{background:#172b42;color:#fff}.calendar-grid button:disabled{cursor:not-allowed;opacity:1;color:#7b8b9d;background:#f0f3f7}.calendar-grid [data-status=occupied]:disabled{background:#3a76b7;color:#fff}.calendar-grid [data-status=unpriced]:disabled{background:repeating-linear-gradient(135deg,#f3f5f8,#f3f5f8 4px,#e9eef3 4px,#e9eef3 5px);color:#677789}.calendar-grid [data-status=past]:disabled{background:#f0f3f7;color:#8996a6}.calendar>[role=status]{margin:12px 0 0;color:var(--dk-muted);font-size:11px;line-height:1.6}.calendar>[role=status]:empty{display:none}
+    .message{margin:14px 0 0;padding:10px 12px;border-radius:9px;background:#f1f5fa;color:#425c78;font-size:12px;font-weight:500;line-height:1.6}.message:empty{display:none}.message[data-state=error]{background:#fff1ee;color:#a2392b}.message[data-state=stale]{background:#fff7e9;color:#79521b}.message[data-state=success]{background:#eef6f2;color:#2c6752}.message[data-state=loading]{background:#edf5ff;color:#215caa}
+    .request-form{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:22px;padding:22px;border:1px solid var(--dk-line);border-radius:16px;background:#fff}.request-form h2{margin:0;font-size:23px;line-height:1.25;letter-spacing:-.5px;font-weight:700}.request-form textarea{min-height:90px;resize:vertical;background:#fff}.request-form select{background:#fff}.request-form .wide{grid-column:1/-1}.summary{grid-column:1/-1;display:grid;gap:8px;margin:0;padding:16px;background:#f2f6fb;border:1px solid #e4ebf4;border-radius:11px}.summary div{display:grid;grid-template-columns:82px minmax(0,1fr);align-items:baseline;gap:12px;margin:0;font-size:13px}.summary dt{font-weight:400;color:var(--dk-muted)}.summary dd{margin:0;font-weight:550;overflow-wrap:anywhere}.summary div:last-child{border-top:1px solid #dce5f0;margin-top:4px;padding-top:12px}.summary div:last-child dd{font-size:22px;letter-spacing:-.6px;font-weight:700}.consent{display:flex;align-items:flex-start;gap:9px;font-size:11px;font-weight:400;line-height:1.7}.consent input{width:16px;height:16px;min-height:0;margin:2px 0 0;padding:0;accent-color:var(--dk-accent);flex:none}.consent a{color:var(--dk-accent);text-underline-offset:3px}.honeypot{position:absolute;left:-10000px}.contacts{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.contacts a{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:9px 12px;border:1px solid #d2e1d9;border-radius:8px;background:#fff;color:#176bdf;font-size:12px;font-weight:600;text-decoration:none}.contacts a:hover{border-color:#a1bddf}.receipt{grid-column:1/-1;padding:18px;border:1px solid #c3dfd0;border-radius:12px;background:#f0f8f3;color:#265f47;font-size:13px;line-height:1.6}.receipt p{margin:0}.return-link{display:inline-flex;align-items:center;min-height:44px;margin:12px 0 0;color:var(--dk-accent);font-weight:600;font-size:13px;text-underline-offset:4px}
+    @media(max-width:900px){form:not(.request-form){grid-template-columns:repeat(3,minmax(0,1fr))}form:not(.request-form)>button{grid-column:1/-1}}
+    @media(max-width:600px){form,form:not(.request-form){grid-template-columns:1fr 1fr;gap:12px}label:has([name=guests]),form:not(.request-form)>button{grid-column:1/-1}.request-form{grid-template-columns:1fr}.search-amenities{gap:7px;padding-top:14px}.search-amenities label{padding:8px 10px;font-size:11px}}
+    @container(max-width:700px){form:not(.request-form){grid-template-columns:1fr 1fr}form:not(.request-form)>button,label:has([name=guests]){grid-column:1/-1}}
+    @container(max-width:460px){.request-form{grid-template-columns:1fr;padding:18px}.calendar{padding:12px}.calendar-grid{gap:3px}.calendar-grid small{font-size:9px}.summary div{grid-template-columns:72px minmax(0,1fr);gap:8px}.search-amenities{gap:7px}.search-amenities label{padding:8px 9px;font-size:11px}}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important}}
+    .booking-quote{margin-top:18px;padding-top:18px;border-top:1px solid var(--dk-line)}.booking-quote .price{margin:0;font-size:30px;line-height:1.2;font-weight:750;letter-spacing:-.8px;font-variant-numeric:tabular-nums}.booking-quote .price small{display:block;margin-top:5px;color:var(--dk-muted);font-size:12px;letter-spacing:0;font-weight:400}.booking-quote .price-placeholder{font-size:14px;letter-spacing:0;font-weight:400;color:var(--dk-muted)}.booking-quote .breakdown{margin:12px 0 0;font-size:11px;color:var(--dk-muted);line-height:1.7}.booking-quote .breakdown:empty{display:none}.booking-quote [data-domkazan-action-for] button{width:100%;margin:16px 0 0!important;padding:12px 16px!important;border-radius:10px!important;font:600 14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important}
+    .request-options{grid-column:1/-1;border:1px solid var(--dk-line);border-radius:10px;padding:0 13px}.request-options summary{min-height:44px;padding:12px 0;color:var(--dk-muted);font-size:12px;font-weight:500;cursor:pointer}.request-options summary:focus-visible{outline:3px solid var(--dk-accent);outline-offset:3px}.request-options>div{display:grid;gap:14px;padding:4px 0 16px}.consent-copy{min-width:0}.consent-copy a{display:inline}
   `;
 
   const money = (amount) => new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 }).format(Number(amount));
@@ -204,6 +162,8 @@
     const input = document.createElement("input");
     input.name = name;
     input.type = type;
+    if (name==='clientName') input.autocomplete='name';
+    if (name==='clientPhone') {input.autocomplete='tel';input.inputMode='tel';}
     input.required = true;
     if (type === "number") { input.min = "1"; input.max = "50"; input.value = "2"; }
     label.append(input);
@@ -236,7 +196,7 @@
 
   function mount({ root, apiUrl, requestUrl, privacyUrl, cards: explicitCards, getFilters,
     initialValues = {}, getViewState, transformHouses, onResults, onInvalidate, renderPrice, testMode = false,
-    calendarUrl, houseSlug, resultsUrl, ownerContacts, showCount = true }) {
+    calendarUrl, houseSlug, resultsUrl, ownerContacts, showCount = true, quietSuccess = false, resultElement }) {
     if (!root || !apiUrl) throw new Error("Укажите root и apiUrl для DomKazanCalendar.");
     if (root.closest("a,button")) throw new Error("Форма поиска должна находиться вне ссылки или кнопки.");
     instances.get(root)?.destroy();
@@ -290,19 +250,24 @@
     commentLabel.className = "wide";
     const comment = document.createElement("textarea"); comment.name = "comment"; comment.maxLength = 2000;
     commentLabel.append(comment); requestForm.append(commentLabel);
+    const requestOptions=document.createElement('details');requestOptions.className='request-options';
+    const optionsTitle=document.createElement('summary');optionsTitle.textContent='Мессенджер и комментарий · необязательно';
+    const optionalFields=document.createElement('div');optionalFields.append(messengerLabel,requestForm.elements.messengerContact.parentElement,commentLabel);
+    requestOptions.append(optionsTitle,optionalFields);requestForm.append(requestOptions);
     const trap = document.createElement("label"); trap.className = "honeypot"; trap.setAttribute("aria-hidden", "true");
     trap.textContent = "Веб-сайт"; const website = document.createElement("input"); website.name = "website"; website.tabIndex = -1;
     website.autocomplete = "off"; trap.append(website); requestForm.append(trap);
     const consentLabel = document.createElement("label"); consentLabel.className = "wide consent";
     const consent = document.createElement("input"); consent.name = "consent"; consent.type = "checkbox"; consent.required = true;
-    consentLabel.append(consent, document.createTextNode("Согласен на обработку персональных данных"));
+    const consentCopy=document.createElement('span');consentCopy.className='consent-copy';consentCopy.textContent='Согласен на обработку персональных данных. ';
+    consentLabel.append(consent,consentCopy);
     let policy = null;
     try {
       const configured = new URL(privacyUrl || root.getAttribute("data-privacy-url"));
       if (configured.protocol === "https:") policy = configured.href;
     } catch { /* A policy URL must be configured before accepting applications. */ }
     if (policy) { const link = document.createElement("a"); link.href = policy; link.target = "_blank"; link.rel = "noopener noreferrer";
-      link.textContent = "Политика обработки данных"; consentLabel.append(link); }
+      link.textContent = "Политика обработки данных"; consentCopy.append(link); }
     requestForm.append(consentLabel);
     const send = document.createElement("button"); send.type = "submit"; send.textContent = "Отправить заявку"; requestForm.append(send);
     const requestMessage = document.createElement("p"); requestMessage.className = "message wide";
@@ -310,7 +275,7 @@
     const contacts = document.createElement("div"); contacts.className = "contacts"; contacts.hidden = true;
     const receipt = document.createElement("section"); receipt.hidden = true; receipt.className = "receipt"; receipt.setAttribute("role", "status");
     const receiptText = document.createElement("p"); receipt.append(receiptText, contacts);
-    shadow.append(style, form, message, requestForm, receipt);
+    shadow.append(style, form, message, ...(resultElement?[resultElement]:[]), requestForm, receipt);
     let selectedHouse = null;
     let submissionKey = null;
     let successfulSearch = null;
@@ -333,7 +298,7 @@
         for (const day of data.days) dayDetails.set(day.date, day);
         picker.refresh();
       } catch (error) {
-        if (!destroyed && token === calendarGeneration && error.name !== "AbortError") message.textContent = "Календарь временно недоступен. Неизвестные даты нельзя выбрать. Попробуйте открыть календарь ещё раз.";
+        if (!destroyed && token === calendarGeneration && error.name !== "AbortError") {message.dataset.state='error';message.textContent = "Календарь временно недоступен. Неизвестные даты нельзя выбрать. Попробуйте открыть календарь ещё раз.";}
       }
     }
 
@@ -409,6 +374,7 @@
         // Retain the filled, read-only form: replacing it with a short receipt
         // would shrink the document and jump the mobile viewport upward.
         requestForm.dataset.submitted='true';
+        for(const card of cards)if(card.slug===house.slug&&card.action){const action=card.action.querySelector('button');action.disabled=true;action.textContent='Заявка отправлена';action.setAttribute('aria-label',`Заявка отправлена: ${house.name}`);}
         for (const input of requestForm.querySelectorAll('input,select,textarea')) input.disabled=true;
         send.hidden=true; requestMessage.hidden=true; heading.textContent='Заявка отправлена';
         requestForm.append(receipt);
@@ -436,7 +402,7 @@
     });
 
     function invalidate(showMessage = true) {
-      generation++; searchController?.abort(); searchController = null; clearTimeout(searchTimer); searchTimer = null; button.disabled = false;
+      generation++; searchController?.abort(); searchController = null; clearTimeout(searchTimer); searchTimer = null; button.disabled = false;form.setAttribute('aria-busy','false');
       successfulSearch = null;
       currentHouses = [];
       clearActions(); requestForm.hidden = true; requestForm.reset(); contacts.hidden = true; contacts.replaceChildren(); receipt.hidden = true;
@@ -449,6 +415,7 @@
         if (card.priceElement) card.priceElement.replaceChildren(...card.originalPriceNodes.map(node => node.cloneNode(true)));
       }
       message.textContent = showMessage ? "Параметры изменились. Повторите поиск." : "";
+      message.dataset.state=showMessage?'stale':'idle';
       onInvalidate?.(Object.fromEntries(new FormData(form)));
     }
 
@@ -465,16 +432,17 @@
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       invalidate(false);
-      if (!cards.length) { message.textContent = "Каталог ещё не готов к поиску. Дождитесь загрузки и проверки карточек."; return; }
+      if (!cards.length) { message.dataset.state='error';message.textContent = "Каталог ещё не готов к поиску. Дождитесь загрузки и проверки карточек."; return; }
       const values = parameters();
       if (!validDate(values.get("checkIn")) || !validDate(values.get("checkOut")) || values.get("checkIn") < today || values.get("checkOut") <= values.get("checkIn") ||
           (Date.parse(values.get("checkOut")) - Date.parse(values.get("checkIn"))) / DAY > 60 || !/^([1-9]|[1-4][0-9]|50)$/.test(values.get("guests"))) {
-        message.textContent = "Выберите период от 1 до 60 ночей и укажите от 1 до 50 гостей."; return;
+        message.dataset.state='error';message.textContent = "Выберите период от 1 до 60 ночей и укажите от 1 до 50 гостей."; return;
       }
       const currentGeneration = generation;
       searchController = new AbortController();
       searchTimer = setTimeout(()=>searchController?.abort(),10000);
       button.disabled = true;
+      form.setAttribute('aria-busy','true');message.dataset.state='loading';
       message.textContent = "Проверяем занятость…";
       try {
         const url = new URL(apiUrl);
@@ -516,14 +484,15 @@
           } else (card.element.closest("a,button") || card.element).after(actionHost);
           card.action = actionHost;
         }
-        message.textContent = showCount ? `Свободных домов: ${cards.filter((card) => available.has(card.slug)).length}` :
+        message.dataset.state='success';
+        message.textContent = quietSuccess ? '' : showCount ? `Свободных домов: ${cards.filter((card) => available.has(card.slug)).length}` :
           currentHouses.length ? "Дом свободен. Стоимость рассчитана сервером." : "Дом недоступен по выбранным датам или условиям. Измените параметры.";
         onResults?.(currentHouses, snapshot);
       } catch (error) {
         if (generation !== currentGeneration) return;
         successfulSearch = null; clearActions();
-        message.textContent = error?.name === "AbortError" ? "Сервер не ответил вовремя. Повторите поиск." : error instanceof Error ? error.message : "Поиск временно недоступен.";
-      } finally { if (generation === currentGeneration) { clearTimeout(searchTimer); searchTimer=null; button.disabled = false; } }
+        message.dataset.state='error';message.textContent = error?.name === "AbortError" ? "Сервер не ответил вовремя. Повторите поиск." : error instanceof Error ? error.message : "Поиск временно недоступен.";
+      } finally { if (generation === currentGeneration) { clearTimeout(searchTimer); searchTimer=null; button.disabled = false;form.setAttribute('aria-busy','false'); } }
     });
     const controller = { reset, invalidate: () => invalidate(), search: () => form.requestSubmit(), values:()=>Object.fromEntries(new FormData(form)),
       request(slug) {

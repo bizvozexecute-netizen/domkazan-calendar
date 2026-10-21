@@ -47,6 +47,10 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
   const initialScrollDone = useRef(false);
   const restorePosition = useRef<{ left: number; top: number } | null>(null);
   const [panel, setPanel] = useState({ left: 16, top: 100 });
+  const [manualOpen,setManualOpen]=useState(false);
+  const actionsRegion=useRef<HTMLDivElement>(null);
+  const actionsTrigger=useRef<HTMLElement|null>(null);
+  useEffect(()=>{if(manualOpen)actionsRegion.current?.querySelector('select')?.focus({preventScroll:true});},[manualOpen]);
 
   const load = useCallback(async (target: string, signal?: AbortSignal) => {
     const result = await responseJson(await fetch(`/api/admin/calendar?month=${target}`, { cache: "no-store", signal }));
@@ -100,6 +104,7 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
   }
 
   function selectCell(houseId: string, day: string, button: HTMLButtonElement) {
+    actionsTrigger.current=button;
     const box = button.getBoundingClientRect();
     setPanel({ left: Math.max(16, Math.min(box.left, window.innerWidth - 736)), top: Math.max(16, Math.min(box.bottom + 8, window.innerHeight - 340)) });
     setSelection((current) => !current || current.houseId !== houseId || current.complete
@@ -143,27 +148,31 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
   }
 
   const selectedHouse = board?.houses.find((house) => house.id === selection?.houseId);
+  const actionsOpen=Boolean(selection||manualOpen);
+  function closeActions(){setSelection(null);setManualOpen(false);setPending(null);actionsTrigger.current?.focus({preventScroll:true});}
   const visibleHouses = board?.houses.filter(house => `${house.name} ${house.calendarName || ""}`.toLocaleLowerCase("ru").includes(houseSearch.trim().toLocaleLowerCase("ru"))) ?? [];
   const buttonStyle = "rounded-lg border px-3 py-2 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800";
   return <section className="space-y-6">
-    <div className="flex flex-wrap items-end justify-between gap-4">
+    <div className="calendar-heading">
       <div><h1 className="text-3xl font-bold">Шахматка занятости</h1><p className="mt-2 text-slate-600">Выберите дом и одну дату, затем вторую для диапазона. Цена указана за ночь.</p></div>
       <Link className="rounded-lg bg-emerald-800 px-4 py-2 font-medium text-white" href="/admin/houses/new">Добавить дом</Link>
     </div>
 
-    <div className="flex flex-wrap items-end gap-2 rounded-lg bg-white p-2 shadow-sm" aria-label="Навигация по календарю">
+    <div className="calendar-tools" aria-label="Навигация по календарю">
       <button type="button" disabled={month <= "2000-01"} onClick={() => changeMonth(shiftedMonth(month, -1))} className={`${buttonStyle} disabled:opacity-50`} aria-label="Предыдущий месяц">←</button>
       <label className="grid gap-1 text-sm font-medium">Месяц<input type="month" min="2000-01" max="2100-12" value={month} onChange={(event) => changeMonth(event.target.value)} className="rounded-lg border px-3 py-2" /></label>
       <button type="button" disabled={month >= "2100-12"} onClick={() => changeMonth(shiftedMonth(month, 1))} className={`${buttonStyle} disabled:opacity-50`} aria-label="Следующий месяц">→</button>
       <button type="button" onClick={goToToday} className={buttonStyle}>Сегодня</button>
-      <span className="ml-auto text-xs text-slate-600">Светлый — свободно · синий — занято или закрыто · — нет тарифа</span>
+      <button type="button" onClick={event=>{actionsTrigger.current=event.currentTarget;setManualOpen(true);}} className={buttonStyle}>Выбрать даты вручную</button>
+      <div className="calendar-legend"><span><i aria-hidden="true"/>Свободно</span><span><i className="occupied" aria-hidden="true"/>Занято / закрыто</span><span>— Нет тарифа</span></div>
     </div>
 
-    <div role={selection ? "region" : undefined} aria-label="Действия с выбранными датами"
+    {!actionsOpen&&message&&<p role="status" className="rounded-lg border bg-white p-3 text-sm">{message}</p>}
+    <div ref={actionsRegion} hidden={!actionsOpen} role="region" aria-label="Действия с выбранными датами"
       style={{ "--panel-left": `${panel.left}px`, "--panel-top": `${panel.top}px` } as CSSProperties}
-      onKeyDown={(event) => { if (event.key === "Escape" && !busy) setSelection(null); }}
-      className={selection ? "fixed inset-x-0 bottom-0 z-50 max-h-[55vh] overflow-auto rounded-t-xl border bg-white p-3 shadow-xl lg:inset-x-auto lg:bottom-auto lg:left-[var(--panel-left)] lg:top-[var(--panel-top)] lg:w-[720px] lg:rounded-xl" : "rounded-xl bg-white p-3 shadow-sm"}>
-      <div className="flex items-center justify-between gap-2"><h2 className="text-base font-medium">Действия с датами</h2>{selection && <button type="button" disabled={busy} onClick={() => setSelection(null)} className="rounded border px-3 py-1" aria-label="Закрыть панель действий">×</button>}</div>
+      onKeyDown={(event) => { if (event.key === "Escape" && !busy) closeActions(); }}
+      className="calendar-actions fixed inset-x-0 bottom-0 z-50 max-h-[55vh] overflow-auto rounded-t-xl border bg-white p-4 shadow-xl lg:inset-x-auto lg:bottom-auto lg:left-[var(--panel-left)] lg:top-[var(--panel-top)] lg:w-[720px] lg:rounded-xl">
+      <div className="flex items-center justify-between gap-2"><h2 className="text-base font-medium">Действия с датами</h2><button type="button" disabled={busy} onClick={closeActions} className="rounded border px-3 py-1" aria-label="Закрыть панель действий">×</button></div>
       <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         <label className="grid min-w-0 gap-1 text-sm">Дом<select aria-label="Дом" value={selection?.houseId ?? ""} onChange={(event) => setSelection(event.target.value ? { houseId: event.target.value, start: today(), end: today(), complete: true } : null)} className="min-w-0 w-full rounded-lg border px-3 py-2"><option value="">Выберите дом</option>{board?.houses.map((house) => <option key={house.id} value={house.id}>{house.name}</option>)}</select></label>
         <label className="grid min-w-0 gap-1 text-sm">С даты<input type="date" min="2000-01-01" max="2100-12-31" value={selection?.start ?? ""} onChange={(event) => setSelection((current) => current && { ...current, start: event.target.value, complete: true })} className="min-w-0 w-full rounded-lg border px-3 py-2" /></label>
@@ -185,15 +194,16 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
       </div>}
     </div>
 
-    <div ref={scrollRegion} className="max-h-[70vh] overflow-auto rounded-xl border bg-white shadow-sm" aria-busy={loading}>
-      <label className="sticky left-0 block max-w-sm p-4 text-sm font-medium">Найти дом в шахматке<input type="search" placeholder="Название дома" value={houseSearch} onChange={event => setHouseSearch(event.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2" /></label>
+    <div className="calendar-card">
+      <div className="calendar-card-header"><label className="block font-medium">Найти дом в шахматке<input type="search" placeholder="Название дома" value={houseSearch} onChange={event => setHouseSearch(event.target.value)} className="w-full rounded-lg border px-3 py-2" /></label><p>{visibleHouses.length} домов · цены за ночь</p></div>
+    <div ref={scrollRegion} className="calendar-grid-scroll" aria-busy={loading}>
       {loading && <p className="p-4">Загружаем календарь…</p>}
       {!loading && board?.houses.length === 0 && <p className="p-6">Домов пока нет. <Link className="underline" href="/admin/houses/new">Добавьте первый дом</Link>.</p>}
       {!loading && board && board.houses.length > 0 && <table className="border-separate border-spacing-0 text-left text-sm">
         <caption className="sr-only">Занятость и цены домов за {month}</caption>
         <thead><tr><th scope="col" className="sticky top-0 left-0 z-30 min-w-28 max-w-40 border-b border-r bg-slate-100 px-2 py-1 font-normal sm:min-w-40">Дом</th>{board.dates.map((day) => {
           const weekDay = new Date(`${day}T00:00:00Z`).getUTCDay();
-          return <th scope="col" key={day} data-calendar-date={day} className={`sticky top-0 z-20 min-w-[72px] border-b border-r px-1 py-1 text-center text-xs font-normal ${weekDay === 0 || weekDay === 6 ? "bg-slate-200" : "bg-slate-50"}`}><span className="block">{day.slice(8)}</span><span className="text-slate-600">{weekdays[weekDay]}</span></th>;
+          return <th scope="col" key={day} data-calendar-date={day} data-today={day===today()?"":undefined} className={`sticky top-0 z-20 min-w-[72px] border-b border-r px-1 py-2 text-center text-xs font-normal ${weekDay === 0 || weekDay === 6 ? "bg-slate-200" : "bg-slate-50"}`}><span className="block">{day.slice(8)}</span><span className="text-slate-600">{weekdays[weekDay]}</span></th>;
         })}</tr></thead>
         <tbody>{visibleHouses.map((house) => <tr key={house.id}><th scope="row" className="sticky left-0 z-10 max-w-40 border-b border-r bg-white px-2 py-1 align-middle"><Link title={house.name} className="block max-w-36 truncate text-xs font-normal text-emerald-900 underline" href={`/admin/houses/${house.id}`}>{house.calendarName || house.name}</Link>{!house.isActive && <span className="block text-xs font-normal text-slate-500">Отключён</span>}</th>{house.cells.map((cell) => {
           const selected = selection?.houseId === house.id && cell.date >= selection.start && cell.date <= selection.end;
@@ -202,6 +212,7 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
           return <td key={cell.date} className="border-b border-r p-0"><button type="button" title={description} aria-pressed={selected} aria-label={description} onClick={(event) => selectCell(house.id, cell.date, event.currentTarget)} className={`min-h-10 w-full whitespace-nowrap px-1 py-2 text-center text-xs font-normal focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-emerald-900 ${selected ? "ring-2 ring-inset ring-emerald-900" : ""} ${cell.status === "booked" || cell.status === "closed" ? "bg-blue-600 text-white" : "bg-white text-slate-800"}`}>{cell.price ? Number(cell.price).toLocaleString("ru-RU") : "—"}</button></td>;
         })}</tr>)}</tbody>
       </table>}
+    </div>
     </div>
   </section>;
 }

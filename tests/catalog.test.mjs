@@ -56,7 +56,8 @@ test('filters combine with date search, quotes survive in separate house URLs, e
   const { dom, win, shadow, controller } = await setup('?checkIn=2026-11-02&checkOut=2026-11-04&guests=2');
   await flush();
   const widget = shadow.querySelector('.search > div').shadowRoot;
-  assert.match(widget.querySelector('.message').textContent, /Свободных домов: 3/);
+  assert.match(shadow.querySelector('.count').textContent, /Найдено домов: 3/);
+  assert.equal(widget.querySelector('.message').textContent,'');
   assert.equal(shadow.querySelector('.price small').textContent, 'за 2 ноч.');
   const houseLink = shadow.querySelector('.details-link');
   assert.match(houseLink.href, /house=555240345232&checkIn=2026-11-02&checkOut=2026-11-04&guests=2/);
@@ -85,7 +86,7 @@ test('direct house URL renders one full page and test request fields use synthet
   assert.ok(shadow.querySelector('.gallery').shadowRoot.querySelector('img'));
   assert.equal(shadow.querySelectorAll('.card').length, 0);
   assert.ok(shadow.querySelector('a[href="https://t.me/viteek_b"]'));
-  shadow.querySelector('[data-domkazan-action-for] button').click();
+  shadow.querySelector('.search > div').shadowRoot.querySelector('[data-domkazan-action-for] button').click();
   const request = shadow.querySelector('.search > div').shadowRoot.querySelector('.request-form');
   assert.equal(request.hidden, false);
   assert.equal(request.elements.clientName.value, 'Тестовый Гость');
