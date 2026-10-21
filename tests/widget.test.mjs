@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { JSDOM } from "jsdom";
+import {clientDay} from './client-dates.mjs';
 
 const script = readFileSync(new URL("../public/embed/domkazan-search.js", import.meta.url), "utf8");
 
@@ -15,8 +16,8 @@ test("widget filters existing catalog cards and updates only their price labels"
   dom.window.eval(script);
   const controller = dom.window.DomKazanCalendar.mount({ root: dom.window.document.getElementById("search"), apiUrl: "https://calendar.example.invalid/api/availability" });
   const form = dom.window.document.getElementById("search").shadowRoot.querySelector("form");
-  form.querySelector('[name="checkIn"]').value = "2026-11-02";
-  form.querySelector('[name="checkOut"]').value = "2026-11-04";
+  form.querySelector('[name="checkIn"]').value = clientDay(2);
+  form.querySelector('[name="checkOut"]').value = clientDay(4);
   form.dispatchEvent(new dom.window.Event("submit", { bubbles: true, cancelable: true }));
   await new Promise((resolve) => setImmediate(resolve));
   const free = dom.window.document.querySelector('[data-domkazan-house="free"]');
@@ -49,8 +50,8 @@ test("widget submits selected house without trusting a browser price and shows o
     apiUrl: "https://calendar.example.invalid/api/availability" });
   const shadow = dom.window.document.getElementById("search").shadowRoot;
   const search = shadow.querySelector("form");
-  search.querySelector('[name="checkIn"]').value = "2026-11-02";
-  search.querySelector('[name="checkOut"]').value = "2026-11-04";
+  search.querySelector('[name="checkIn"]').value = clientDay(2);
+  search.querySelector('[name="checkOut"]').value = clientDay(4);
   search.dispatchEvent(new dom.window.Event("submit", { bubbles: true, cancelable: true }));
   await new Promise((resolve) => setImmediate(resolve));
   dom.window.document.querySelector('[data-domkazan-action-for="free"] button').click();
@@ -82,8 +83,8 @@ function fixture(fetch, getFilters) {
     apiUrl: "https://calendar.example.invalid/api/availability", getFilters });
   const shadow = dom.window.document.getElementById("search").shadowRoot;
   const form = shadow.querySelector("form");
-  form.querySelector('[name="checkIn"]').value = "2026-11-02";
-  form.querySelector('[name="checkOut"]').value = "2026-11-04";
+  form.querySelector('[name="checkIn"]').value = clientDay(2);
+  form.querySelector('[name="checkOut"]').value = clientDay(4);
   const submit = (target = form) => target.dispatchEvent(new dom.window.Event("submit", { bubbles: true, cancelable: true }));
   return { dom, controller, shadow, form, submit, action: () => dom.window.document.querySelector('[data-domkazan-action-for="free"] button') };
 }
@@ -109,7 +110,7 @@ test("date, guest and filter changes invalidate the chosen house and require ano
   for (const name of ["checkIn", "checkOut", "guests"]) {
     f.submit(); await tick(); f.action().click();
     const field = f.form.querySelector(`[name="${name}"]`);
-    field.value = name === "guests" ? "3" : name === "checkIn" ? "2026-11-01" : "2026-11-05";
+    field.value = name === "guests" ? "3" : name === "checkIn" ? clientDay(1) : clientDay(5);
     field.dispatchEvent(new f.dom.window.Event("input", { bubbles: true }));
     assert.equal(f.action(), null);
     assert.equal(f.shadow.querySelector(".request-form").hidden, true);
@@ -164,8 +165,8 @@ test("a non-clickable grid item can group its link and separate application slot
     cards: [{ slug: "free", element: doc.getElementById("free"), priceElement: doc.getElementById("price"), actionElement: doc.getElementById("slot") },
       { slug: "busy", element: doc.getElementById("busy") }] });
   const form = doc.getElementById("search").shadowRoot.querySelector("form");
-  form.elements.checkIn.value="2026-11-02";
-  form.elements.checkOut.value="2026-11-04";
+  form.elements.checkIn.value=clientDay(2);
+  form.elements.checkOut.value=clientDay(4);
   form.dispatchEvent(new dom.window.Event("submit", { cancelable: true })); await tick();
   assert.equal(doc.querySelector("#slot button").closest("a"), null);
   assert.equal(doc.getElementById("busy").style.display, "none");

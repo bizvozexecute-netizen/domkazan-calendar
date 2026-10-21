@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
+import {clientDay,clientStayQuery} from './client-dates.mjs';
 import { publicCatalog,loadCatalog } from '../ops/tilda-test-gateway/lib/catalog.js';
 
 const details = JSON.parse(readFileSync(new URL('../data/tilda-catalog-details.json', import.meta.url), 'utf8'));
@@ -53,19 +54,21 @@ async function setup(suffix = '', mapHouse = house => house) {
 }
 
 test('filters combine with date search, quotes survive in separate house URLs, empty state is explicit', async () => {
-  const { dom, win, shadow, controller } = await setup('?checkIn=2026-11-02&checkOut=2026-11-04&guests=2');
+  const { dom, win, shadow, controller } = await setup(`?${clientStayQuery}`);
   await flush();
   const widget = shadow.querySelector('.search > div').shadowRoot;
   assert.match(shadow.querySelector('.count').textContent, /Найдено домов: 3/);
   assert.equal(widget.querySelector('.message').textContent,'');
   assert.equal(shadow.querySelector('.price small').textContent, 'за 2 ноч.');
   const houseLink = shadow.querySelector('.details-link');
-  assert.match(houseLink.href, /house=555240345232&checkIn=2026-11-02&checkOut=2026-11-04&guests=2/);
+  const target=new URL(houseLink.href).searchParams;
+  assert.equal(target.get('house'),'555240345232');assert.equal(target.get('checkIn'),clientDay(2));
+  assert.equal(target.get('checkOut'),clientDay(4));assert.equal(target.get('guests'),'2');
   assert.equal(houseLink.target, '');
   const pool = widget.querySelector('input[value="pool"]');
   pool.checked = true; pool.dispatchEvent(new win.Event('change', { bubbles: true }));
   assert.ok(shadow.querySelector('.price small'), 'reset preserves the starting price caption and its formatting');
-  assert.equal(widget.querySelector('[name="checkIn"]').value, '2026-11-02');
+  assert.equal(widget.querySelector('[name="checkIn"]').value, clientDay(2));
   widget.querySelector('form').dispatchEvent(new win.Event('submit', { cancelable: true }));
   await flush();
   assert.match(shadow.querySelector('.count').textContent, /1$/);
@@ -80,7 +83,7 @@ test('filters combine with date search, quotes survive in separate house URLs, e
 });
 
 test('direct house URL renders one full page and test request fields use synthetic details', async () => {
-  const { dom, shadow, controller } = await setup('?house=555240345232&checkIn=2026-11-02&checkOut=2026-11-04&guests=2');
+  const { dom, shadow, controller } = await setup(`?house=555240345232&${clientStayQuery}`);
   await flush();
   assert.equal(shadow.querySelector('h1').textContent, 'Казанка большой');
   assert.ok(shadow.querySelector('.gallery').shadowRoot.querySelector('img'));
@@ -97,7 +100,7 @@ test('direct house URL renders one full page and test request fields use synthet
 
 test('catalog maps by explicit Product UID after slug rename and submits the database ID; an unlinked UID never falls back',async()=>{
   const first=details.products[0];
-  const {dom,win,shadow,controller}=await setup('?checkIn=2026-11-02&checkOut=2026-11-04&guests=2',house=>house.slug===first.slug
+  const {dom,win,shadow,controller}=await setup(`?${clientStayQuery}`,house=>house.slug===first.slug
     ? {...house,id:'synthetic-database-id',slug:'renamed-internal-code',tildaProductUid:first.productUid}
     : {...house,tildaProductUid:null});
   await flush();assert.match(shadow.querySelector('.count').textContent,/Найдено домов: 1/);

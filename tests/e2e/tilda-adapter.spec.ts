@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { selectStay } from "./stay-helper";
+import {fixtureDay} from './journey-fixture';
 
 test("dynamic Tilda-shaped catalog keeps keyboard actions separate from links", async ({ page }, testInfo) => {
   const errors: string[] = [];
@@ -24,7 +25,7 @@ test("dynamic Tilda-shaped catalog keeps keyboard actions separate from links", 
     grid.innerHTML = ["101", "102"].map((uid) => `<article data-product-uid="${uid}" data-product-url="/tproduct/${uid}-synthetic">
       <div><a href="#prodpopup">Подробнее о тестовом доме ${uid}</a></div></article>`).join("");
   });
-  await selectStay(page,"2026-11-02","2026-11-04");
+  await selectStay(page,fixtureDay(2),fixtureDay(4));
   await page.getByRole("button", { name: "Показать свободные дома" }).click();
   await expect(page.locator('[data-product-uid="102"]')).toBeHidden();
   await expect(page.locator('[data-product-uid="101"]')).toContainText(/12\s000 ₽ за 2 ноч\./);
@@ -36,7 +37,7 @@ test("dynamic Tilda-shaped catalog keeps keyboard actions separate from links", 
   await page.getByLabel("Фильтр Tilda").fill("новый фильтр");
   await expect(action).toHaveCount(0);
   await expect(page.getByRole("form", { name: "Заявка на проживание" })).toBeHidden();
-  await expect(page.getByRole("button",{name:"Заезд",exact:true})).toHaveText("02.11.2026");
+  await expect(page.getByRole("button",{name:"Заезд",exact:true})).toHaveText(fixtureDay(2).split('-').reverse().join('.'));
   await page.getByRole("button", { name: "Показать свободные дома" }).click();
   await expect(action).toBeVisible();
   if (testInfo.project.name.startsWith("mobile")) expect(await page.evaluate(() => window.innerWidth)).toBeLessThan(760);

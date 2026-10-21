@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {JSDOM} from 'jsdom';
+import {clientDay} from './client-dates.mjs';
 const script=readFileSync(new URL('../public/embed/domkazan-search.js',import.meta.url),'utf8');
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
 function setup(options={}) {
@@ -13,7 +14,7 @@ function setup(options={}) {
 }
 test('range picker selects across year boundary in one opening, closes and returns focus',()=>{
   const {dom,controller,shadow}=setup();
-  const year=new Date().getUTCFullYear()+1;
+  const year=Number(clientDay(0).slice(0,4));
   const start=`${year}-12-31`,end=`${year+1}-01-02`;
   const trigger=shadow.querySelector('[aria-label="Заезд"]'); trigger.click();
   for(let i=0;i<24&&!shadow.querySelector(`[data-day="${start}"]`);i++)shadow.querySelector('[aria-label="Следующий месяц"]').click();
@@ -33,7 +34,7 @@ test('escape restores focus; impossible ranges do not reach API',async()=>{
   shadow.querySelector('[aria-label="Заезд"]').click();
   shadow.querySelector('.calendar').dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
   assert.equal(shadow.querySelector('.calendar').hidden,true);
-  const form=shadow.querySelector('form');form.elements.checkIn.value='2026-12-10';form.elements.checkOut.value='2026-12-09';
+  const form=shadow.querySelector('form');form.elements.checkIn.value=clientDay(4);form.elements.checkOut.value=clientDay(3);
   form.dispatchEvent(new dom.window.Event('submit',{cancelable:true}));await flush();
   assert.equal(calls,0);assert.match(shadow.querySelector('.message').textContent,/Выберите период/);
   controller.destroy();dom.window.close();
@@ -84,7 +85,7 @@ test('house calendar distinguishes occupied and missing rate, and never crosses 
 
 test('failed submission preserves contacts and retries exactly the original idempotent payload',async()=>{
   const {dom,controller,shadow}=setup();const form=shadow.querySelector('form');
-  form.elements.checkIn.value='2026-11-02';form.elements.checkOut.value='2026-11-04';
+  form.elements.checkIn.value=clientDay(2);form.elements.checkOut.value=clientDay(4);
   form.dispatchEvent(new dom.window.Event('submit',{cancelable:true}));await flush();
   dom.window.document.querySelector('[data-domkazan-action-for] button').click();
   const request=shadow.querySelector('.request-form');request.elements.clientName.value='Synthetic';request.elements.clientPhone.value='+70000000000';request.elements.consent.checked=true;
