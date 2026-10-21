@@ -90,7 +90,7 @@ npm run lint
 npm test
 npm run test:integration
 npm run build
-npx playwright install --with-deps chromium
+npx playwright install --with-deps chromium webkit
 npm run test:e2e
 npm run test:backup
 npm audit --omit=dev
@@ -99,4 +99,6 @@ npm audit
 
 Интеграция и E2E требуют отдельный TEST_DATABASE_URL с суффиксом `_test`, отличающийся от DATABASE_URL. E2E использует порт 3100, временные случайные пароль/сессию, 9 вымышленных домов и проверяет реальные HTTP/API/PostgreSQL взаимодействия в Chromium при десктопной и мобильной ширине. Созданные тестом заявки удаляются после сценария. Скриншоты — в `test-results/`.
 
-GitHub Actions `.github/workflows/ci.yml` запускает TypeScript, ESLint, unit/DOM, интеграцию на временной PostgreSQL 16, production build, Chromium, backup/restore и аудит. Отдельная job собирает Dockerfile, запускает Compose с HTTPS, проверяет proxy и восстанавливает архив. Production-аудит блокирует CI; полный аудит явно сообщает известные dev-проблемы. Несовместимые `npm audit fix --force` не применяются. Workflow не публикует приложение и не меняет Tilda.
+GitHub Actions `.github/workflows/ci.yml` запускает TypeScript, ESLint, unit/DOM, интеграцию на временной PostgreSQL 16, production build, Chromium и WebKit, backup/restore и аудит. Отдельная job собирает Dockerfile, запускает Compose с HTTPS, проверяет proxy и восстанавливает архив. Оба аудита (`npm audit --omit=dev` и полный `npm audit`) обязательны и блокируют CI при ошибке; исключений для advisory и `continue-on-error` у них нет. Несовместимые `npm audit fix --force` не применяются. Workflow не публикует приложение и не меняет Tilda.
+
+Пять прежних замечаний dev-цепочки ESLint устранены точечной заменой файлового поиска с проверкой совместимости: [обоснование и сопровождение](dependency-security.md). Эти тесты входят в `npm test`. При чистой установке нужен каталог `tooling/next-eslint-glob`, поэтому Dockerfile копирует его до `npm ci`.

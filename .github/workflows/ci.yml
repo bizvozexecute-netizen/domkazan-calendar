@@ -43,8 +43,7 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y postgresql-client-16
       - run: npm run test:backup
       - run: npm audit --omit=dev
-      - name: Full dependency audit (known dev advisory requires manual review)
-        continue-on-error: true
+      - name: Full dependency audit
         run: npm audit
       - uses: actions/upload-artifact@v5
         if: always()
