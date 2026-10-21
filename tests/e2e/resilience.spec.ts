@@ -1,5 +1,6 @@
 import {test,expect} from '@playwright/test';
 import {fixtureOrigin,fixtureProduct,fixtureHouses,fixtureDay,journeyFixture,openFixtureHouse} from './journey-fixture';
+import {selectStay} from './stay-helper';
 
 test.beforeEach(async({context})=>journeyFixture(context));
 
@@ -33,9 +34,8 @@ test('a malformed date link can be corrected without JavaScript errors',async({p
   const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
   await page.goto(`/resilience-fixture?house=${fixtureProduct.productUid}&checkIn=not-a-date&checkOut=${fixtureDay(4)}&guests=2`);
   await expect(page.getByRole('heading',{name:fixtureProduct.name,level:1})).toBeVisible();
-  await page.getByRole('button',{name:'Заезд',exact:true}).click();
-  await expect(page.locator(`[data-day="${fixtureDay(2)}"]`)).toBeEnabled();
-  await page.locator(`[data-day="${fixtureDay(2)}"]`).click();await page.locator(`[data-day="${fixtureDay(4)}"]`).click();
+  // Recover into a later month too; this must work on the last days of a month.
+  await selectStay(page,fixtureDay(40),fixtureDay(42));
   await page.getByRole('button',{name:'Проверить стоимость',exact:true}).click();
   await expect(page.getByRole('button',{name:`Оставить заявку: ${fixtureProduct.name}`})).toBeVisible();expect(errors).toEqual([]);
 });
