@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
-import { publicCatalog } from '../ops/tilda-test-gateway/lib/catalog.js';
+import { publicCatalog,loadCatalog } from '../ops/tilda-test-gateway/lib/catalog.js';
 
 const details = JSON.parse(readFileSync(new URL('../data/tilda-catalog-details.json', import.meta.url), 'utf8'));
 const flush = () => new Promise(resolve => setTimeout(resolve, 20));
@@ -21,6 +21,13 @@ test('catalog strips markup and private booking links; images stay on Tilda CDN'
   assert.doesNotMatch(JSON.stringify(result), /homereserve|javascript|evil\.invalid|<b>/);
   assert.throws(() => publicCatalog({ total: 2, products: [] }), /Incomplete/);
   assert.equal(publicCatalog({ total: 1, products: [{ uid: '111111111111', title: 'Дом', descr: '10 спальных мест' }] }).products[0].bedrooms, null);
+});
+
+test('parallel catalog cache misses share one source request',async()=>{
+  const previous=globalThis.fetch;let calls=0;
+  globalThis.fetch=async()=>{calls++;await flush();return Response.json({total:0,products:[]});};
+  try{const results=await Promise.all([loadCatalog(),loadCatalog(),loadCatalog()]);assert.equal(calls,1);assert.equal(results[0],results[1]);}
+  finally{globalThis.fetch=previous;}
 });
 
 test('public detail snapshot covers the existing homes without customer data or old booking HTML', () => {

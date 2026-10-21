@@ -24,7 +24,7 @@
     const title = document.createElement("strong");
     const next = document.createElement("button"); next.type = "button"; next.textContent = "→"; next.setAttribute("aria-label", "Следующий месяц");
     navigation.append(previous, title, next);
-    const grid = document.createElement("div"); grid.className = "calendar-grid"; grid.setAttribute("role", "grid");
+    const grid = document.createElement("div"); grid.className = "calendar-grid"; grid.setAttribute("role", "group"); grid.setAttribute("aria-label","Дни месяца");
     const status = document.createElement("p"); status.setAttribute("role", "status");
     container.append(caption, navigation, grid, status);
     for (const [name, label] of [["checkIn", "Заезд"], ["checkOut", "Выезд"]]) {
@@ -76,12 +76,13 @@
         cell.setAttribute("aria-label", `${dateLabel(day)}${description ? `, ${description}` : ""}${details?.price !== null && details?.price !== undefined ? `, ${details.price} рублей` : ""}`);
         cell.setAttribute("aria-pressed", String(day === fields.checkIn.value || day === fields.checkOut.value));
         if (day >= fields.checkIn.value && fields.checkOut.value && day <= fields.checkOut.value) cell.classList.add("in-range");
-        if (blocked) cell.classList.add("unavailable");
+        if (blocked) cell.classList.add(details.status === "unpriced" ? "unpriced" : "unavailable");
         cell.tabIndex = day === focusDay ? 0 : -1;
         cell.addEventListener("click", () => choose(day)); grid.append(cell);
       }
       const buttons = [...grid.querySelectorAll("button:not(:disabled)")];
       if (!buttons.some((button) => button.tabIndex === 0) && buttons.length) buttons[0].tabIndex = 0;
+      if(options.getDay) status.textContent='Цена за ночь без доплат. Синий — занято, «—» — нет тарифа. Итог рассчитывается отдельно.';
     }
     function choose(day) {
       status.textContent = "";
@@ -145,6 +146,7 @@
     .calendar-grid button[aria-pressed=true] { background:var(--dk-accent,#1c6047); color:white; }
     .calendar-grid .in-range { background:#dceefe; }
     .calendar-grid .unavailable { background:#dbeafe; }
+    .calendar-grid .unpriced { background:#f1f1f1; color:#737373; }
     .calendar-grid small { display:block; font-size:9px; }
     .search-amenities { grid-column:1/-1; display:flex; flex-wrap:wrap; gap:12px; border:0; margin:0; padding:0; }
     .search-amenities label { display:flex; align-items:center; font-weight:400; }

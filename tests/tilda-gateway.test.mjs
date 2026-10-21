@@ -3,12 +3,18 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { GET } from '../ops/tilda-test-gateway/api/availability.js';
 import { POST } from '../ops/tilda-test-gateway/api/requests.js';
+import {GET as calendarGet} from '../ops/tilda-test-gateway/api/house-calendar.js';
 
 const gateway = 'https://domkazan-calendar-tilda-test-gatewa.vercel.app';
 const upstream = 'https://domkazan-calendar-test-cnu827x24-iss-projects-5d0a08b3.vercel.app';
 const headers = { origin: 'https://domkazan116.ru', 'x-vercel-oidc-token': 'test-oidc' };
 const query = 'checkIn=2026-10-20&checkOut=2026-10-22&guests=2';
 const tildaHouse = { id: 'test-tilda-id', slug: 'tilda-259712110892', quote: { total: '14000.00' } };
+
+test('calendar gateway validates UID and source before forwarding',async()=>{
+  assert.equal((await calendarGet(new Request(`${gateway}/api/house-calendar?house=tilda-259712110892&month=2026-11`))).status,403);
+  assert.equal((await calendarGet(new Request(`${gateway}/api/house-calendar?house=../../admin&month=2026-11`,{headers}))).status,400);
+});
 
 test('public gateway serves the reviewed adapter and widget unchanged', () => {
   for (const name of ['domkazan-search.js', 'domkazan-tilda.js', 'domkazan-catalog.js']) {

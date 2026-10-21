@@ -50,3 +50,18 @@ test('house calendar distinguishes occupied and missing rate, and never crosses 
   assert.equal(shadow.querySelector(`[data-day="${end}"]`)?.disabled,true);
   controller.destroy();dom.window.close();
 });
+
+test('failed submission preserves contacts and retries exactly the original idempotent payload',async()=>{
+  const {dom,controller,shadow}=setup();const form=shadow.querySelector('form');
+  form.elements.checkIn.value='2026-11-02';form.elements.checkOut.value='2026-11-04';
+  form.dispatchEvent(new dom.window.Event('submit',{cancelable:true}));await flush();
+  dom.window.document.querySelector('[data-domkazan-action-for] button').click();
+  const request=shadow.querySelector('.request-form');request.elements.clientName.value='Synthetic';request.elements.clientPhone.value='+70000000000';request.elements.consent.checked=true;
+  const payloads=[];dom.window.fetch=async(url,options)=>{payloads.push(JSON.parse(options.body));if(payloads.length===1)throw new Error('Temporary failure');return {ok:true,json:async()=>({requestId:'synthetic',message:'Received',contacts:{}})};};
+  request.dispatchEvent(new dom.window.Event('submit',{cancelable:true}));await flush();
+  assert.equal(request.elements.clientName.value,'Synthetic');assert.equal(request.hidden,false);
+  request.dispatchEvent(new dom.window.Event('submit',{cancelable:true}));await flush();
+  assert.deepEqual(payloads[0],payloads[1]);assert.equal(request.dataset.submitted,'true');assert.equal(request.elements.clientPhone.disabled,true);
+  assert.equal(shadow.querySelector('.receipt').hidden,false);
+  controller.destroy();dom.window.close();
+});
