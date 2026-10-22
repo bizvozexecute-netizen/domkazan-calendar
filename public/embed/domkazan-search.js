@@ -199,7 +199,7 @@
 
   function mount({ root, apiUrl, requestUrl, privacyUrl, cards: explicitCards, getFilters,
     initialValues = {}, getViewState, transformHouses, onResults, onInvalidate, renderPrice, testMode = false,
-    calendarUrl, houseSlug, resultsUrl, ownerContacts, showCount = true, quietSuccess = false, resultElement, onSearchComplete }) {
+    calendarUrl, houseSlug, resultsUrl, ownerContacts, showCount = true, quietSuccess = false, resultElement, onSearchComplete, onRequestSaved }) {
     if (!root || !apiUrl) throw new Error("Укажите root и apiUrl для DomKazanCalendar.");
     if (root.closest("a,button")) throw new Error("Форма поиска должна находиться вне ссылки или кнопки.");
     instances.get(root)?.destroy();
@@ -416,6 +416,17 @@
         if (resultsUrl) returnLink.href = typeof resultsUrl === "function" ? resultsUrl() : resultsUrl;
         else { returnLink.href = "#"; returnLink.addEventListener("click", event => { event.preventDefault(); receipt.hidden = true; }); }
         receipt.append(returnLink);
+        if(serverTotal!==null){
+          // The POST verifies the total, but does not return a fresh breakdown.
+          // Never retain the old fee components beside the saved request price.
+          const verifiedHouse={...house,quote:{total:serverTotal,nights:house.quote.nights}};
+          currentHouses=currentHouses.map(item=>item.id===house.id?verifiedHouse:item);
+          for(const card of cards)if(card.slug===house.slug&&card.priceElement){
+            if(renderPrice)renderPrice(card.priceElement,verifiedHouse);
+            else card.priceElement.textContent=`${money(serverTotal)} ₽ за ${house.quote.nights} ноч.`;
+          }
+          onRequestSaved?.(verifiedHouse,snapshot);
+        }
       } catch (error) {
         if(destroyed)return;
         if(responseStatus===409){invalidate(false);message.dataset.state='error';message.textContent='Доступность дома изменилась. Повторите поиск перед новой заявкой.';}

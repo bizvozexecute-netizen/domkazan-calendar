@@ -60,7 +60,7 @@ test('published TEST Tilda: search, detail, actual photo, safe request and retur
     await expect(page.getByText(new RegExp(`Заявка ${data.requestId}:`))).toBeVisible();
     await page.screenshot({path:testInfo.outputPath('real-receipt.png'),fullPage:true});
     // A NEW request never closes dates: repeat the real availability check.
-    const available=await page.request.get(`https://domkazan-calendar-tilda-test-gatewa.vercel.app/api/availability?checkIn=${day(2)}&checkOut=${day(4)}&guests=8&house=tilda-${uid}`,{headers:{Origin:'https://domkazan116.ru'}});
+    const available=await page.request.get(`https://domkazan-calendar-tilda-test-gatewa.vercel.app/api/availability?checkIn=${day(2)}&checkOut=${day(4)}&guests=8&house=tilda-${uid}`,{headers:{Origin:'https://domkazan116.ru',Referer:`https://domkazan116.ru${path}`}});
     expect((await available.json()).houses.some((h:{slug:string})=>h.slug===`tilda-${uid}`)).toBe(true);
     await page.getByRole('link',{name:'Вернуться к результатам',exact:true}).click();
   }else{

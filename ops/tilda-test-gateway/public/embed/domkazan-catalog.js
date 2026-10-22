@@ -396,6 +396,9 @@
           for (const { product, nodes } of cardLinks) {for (const node of nodes) node.href = houseUrl(product.productUid, paramsWithFilters(currentValues));cards.find(card=>card.slug===product.slug)?.priceElement.classList.add('price-placeholder');}
         },
         onResults:applyResults,
+        onRequestSaved(house,snapshot){
+          if(lastResult)applyResults(lastResult.houses.map(item=>item.id===house.id?house:item),snapshot,false);
+        },
         onSearchComplete:()=>root.dispatchEvent(new CustomEvent('domkazan:view-ready',{bubbles:true})),
       });
       if (!selected) {

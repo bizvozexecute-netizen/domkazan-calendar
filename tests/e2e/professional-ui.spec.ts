@@ -4,6 +4,46 @@ import { fixtureOrigin, fixtureProduct, fixtureDay, journeyFixture, openFixtureH
 
 test.beforeEach(async ({ context }) => journeyFixture(context));
 
+test('saved request replaces the displayed quote and removes its obsolete breakdown', async ({ page, context }) => {
+  await context.route(`${fixtureOrigin}/api/availability?*`, route => route.fulfill({ json: { houses: [{
+    id: fixtureProduct.slug, slug: fixtureProduct.slug, name: fixtureProduct.name,
+    quote: { total: '10000', nights: 2, accommodationTotal: '9000', extraGuestTotal: '0', serviceFee: '1000' },
+  }] } }));
+  await context.route(`${fixtureOrigin}/api/requests`, route => route.fulfill({ status: 201,
+    json: { requestId: 'synthetic-repriced', total: '13000', message: 'Тестовая заявка получена.', contacts: {} } }));
+  await openFixtureHouse(page);
+  await expect(page.locator('.quote-lines')).toContainText('Сервисный сбор');
+  await page.getByRole('button', { name: `Оставить заявку: ${fixtureProduct.name}` }).click();
+  await page.getByRole('checkbox', { name: /Согласен на обработку/ }).check();
+  await page.getByRole('button', { name: 'Отправить заявку', exact: true }).click();
+  await expect(page.locator('.receipt')).toContainText('Цена обновилась');
+  await expect(page.locator('.summary div:last-child dd')).toHaveText(/13\s000 ₽/);
+  await expect(page.locator('.booking-quote .price')).toHaveText(/13\s000 ₽ за 2 ноч\./);
+  await expect(page.locator('.quote-lines')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: `Заявка отправлена: ${fixtureProduct.name}` })).toBeDisabled();
+});
+
+test('a newly confirmed quote also updates catalog price sorting without another request', async ({ page, context }) => {
+  const products = [fixtureProduct, { ...fixtureProduct, productUid: '222222222222', slug: 'tilda-222222222222', name: 'Второй вымышленный дом' }];
+  await context.route(`${fixtureOrigin}/api/catalog`, route => route.fulfill({ json: { products } }));
+  let searches = 0;
+  await context.route(`${fixtureOrigin}/api/availability?*`, route => { searches++; return route.fulfill({ json: {
+    houses: products.map((product, index) => ({ id: product.slug, slug: product.slug, name: product.name, quote: { total: String(10000 + index * 2000), nights: 2 } })),
+  } }); });
+  await context.route(`${fixtureOrigin}/api/requests`, route => route.fulfill({ status: 201,
+    json: { requestId: 'synthetic-repriced-sort', total: '20000', message: 'Тестовая заявка получена.', contacts: {} } }));
+  await page.goto(`/resilience-fixture?checkIn=${fixtureDay(2)}&checkOut=${fixtureDay(4)}&guests=2`);
+  await expect(page.locator('.count')).toHaveText('Найдено домов: 2');
+  await page.getByLabel('Сортировать', { exact: true }).selectOption('price');
+  await page.getByRole('button', { name: `Оставить заявку: ${fixtureProduct.name}` }).click();
+  await page.getByRole('checkbox', { name: /Согласен на обработку/ }).check();
+  await page.getByRole('button', { name: 'Отправить заявку', exact: true }).click();
+  await expect(page.locator('.receipt')).toContainText('Цена обновилась');
+  await expect(page.locator('.cards article').first()).toHaveAttribute('data-domkazan-house', products[1].slug);
+  await expect(page.locator(`[data-domkazan-house="${fixtureProduct.slug}"] .price`)).toHaveText(/20\s000 ₽ за 2 ноч\./);
+  expect(searches).toBe(1);
+});
+
 test('structured description, current quote and request explain the stay without stale tariffs', async ({ page, context }, testInfo) => {
   const product = { ...fixtureProduct, description: [
     'вместимость до 12 гостей', '3 спальни, 6 спальных мест', 'кухня, гостиная', 'веранда с мангалом',
