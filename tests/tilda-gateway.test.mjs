@@ -3,12 +3,18 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { GET } from '../ops/tilda-test-gateway/api/availability.js';
 import { POST } from '../ops/tilda-test-gateway/api/requests.js';
+import {GET as calendarGet} from '../ops/tilda-test-gateway/api/house-calendar.js';
 
 const gateway = 'https://domkazan-calendar-tilda-test-gatewa.vercel.app';
 const upstream = 'https://domkazan-calendar-test-cnu827x24-iss-projects-5d0a08b3.vercel.app';
 const headers = { origin: 'https://domkazan116.ru', 'x-vercel-oidc-token': 'test-oidc' };
 const query = 'checkIn=2026-10-20&checkOut=2026-10-22&guests=2';
 const tildaHouse = { id: 'test-tilda-id', slug: 'tilda-259712110892', quote: { total: '14000.00' } };
+
+test('calendar gateway validates UID and source before forwarding',async()=>{
+  assert.equal((await calendarGet(new Request(`${gateway}/api/house-calendar?house=tilda-259712110892&month=2026-11`))).status,403);
+  assert.equal((await calendarGet(new Request(`${gateway}/api/house-calendar?house=../../admin&month=2026-11`,{headers}))).status,400);
+});
 
 test('public gateway serves the reviewed adapter and widget unchanged', () => {
   for (const name of ['domkazan-search.js', 'domkazan-tilda.js', 'domkazan-catalog.js']) {
@@ -31,16 +37,17 @@ test('gateway sends only a Vercel identity to Preview and exposes Tilda houses',
   const previousFetch = globalThis.fetch;
   const previousOrigin = process.env.GATEWAY_UPSTREAM_ORIGIN;
   process.env.GATEWAY_UPSTREAM_ORIGIN = upstream;
+  const mappedHouse={...tildaHouse,id:'mapped-id',slug:'renamed-internal-code',tildaProductUid:'111111111111'};
   globalThis.fetch = async (url, options) => {
     assert.equal(new URL(url).origin, upstream);
     assert.equal(options.headers['x-vercel-trusted-oidc-idp-token'], 'test-oidc');
-    return Response.json({ houses: [tildaHouse, { id: 'demo', slug: 'demo-house-01' }] });
+    return Response.json({ houses: [tildaHouse,mappedHouse,{...tildaHouse,id:'unlinked',tildaProductUid:null}, { id: 'demo', slug: 'demo-house-01' }] });
   };
   try {
     const response = await GET(new Request(`${gateway}/api/availability?${query}`, { headers }));
     assert.equal(response.status, 200);
     assert.equal(response.headers.get('access-control-allow-origin'), headers.origin);
-    assert.deepEqual((await response.json()).houses, [tildaHouse]);
+    assert.deepEqual((await response.json()).houses, [tildaHouse,mappedHouse]);
   } finally {
     globalThis.fetch = previousFetch;
     if (previousOrigin === undefined) delete process.env.GATEWAY_UPSTREAM_ORIGIN;

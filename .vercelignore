@@ -1,0 +1,15 @@
+.git
+node_modules
+.next
+.env
+.env.*
+.local*
+.vercel-preview-credentials.json
+.vpn-test-credentials.json
+backups
+test-results
+playwright-report
+coverage
+*.dump
+*.dump.sha256
+*.partial

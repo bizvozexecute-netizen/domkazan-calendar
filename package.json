@@ -13,7 +13,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/dates.test.ts tests/pricing.test.ts tests/rates.test.ts tests/widget.test.mjs tests/tilda-adapter.test.mjs tests/tilda-public-snapshot.test.mjs tests/tilda-gateway.test.mjs tests/catalog.test.mjs tests/admin-ui.test.tsx tests/customer-requests.test.ts tests/request-security.test.ts tests/test-catalog.test.ts",
+    "test": "tsx --test tests/dates.test.ts tests/pricing.test.ts tests/rates.test.ts tests/widget.test.mjs tests/range-calendar.test.mjs tests/tilda-adapter.test.mjs tests/tilda-public-snapshot.test.mjs tests/tilda-gateway.test.mjs tests/catalog.test.mjs tests/admin-ui.test.tsx tests/customer-requests.test.ts tests/request-security.test.ts tests/test-catalog.test.ts tests/lint-dependencies.test.mjs tests/test-runner.test.mjs",
     "test:integration": "node scripts/test-integration.mjs",
     "test:e2e": "node scripts/test-e2e.mjs",
     "test:backup": "node scripts/test-backup-restore.mjs",
@@ -47,6 +47,7 @@
     "@types/react-dom": "^19.0.0",
     "eslint": "^9.0.0",
     "eslint-config-next": "^16.0.0",
+    "fast-glob": "file:tooling/next-eslint-glob",
     "jsdom": "^27.4.0",
     "prisma": "^7.10.0",
     "tailwindcss": "^4.0.0",
@@ -55,6 +56,9 @@
   },
   "overrides": {
     "deepmerge-ts": "8.0.2",
-    "mysql2": "3.24.6"
+    "mysql2": "3.24.6",
+    "@next/eslint-plugin-next@16.4.0": {
+      "fast-glob": "$fast-glob"
+    }
   }
 }

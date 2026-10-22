@@ -11,6 +11,8 @@ model House {
   id              String           @id @default(cuid())
   slug            String           @unique
   name            String
+  calendarName    String?
+  tildaProductUid String?          @unique
   tildaUrl        String?
   maxGuests       Int
   includedGuests  Int?

@@ -25,6 +25,11 @@ export function publicCatalog(data) {
     const images = [...new Set((Array.isArray(rawGallery) ? rawGallery : []).map(item => item.img).filter(value => {
       try { const url = new URL(value); return url.protocol === 'https:' && /(^|\.)tildacdn\.(com|info|net|pub)$/.test(url.hostname); } catch { return false; }
     }))].slice(0, 50);
+    const videoCandidates = [...(Array.isArray(rawGallery) ? rawGallery.flatMap(item => [item.video, item.url]) : []),
+      ...(description.match(/https:\/\/rutube\.ru\/(?:video|play\/embed)\/[a-f0-9]{32}\/?/gi) || [])];
+    const rutubeUrl = videoCandidates.find(value => {
+      try { const url = new URL(value); return url.protocol === 'https:' && url.hostname === 'rutube.ru' && /^\/(?:video|play\/embed)\/[a-f0-9]{32}\/?$/i.test(url.pathname); } catch { return false; }
+    }) || null;
     const has = expression => expression.test(facts);
     const amenities = [];
     if (has(/бассейн/i)) amenities.push('pool');
@@ -42,7 +47,7 @@ export function publicCatalog(data) {
     const supplement = description.match(/(?:цен[аы]|стоимость)[^\n]*?до\s*(\d+)\s*(?:чел|гост)[^\n]*?(?:далее|свыше)[^\d\n]*([\d\s]+)\s*(?:₽|руб)\s*\/\s*чел/i);
     const service = description.match(/сервисный сбор[^\n]*?[-–—:]\s*([\d\s]+)\s*(?:₽|руб)/i);
     return { productUid: uid, slug: `tilda-${uid}`, name: plain(product.title).slice(0, 120),
-      description, facts, images, amenities,
+      description, facts, images, amenities, rutubeUrl,
       maxGuests: Number(facts.match(/вместимост[ьи]?\s*(?:до\s*)?(\d+)\s*гост/i)?.[1]) || null,
       bedrooms: Number(facts.match(/(\d+)\s*(?:спальня|спальни|спален)(?![а-яё])/i)?.[1]) || null,
       beds: Number(facts.match(/(\d+)\s*спальн[ыо][хе]\s*мест/i)?.[1]) || null,
@@ -56,11 +61,17 @@ export function publicCatalog(data) {
 }
 
 let cached;
+let inFlight;
 export async function loadCatalog() {
   if (cached && cached.expires > Date.now()) return cached.value;
-  const response = await fetch(catalogSource, { signal: AbortSignal.timeout(10000) });
-  if (!response.ok) throw new Error('Tilda unavailable');
-  const value = publicCatalog(await response.json());
-  cached = { value, expires: Date.now() + 60000 };
-  return value;
+  if (inFlight) return inFlight;
+  inFlight = (async () => {
+    const response = await fetch(catalogSource, { signal: AbortSignal.timeout(8000) });
+    if (!response.ok) throw new Error('Tilda unavailable');
+    const value = publicCatalog(await response.json());
+    cached = { value, expires: Date.now() + 60000 };
+    return value;
+  })();
+  try { return await inFlight; }
+  finally { inFlight = null; }
 }

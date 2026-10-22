@@ -1,9 +1,12 @@
 import { test, expect } from "@playwright/test";
 import { db } from "../../src/lib/db";
 import { dateKey, todayInMoscow } from "../../src/lib/dates";
+import { selectStay } from "./stay-helper";
+import {resetTestThrottle} from "./reset-throttle";
 
 const day = (offset: number) => dateKey(new Date(todayInMoscow().getTime() + offset * 86_400_000));
 const created: string[] = [];
+test.beforeEach(resetTestThrottle);
 test.afterEach(async () => {
   if (created.length) await db.bookingRequest.deleteMany({ where: { id: { in: created.splice(0) } } });
 });
@@ -23,8 +26,7 @@ test("catalog search, stale form reset, application and manual confirmation work
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/test-catalog");
-  await page.getByLabel("Заезд", { exact: true }).fill(day(2));
-  await page.getByLabel("Выезд", { exact: true }).fill(day(4));
+  await selectStay(page,day(2),day(4));
   const search = page.getByRole("button", { name: "Показать свободные дома" });
   await search.click();
   const action = page.locator('[data-domkazan-action-for="demo-house-01"] button');
@@ -67,12 +69,19 @@ test("catalog search, stale form reset, application and manual confirmation work
   await expect(page).toHaveURL(/\/admin$/);
   await expect(page.getByRole("heading", { name: "Шахматка занятости" })).toBeVisible();
   await expect(page.locator("button[aria-pressed]").first()).toBeVisible();
+  await expect(page.getByRole('region',{name:'Действия с выбранными датами',exact:true})).toBeHidden();
+  await page.getByRole('button',{name:'Выбрать даты вручную',exact:true}).click();
   if (testInfo.project.name === "desktop") {
     const houseBox = await page.getByLabel("Дом", { exact: true }).boundingBox();
     const dateBox = await page.getByLabel("С даты", { exact: true }).boundingBox();
     expect(houseBox!.x + houseBox!.width).toBeLessThanOrEqual(dateBox!.x);
   }
+  await page.getByLabel('Дом',{exact:true}).press('Escape');
+  await expect(page.getByRole('button',{name:'Выбрать даты вручную',exact:true})).toBeFocused();
   await page.getByRole("button", { name: "Сегодня", exact: true }).click();
+  const visibleToday=await page.locator(`[data-calendar-date="${day(0)}"]`).boundingBox();
+  const stickyHouse=await page.locator('.calendar-grid-scroll thead th').first().boundingBox();
+  expect(visibleToday!.x).toBeGreaterThanOrEqual(stickyHouse!.x+stickyHouse!.width-1);
   await page.screenshot({ path: testInfo.outputPath("admin-calendar.png"), fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
   await page.getByRole("link", { name: "Дома", exact: true }).click();

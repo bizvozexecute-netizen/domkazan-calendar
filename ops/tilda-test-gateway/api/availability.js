@@ -6,7 +6,7 @@ export async function GET(request) {
   const headers = cors(request, 'GET');
   if (!checkBrowserSource(request)) return json({ error: 'Только тестовая страница каталога.' }, 403, headers);
   const url = new URL(request.url);
-  const allowed = new Set(['checkIn', 'checkOut', 'guests', 'district', 'bedrooms', 'amenities', 'petsAllowed']);
+  const allowed = new Set(['checkIn', 'checkOut', 'guests', 'district', 'bedrooms', 'amenities', 'petsAllowed', 'house']);
   if ([...url.searchParams.keys()].some(key => !allowed.has(key)) || url.search.length > 1024) {
     return json({ error: 'Некорректные параметры поиска.' }, 400, headers);
   }

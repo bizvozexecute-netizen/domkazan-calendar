@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { JSDOM } from "jsdom";
+import {clientDay} from './client-dates.mjs';
 
 const widget = readFileSync(new URL("../public/embed/domkazan-search.js", import.meta.url), "utf8");
 const adapter = readFileSync(new URL("../public/embed/domkazan-tilda.js", import.meta.url), "utf8");
@@ -28,8 +29,8 @@ function fixture(mapping = [{ productUid: "101", houseSlug: "house-a" }, { produ
   const controller = w.DomKazanTilda.mount({ root, catalog, mapping,
     apiUrl: "https://calendar.example.invalid/api/availability", privacyUrl: "https://example.invalid/privacy" });
   const form = root.shadowRoot.querySelector("form");
-  form.querySelector('[name="checkIn"]').value = "2026-11-02";
-  form.querySelector('[name="checkOut"]').value = "2026-11-04";
+  form.querySelector('[name="checkIn"]').value = clientDay(2);
+  form.querySelector('[name="checkOut"]').value = clientDay(4);
   function search() { form.dispatchEvent(new w.Event("submit", { bubbles: true, cancelable: true })); }
   return { dom, w, root, grid, catalog, controller, calls, form, search };
 }
@@ -94,7 +95,7 @@ test("Tilda redraw and native filter changes clear stale application and preserv
   f.grid.innerHTML = card("102") + card("101"); await tick();
   assert.equal(f.grid.querySelector("button"), null);
   assert.equal(f.root.shadowRoot.querySelector(".request-form").hidden, true);
-  assert.equal(f.form.querySelector('[name="checkIn"]').value, "2026-11-02");
+  assert.equal(f.form.querySelector('[name="checkIn"]').value, clientDay(2));
   f.search(); await tick();
   assert.equal(f.grid.firstElementChild.style.display, "none");
   assert.ok(f.grid.lastElementChild.querySelector("button"));
