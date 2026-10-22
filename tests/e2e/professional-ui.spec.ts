@@ -4,6 +4,40 @@ import { fixtureOrigin, fixtureProduct, fixtureDay, journeyFixture, openFixtureH
 
 test.beforeEach(async ({ context }) => journeyFixture(context));
 
+test('stalled gallery and enlarged photos offer retry and recover without stale loading timers', async ({ page, context }) => {
+  await page.clock.install();
+  const blocked = new Set([fixtureProduct.images[1], fixtureProduct.images[2]]);
+  const waiting: { url: string; release: () => void }[] = [];
+  await context.route('https://static.tildacdn.com/fixture-*.svg*', async route => {
+    const url = new URL(route.request().url());const source=url.origin+url.pathname;
+    if (blocked.has(source) && !url.searchParams.has('_dk_retry')) await new Promise<void>(release => waiting.push({ url:source, release }));
+    await route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"/>' }).catch(() => {});
+  });
+  const release = (url: string) => { blocked.delete(url); for (const item of waiting) if (item.url === url) item.release(); };
+  await openFixtureHouse(page);
+  const photo = page.locator('.gallery .photo-button img'); await expect(photo).toHaveClass('loaded');
+  await page.getByRole('button', { name: 'Фото 2', exact: true }).click();
+  await page.clock.fastForward(16000);
+  await expect(page.locator('.gallery .viewer .media-status')).toBeVisible();
+  await expect(page.locator('.gallery .viewer .media-status')).toContainText('Фото загружается дольше обычного.');
+  await page.getByRole('button', { name: 'Повторить загрузку фото', exact: true }).click();
+  await expect(photo).toHaveClass('loaded');
+  await expect(photo).toHaveAttribute('src', /_dk_retry=/);release(fixtureProduct.images[1]);
+  await expect(page.getByRole('button', { name: 'Увеличить фото', exact: true })).toBeFocused();
+  await page.getByRole('button', { name: 'Увеличить фото', exact: true }).click();
+  const zoom = page.getByRole('dialog', { name: 'Увеличенное фото', exact: true });
+  await page.keyboard.press('ArrowRight'); await page.clock.fastForward(16000);
+  await expect(zoom.locator('.media-status')).toBeVisible();
+  await expect(zoom.locator('.media-status')).toContainText('Фото загружается дольше обычного.');
+  await zoom.getByRole('button', { name: 'Повторить загрузку фото', exact: true }).click();
+  await expect(zoom.locator('img')).toHaveClass('loaded');
+  await expect(zoom.locator('img')).toHaveAttribute('src', /_dk_retry=/);release(fixtureProduct.images[2]);
+  await page.keyboard.press('Escape'); await expect(photo).toHaveClass('loaded');
+  await page.getByRole('button', { name: 'Фото 1', exact: true }).click();
+  await expect(photo).toHaveClass('loaded'); await page.clock.fastForward(16000);
+  await expect(page.getByRole('button', { name: 'Повторить загрузку фото', exact: true })).toHaveCount(0);
+});
+
 test('saved request replaces the displayed quote and removes its obsolete breakdown', async ({ page, context }) => {
   await context.route(`${fixtureOrigin}/api/availability?*`, route => route.fulfill({ json: { houses: [{
     id: fixtureProduct.slug, slug: fixtureProduct.slug, name: fixtureProduct.name,

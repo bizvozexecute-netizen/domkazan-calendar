@@ -73,7 +73,7 @@ test('gallery loads full photos, follows active thumbnail, supports zoom keyboar
 
 test('broken image has a usable retry instead of a blank gallery',async({context,page})=>{
   let failed=true;
-  await context.route(fixtureProduct.images[0],route=>failed?route.abort('failed'):route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="300" height="400"/>'}));
+  await context.route(`${fixtureProduct.images[0]}*`,route=>failed?route.abort('failed'):route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="300" height="400"/>'}));
   await openFixtureHouse(page);await expect(page.getByRole('button',{name:'Повторить загрузку фото',exact:true})).toBeVisible();
   failed=false;await page.getByRole('button',{name:'Повторить загрузку фото',exact:true}).click();
   await expect(page.locator('.gallery .photo-button img')).toHaveClass('loaded');await expect(page.getByText('Фото временно недоступно.',{exact:true})).toHaveCount(0);

@@ -41,9 +41,17 @@ test('published TEST Tilda: search, detail, actual photo, safe request and retur
   expect(await page.evaluate(()=>performance.timeOrigin)).toBe(timeOrigin);
   await expect(page.getByText(/^(?:Дом свободен на выбранные даты\.|Дом свободен\. Стоимость рассчитана сервером\.)$/)).toBeVisible({timeout:20000});
   if(process.env.LIVE_TILDA_LOCAL_WIDGET==='true')await expect(page.getByText('Дом свободен на выбранные даты.',{exact:true})).toBeVisible();
-  const photo=page.locator('.gallery .photo-button img');await expect(photo).toHaveClass('loaded',{timeout:30000});
+  const photo=page.locator('.gallery .photo-button img');let photoRetries=0;
+  async function waitForPhoto(){
+    const retry=page.getByRole('button',{name:'Повторить загрузку фото',exact:true});
+    await expect(page.locator('.gallery .photo-button img.loaded').or(retry)).toBeVisible({timeout:30000});
+    // One explicit user retry exercises recovery; persistent CDN failures fail.
+    if(await retry.isVisible()){photoRetries++;await retry.click();}
+    await expect(photo).toHaveClass('loaded',{timeout:30000});
+  }
+  await waitForPhoto();
   expect(await photo.evaluate((img:HTMLImageElement)=>img.naturalWidth)).toBeGreaterThan(0);
-  await page.getByRole('button',{name:'Следующее фото',exact:true}).click();await expect(photo).toHaveClass('loaded',{timeout:30000});
+  await page.getByRole('button',{name:'Следующее фото',exact:true}).click();await waitForPhoto();
   await page.getByRole('button',{name:'Увеличить фото',exact:true}).click();await expect(page.getByRole('dialog',{name:'Увеличенное фото',exact:true})).toBeVisible();
   await page.keyboard.press('ArrowRight');await page.keyboard.press('Escape');
   await expect(page.getByRole('button',{name:'Увеличить фото',exact:true})).toBeFocused();
@@ -74,4 +82,5 @@ test('published TEST Tilda: search, detail, actual photo, safe request and retur
   expect(documents).toBe(1);expect(await page.evaluate(()=>performance.timeOrigin)).toBe(timeOrigin);
   expect(await page.evaluate(()=>(window as Window&{domkazanHeroCheck?:{flashes:number}}).domkazanHeroCheck?.flashes)).toBe(0);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);expect(errors).toEqual([]);
+  await testInfo.attach('photo-retries.json',{body:JSON.stringify({photoRetries}),contentType:'application/json'});
 });

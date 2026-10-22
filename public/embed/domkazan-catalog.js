@@ -148,6 +148,7 @@
     const modal = document.createElement("dialog"); modal.setAttribute("aria-label", "Увеличенное фото");
     const close = document.createElement("button"); close.type = "button"; close.textContent = "Закрыть фото"; close.addEventListener("click", () => modal.close()); modal.append(close);
     const mediaStyle=document.createElement('style');mediaStyle.textContent=`
+      .zoom-photo{position:relative;min-width:min(75vw,600px);min-height:200px}.zoom-photo img{opacity:0}.zoom-photo img.loaded{opacity:1}
       .media-status{position:absolute;inset:0;display:grid;place-content:center;text-align:center;gap:12px;padding:24px;color:#586b80;background:#eaf0f6;font-size:13px;pointer-events:none}.media-status button{pointer-events:auto}.video-help{margin:10px 0;color:#586b80;font-size:12px}.video-help a{display:inline-flex;align-items:center;min-height:44px;color:#176bdf;text-underline-offset:3px}.zoom-nav{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:12px}.zoom-nav span{min-width:60px;text-align:center}dialog img{min-height:100px}.photo-button img{opacity:0}.photo-button img.loaded{opacity:1}
     `;
     const videoHelp=document.createElement('p');videoHelp.className='video-help';videoHelp.hidden=true;
@@ -156,22 +157,55 @@
     const zoomPrevious=previous.cloneNode(true),zoomNext=next.cloneNode(true),zoomCaption=document.createElement('span');
     zoomCaption.setAttribute('aria-live','polite');zoomNav.append(zoomPrevious,zoomCaption,zoomNext);modal.append(zoomNav);
     let current = 0; const total = photos.length + Number(Boolean(video));
+    const photoSources=photos.map(photo=>photo.src);let retrySequence=0;
+    function retryPhoto(){
+      // A thumbnail may still hold the old request open. A new node with the
+      // same URL can share that stalled request, so retry with a fresh URL.
+      const url=new URL(photos[current].src,location.href);
+      url.searchParams.set('_dk_retry',`${Date.now()}-${++retrySequence}`);
+      photoSources[current]=url.href;
+      const thumb=thumbs.children[current]?.querySelector('img');if(thumb)thumb.src=url.href;
+    }
+    let stopPhoto=()=>{},stopZoom=()=>{};
+    function watchPhoto(photo,status,retryAction){
+      let active=true;
+      function failed(message){
+        if(!active)return;
+        clearTimeout(timer);status.replaceChildren(document.createTextNode(message));
+        const retry=el('button',{type:'button',text:'Повторить загрузку фото'});retry.addEventListener('click',retryAction);status.append(retry);
+      }
+      const timer=setTimeout(()=>failed('Фото загружается дольше обычного.'),15000);
+      photo.addEventListener('load',async()=>{
+        try{await photo.decode?.();}catch{/* A loaded image can still be displayed. */}
+        if(!active)return;
+        clearTimeout(timer);photo.classList.add('loaded');status.remove();
+      });
+      photo.addEventListener('error',()=>failed('Фото временно недоступно.'));
+      return()=>{active=false;clearTimeout(timer);};
+    }
     previous.disabled=next.disabled=total<2;
-    modal.addEventListener('close',()=>viewer.querySelector('button')?.focus({preventScroll:true}));
-    function renderZoom(){modal.querySelector('img')?.remove();const image=document.createElement('img');image.src=photos[current].src;image.alt=photos[current].alt;modal.insertBefore(image,zoomNav);zoomCaption.textContent=`${current+1} / ${photos.length}`;zoomPrevious.hidden=zoomNext.hidden=photos.length<2;}
+    modal.addEventListener('close',()=>{stopZoom();viewer.querySelector('button')?.focus({preventScroll:true});});
+    function renderZoom(){
+      stopZoom();modal.querySelector('.zoom-photo')?.remove();
+      const image=el('img',{alt:photos[current].alt});
+      const status=el('div',{class:'media-status',role:'status',text:'Загружаем фото…'});
+      stopZoom=watchPhoto(image,status,()=>{retryPhoto();render();renderZoom();close.focus({preventScroll:true});});
+      image.src=photoSources[current];modal.insertBefore(el('div',{class:'zoom-photo'},[image,status]),zoomNav);
+      zoomCaption.textContent=`${current+1} / ${photos.length}`;zoomPrevious.hidden=zoomNext.hidden=photos.length<2;
+    }
     function moveZoom(delta){current=(current+delta+photos.length)%photos.length;render();renderZoom();}
     zoomPrevious.addEventListener('click',()=>moveZoom(-1));zoomNext.addEventListener('click',()=>moveZoom(1));
     modal.addEventListener('keydown',event=>{if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();moveZoom(event.key==='ArrowLeft'?-1:1);}});
     function render() {
+      stopPhoto();
       viewer.replaceChildren(); caption.textContent = `${current + 1} / ${total}`;videoHelp.hidden=current<photos.length;
       [...thumbs.children].forEach((thumb, index) => thumb.setAttribute("aria-current", String(index === current)));
       const active=thumbs.children[current];if(active){const target=Math.max(0,active.offsetLeft-thumbs.offsetLeft-(thumbs.clientWidth-active.clientWidth)/2);thumbs.scrollLeft=target;}
       if (current < photos.length) {
         const photo = document.createElement("img");photo.alt = photos[current].alt;
         const status=document.createElement('div');status.className='media-status';status.setAttribute('role','status');status.textContent='Загружаем фото…';
-        photo.addEventListener('load',async()=>{try{await photo.decode?.();}catch{/* The browser can still display a loaded photo. */}photo.classList.add('loaded');status.remove();});
-        photo.addEventListener('error',()=>{status.replaceChildren(document.createTextNode('Фото временно недоступно.'));const retry=document.createElement('button');retry.type='button';retry.textContent='Повторить загрузку фото';retry.addEventListener('click',()=>render());status.append(retry);});
-        photo.src=photos[current].src;
+        stopPhoto=watchPhoto(photo,status,()=>{retryPhoto();render();viewer.querySelector('button')?.focus({preventScroll:true});});
+        photo.src=photoSources[current];
         const zoom = document.createElement("button"); zoom.type = "button"; zoom.className = "photo-button"; zoom.setAttribute("aria-label", "Увеличить фото");
         const hint=text('span','Смотреть весь кадр ↗','zoom-hint');hint.setAttribute('aria-hidden','true');
         zoom.addEventListener("click", () => { if(!photo.complete||!photo.naturalWidth)return;renderZoom();modal.showModal(); }); zoom.append(photo,hint); viewer.append(zoom,status);
@@ -203,7 +237,7 @@
     const galleryHeading=el('div',{class:'gallery-heading'},[text('h2',`${photos.length} ${plural(photos.length,['фотография','фотографии','фотографий'])}`)]);
     if(video){const videoShortcut=el('button',{type:'button',text:'Смотреть видео', 'aria-label':'Перейти к видео дома'});videoShortcut.addEventListener('click',()=>{current=photos.length;render();viewer.focus({preventScroll:true});});galleryHeading.append(videoShortcut);}
     shadow.append(style,mediaStyle,galleryHeading, viewer,videoHelp, navigation, thumbs, modal); render();
-    return { destroy() { if (modal.open) modal.close(); shadow.replaceChildren(document.createElement("slot")); root.replaceChildren(...original); } };
+    return { destroy() { stopPhoto();stopZoom();if (modal.open) modal.close(); shadow.replaceChildren(document.createElement("slot")); root.replaceChildren(...original); } };
   }
   function mountPage({ root, apiOrigin, privacyUrl, pagePath = window.location.pathname, testMode = true, catalogData, catalogReturn }) {
     if (!root || !window.DomKazanCalendar) throw new Error('Модуль поиска не загружен.');
