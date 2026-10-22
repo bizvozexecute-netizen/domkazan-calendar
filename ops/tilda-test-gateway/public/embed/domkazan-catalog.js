@@ -467,12 +467,22 @@
     const previousRestoration=history.scrollRestoration;
     history.scrollRestoration='manual';
     const controller=new AbortController();
-    const timer=setTimeout(()=>controller.abort(),10000);
+    const timer=options.catalogData===undefined?setTimeout(()=>controller.abort(),10000):undefined;
     // Content is reused within this visit; every view still rechecks availability.
-    const catalogData=fetch(new URL('/api/catalog',options.apiOrigin),{signal:controller.signal})
+    let catalogData=options.catalogData!==undefined?Promise.resolve(options.catalogData):fetch(new URL('/api/catalog',options.apiOrigin),{signal:controller.signal})
       .then(async response=>{if(!response.ok)throw new Error('Каталог временно недоступен.');return response.json();})
       .finally(()=>clearTimeout(timer));
-    let current,overlay,alive=true,revision=0,navigating=false,restorePending=false;
+    let current,overlay,alive=true,revision=0,navigating=false,restorePending=false,engaged=false;
+    const engage=()=>{engaged=true;};
+    for(const event of ['pointerdown','keydown','input','wheel'])root.addEventListener(event,engage,{passive:true});
+    if(options.refreshCatalogData)Promise.resolve(options.refreshCatalogData).then(data=>{
+      if(!alive||!Array.isArray(data?.products)||!data.products.length)return;
+      catalogData=Promise.resolve(data);
+      // Never replace an active form, gallery or search result. Navigation uses
+      // the fresh content next time; an untouched initial view can refresh now.
+      const query=new URLSearchParams(location.search);
+      if(!engaged&&!navigating&&!(query.has('checkIn')&&query.has('checkOut')))render();
+    }).catch(()=>{/* Public metadata cache stays usable; search still uses the live API. */});
     function removeOverlay(){overlay?.remove();overlay=null;root.inert=false;}
     function readReturn(){
       try{
@@ -532,7 +542,7 @@
     root.addEventListener('domkazan:error',removeOverlay);
     window.addEventListener('popstate',popped);
     render();
-    return{destroy(){alive=false;controller.abort();clearTimeout(timer);current?.destroy();removeOverlay();root.removeEventListener('click',clicked);root.removeEventListener('domkazan:view-ready',ready);root.removeEventListener('domkazan:error',removeOverlay);window.removeEventListener('popstate',popped);history.scrollRestoration=previousRestoration;}};
+    return{destroy(){alive=false;controller.abort();clearTimeout(timer);current?.destroy();removeOverlay();for(const event of ['pointerdown','keydown','input','wheel'])root.removeEventListener(event,engage);root.removeEventListener('click',clicked);root.removeEventListener('domkazan:view-ready',ready);root.removeEventListener('domkazan:error',removeOverlay);window.removeEventListener('popstate',popped);history.scrollRestoration=previousRestoration;}};
   }
   window.DomKazanCatalog = { mount };
 })();

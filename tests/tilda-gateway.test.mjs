@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { GET } from '../ops/tilda-test-gateway/api/availability.js';
 import { POST } from '../ops/tilda-test-gateway/api/requests.js';
 import {GET as calendarGet} from '../ops/tilda-test-gateway/api/house-calendar.js';
+import {renderTildaTestSnippet} from '../scripts/render-tilda-test-snippet.mjs';
 
 const gateway = 'https://domkazan-calendar-tilda-test-gatewa.vercel.app';
 const upstream = 'https://domkazan-calendar-test-cnu827x24-iss-projects-5d0a08b3.vercel.app';
@@ -11,13 +12,33 @@ const headers = { origin: 'https://domkazan116.ru', 'x-vercel-oidc-token': 'test
 const query = 'checkIn=2026-10-20&checkOut=2026-10-22&guests=2';
 const tildaHouse = { id: 'test-tilda-id', slug: 'tilda-259712110892', quote: { total: '14000.00' } };
 
+test('prepared test-page snippet stays synchronized with the reviewed bootstrap',async()=>{
+  const snippet=await renderTildaTestSnippet(gateway);
+  assert.equal(readFileSync(new URL('../integration/tilda-311744409-t123.html',import.meta.url),'utf8'),snippet);
+  await assert.rejects(renderTildaTestSnippet('https://example.invalid'),/reviewed test gateway/);
+});
+
+test('first-paint cache contains only public Tilda metadata and safe inline JSON',async()=>{
+  const data=JSON.parse(readFileSync(new URL('../data/tilda-catalog-initial.json',import.meta.url),'utf8'));
+  assert.equal(data.products.length,63);
+  assert.doesNotMatch(JSON.stringify(data),/clientPhone|clientName|requestId|blockedPeriod|homereserve\.ru|<script/i);
+  const allowed=['productUid','slug','name','description','facts','images','amenities','rutubeUrl','maxGuests','bedrooms','beds','publicBaseRates','includedGuests','extraGuestPrice','serviceFee'];
+  for(const product of data.products){
+    assert.ok(Object.keys(product).every(key=>allowed.includes(key)));
+    assert.match(product.productUid,/^\d{12}$/);
+  }
+  const snippet=await renderTildaTestSnippet(gateway);
+  const inline=snippet.match(/<script id="domkazan-catalog-initial" type="application\/json">([\s\S]*?)<\/script>/)[1];
+  assert.ok(!inline.includes('<'));assert.deepEqual(JSON.parse(inline),data);
+});
+
 test('calendar gateway validates UID and source before forwarding',async()=>{
   assert.equal((await calendarGet(new Request(`${gateway}/api/house-calendar?house=tilda-259712110892&month=2026-11`))).status,403);
   assert.equal((await calendarGet(new Request(`${gateway}/api/house-calendar?house=../../admin&month=2026-11`,{headers}))).status,400);
 });
 
 test('public gateway serves the reviewed adapter and widget unchanged', () => {
-  for (const name of ['domkazan-search.js', 'domkazan-tilda.js', 'domkazan-catalog.js']) {
+  for (const name of ['domkazan-search.js', 'domkazan-tilda.js', 'domkazan-catalog.js', 'domkazan-test-bootstrap.js']) {
     assert.equal(readFileSync(new URL(`../ops/tilda-test-gateway/public/embed/${name}`, import.meta.url), 'utf8'),
       readFileSync(new URL(`../public/embed/${name}`, import.meta.url), 'utf8'));
   }

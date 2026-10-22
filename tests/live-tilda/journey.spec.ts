@@ -7,10 +7,19 @@ const day=(offset:number)=>new Date(Date.now()+offset*86400000).toISOString().sl
 // Opt-in verification of unshipped code inside the existing test document.
 // The interception affects this browser only; it never writes or publishes Tilda.
 test.beforeEach(async({context})=>{
-  if(process.env.LIVE_TILDA_LOCAL_WIDGET==='true'){
+  if(process.env.LIVE_TILDA_LOCAL_WIDGET==='true'||process.env.LIVE_TILDA_LOCAL_BOOTSTRAP==='true'){
     for(const name of ['domkazan-search.js','domkazan-catalog.js']){
       await context.route(`https://domkazan-calendar-tilda-test-gatewa.vercel.app/embed/${name}*`,async route=>route.fulfill({contentType:'application/javascript',body:await readFile(`public/embed/${name}`,'utf8')}));
     }
+  }
+  if(process.env.LIVE_TILDA_LOCAL_BOOTSTRAP==='true'){
+    await context.route(/^https:\/\/domkazan116\.ru\/calendar-test-311744409(?:\?|$)/,async route=>{
+      const response=await route.fetch();const html=await response.text();
+      const start=html.indexOf('<!-- DomKazan: page-local catalog');
+      const end=html.indexOf('<!-- nominify end -->',start);
+      if(start<0||end<start)throw new Error('Test T123 boundary changed; refusing replacement');
+      await route.fulfill({response,body:html.slice(0,start)+await readFile('integration/tilda-311744409-t123.html','utf8')+html.slice(end)});
+    });
   }
 });
 
@@ -18,6 +27,12 @@ test('published TEST Tilda: search, detail, actual photo, safe request and retur
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   let documents=0;page.on('request',request=>{if(request.isNavigationRequest()&&request.frame()===page.mainFrame()&&new URL(request.url()).pathname===path)documents++;});
   await page.goto(path);await expect(page.locator('.cards article').first()).toBeVisible();
+  if(process.env.LIVE_TILDA_LOCAL_BOOTSTRAP==='true'){
+    await expect(page.locator('#rec4862082401')).toHaveAttribute('data-screen-max','0');
+    const duration=await page.evaluate(()=>performance.getEntriesByName('domkazan:startup-to-ready')[0]?.duration);
+    expect(duration).toBeGreaterThan(0);
+    await testInfo.attach('startup.json',{body:JSON.stringify({durationMs:duration}),contentType:'application/json'});
+  }
   if(process.env.LIVE_TILDA_LOCAL_WIDGET==='true')await expect(page.getByRole('heading',{name:'Каталог загородных домов',level:1})).toBeVisible();
   const timeOrigin=await page.evaluate(()=>{
     const state={flashes:0};Object.assign(window,{domkazanHeroCheck:state});
