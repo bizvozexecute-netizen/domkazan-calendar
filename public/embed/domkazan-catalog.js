@@ -475,8 +475,13 @@
     let current,overlay,alive=true,revision=0,navigating=false,restorePending=false,engaged=false;
     const engage=()=>{engaged=true;};
     for(const event of ['pointerdown','keydown','input','wheel'])root.addEventListener(event,engage,{passive:true});
-    if(options.refreshCatalogData)Promise.resolve(options.refreshCatalogData).then(data=>{
+    if(options.refreshCatalogData)Promise.resolve(options.refreshCatalogData).then(async data=>{
       if(!alive||!Array.isArray(data?.products)||!data.products.length)return;
+      const previous=await catalogData;
+      if(!alive)return;
+      // An identical background response must not tear down the first view,
+      // especially when API and module loads finish in the same browser turn.
+      if(JSON.stringify(previous.products)===JSON.stringify(data.products))return;
       catalogData=Promise.resolve(data);
       // Never replace an active form, gallery or search result. Navigation uses
       // the fresh content next time; an untouched initial view can refresh now.
