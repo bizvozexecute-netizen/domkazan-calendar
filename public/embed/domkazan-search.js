@@ -197,6 +197,21 @@
 
   function hide(card) { card.element.style.setProperty("display", "none", "important"); }
 
+  async function availabilityResponse(url, signal) {
+    // Only this read-only GET may repeat. Keep the same total search deadline
+    // and abort signal; changing parameters cancels both attempts. Never retry POST.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (signal.aborted) throw new DOMException('Search cancelled', 'AbortError');
+      try {
+        const response = await fetch(url, {method:'GET', signal});
+        if (attempt === 0 && [502,503,504].includes(response.status) && !signal.aborted) continue;
+        return response;
+      } catch (error) {
+        if (attempt !== 0 || signal.aborted || error?.name !== 'TypeError') throw error;
+      }
+    }
+  }
+
   function mount({ root, apiUrl, requestUrl, privacyUrl, cards: explicitCards, getFilters,
     initialValues = {}, getViewState, transformHouses, onResults, onInvalidate, renderPrice, testMode = false,
     calendarUrl, houseSlug, resultsUrl, ownerContacts, showCount = true, quietSuccess = false, resultElement, onSearchComplete, onRequestSaved }) {
@@ -498,7 +513,7 @@
         const snapshot = Object.freeze({ signature: signature(), checkIn: params.get("checkIn"),
           checkOut: params.get("checkOut"), guests: params.get("guests") });
         for (const [key, value] of params) url.searchParams.set(key, value);
-        const response = await fetch(url.toString(), { method: "GET", signal: searchController.signal });
+        const response = await availabilityResponse(url.toString(), searchController.signal);
         const data = await response.json();
         if (generation !== currentGeneration) return;
         if (snapshot.signature !== signature()) { invalidate(); return; }
@@ -539,7 +554,7 @@
       } catch (error) {
         if (generation !== currentGeneration) return;
         successfulSearch = null; clearActions();
-        message.dataset.state='error';message.textContent = error?.name === "AbortError" ? "Не удалось проверить стоимость вовремя. Повторите поиск." : error instanceof Error ? error.message : "Поиск временно недоступен.";
+        message.dataset.state='error';message.textContent = error?.name === "AbortError" ? "Не удалось проверить стоимость вовремя. Повторите поиск." : error?.name === 'TypeError' ? 'Не удалось связаться с сервером. Повторите поиск.' : error instanceof Error ? error.message : "Поиск временно недоступен.";
       } finally { if (generation === currentGeneration) { clearTimeout(searchTimer); searchTimer=null; button.disabled = false;form.setAttribute('aria-busy','false');onSearchComplete?.(); } }
     });
     const controller = { reset, invalidate: () => invalidate(), search: () => {if(!form.checkValidity())return false;form.requestSubmit();return true;}, values:()=>Object.fromEntries(new FormData(form)),

@@ -39,7 +39,7 @@ test('public detail snapshot covers the existing homes without customer data or 
   }
 });
 
-async function setup(suffix = '', mapHouse = house => house) {
+async function setup(suffix = '', mapHouse = house => house, options = {}) {
   const dom = new JSDOM('<div id="catalog"></div>', { url: `https://domkazan116.ru/calendar-test-311744409${suffix}`, runScripts: 'outside-only' });
   const win = dom.window;
   const products = details.products.slice(0, 3);
@@ -48,10 +48,21 @@ async function setup(suffix = '', mapHouse = house => house) {
       name: product.name, maxGuests: product.maxGuests, quote: { total: String(10000 + index * 5000), nights: 2 } })).map(mapHouse) }) };
   for (const file of ['domkazan-search.js', 'domkazan-catalog.js']) win.eval(readFileSync(new URL(`../public/embed/${file}`, import.meta.url), 'utf8'));
   const root = win.document.getElementById('catalog');
-  const controller = win.DomKazanCatalog.mount({ root, apiOrigin: 'https://gateway.example.invalid' });
+  const controller = win.DomKazanCatalog.mount({ root, apiOrigin: 'https://gateway.example.invalid', ...options });
   await flush();
   return { dom, win, root, shadow: root.shadowRoot, controller };
 }
+
+test('identical refreshed metadata preserves the first catalog DOM instead of remounting it',async()=>{
+  const products=details.products.slice(0,3);let refresh;
+  const f=await setup('',house=>house,{catalogData:{products},refreshCatalogData:new Promise(resolve=>{refresh=resolve;})});
+  try{
+    const first=f.shadow.querySelector('article');let ready=0;f.root.addEventListener('domkazan:ready',()=>ready++);
+    refresh(JSON.parse(JSON.stringify({products})));await flush();
+    assert.equal(f.shadow.querySelector('article'),first,'An unchanged refresh must not tear down the ready catalog');
+    assert.equal(ready,0);
+  }finally{f.controller.destroy();f.dom.window.close();}
+});
 
 test('filters combine with date search, quotes survive in separate house URLs, empty state is explicit', async () => {
   const { dom, win, shadow, controller } = await setup(`?${clientStayQuery}`);

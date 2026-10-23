@@ -63,6 +63,8 @@ jobs:
             test-results/**/house-polished.png
             test-results/**/structured-house.png
             test-results/**/video.webm
+            test-results/catalog-startup-*/test-failed-*.png
+            test-results/catalog-startup-*/error-context.md
           if-no-files-found: ignore
           retention-days: 7
   containers:

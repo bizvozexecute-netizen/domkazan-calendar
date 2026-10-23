@@ -1,23 +1,19 @@
-import {test,expect} from '@playwright/test';
-import {readFile} from 'node:fs/promises';
+import {test,expect} from './live-fixture';
 import {selectStay} from '../e2e/stay-helper';
 const path='/calendar-test-311744409';
 const day=(offset:number)=>new Date(Date.now()+offset*86400000).toISOString().slice(0,10);
 
-// Opt-in verification of unshipped code inside the existing test document.
-// The interception affects this browser only; it never writes or publishes Tilda.
-test.beforeEach(async({context})=>{
-  if(process.env.LIVE_TILDA_LOCAL_WIDGET==='true'){
-    for(const name of ['domkazan-search.js','domkazan-catalog.js']){
-      await context.route(`https://domkazan-calendar-tilda-test-gatewa.vercel.app/embed/${name}*`,async route=>route.fulfill({contentType:'application/javascript',body:await readFile(`public/embed/${name}`,'utf8')}));
-    }
-  }
-});
 
 test('published TEST Tilda: search, detail, actual photo, safe request and return',async({page},testInfo)=>{
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   let documents=0;page.on('request',request=>{if(request.isNavigationRequest()&&request.frame()===page.mainFrame()&&new URL(request.url()).pathname===path)documents++;});
   await page.goto(path);await expect(page.locator('.cards article').first()).toBeVisible();
+  if(process.env.LIVE_TILDA_LOCAL_BOOTSTRAP==='true'){
+    await expect(page.locator('#rec4862082401')).toHaveAttribute('data-screen-max','0');
+    const duration=await page.evaluate(()=>performance.getEntriesByName('domkazan:startup-to-ready')[0]?.duration);
+    expect(duration).toBeGreaterThan(0);
+    await testInfo.attach('startup.json',{body:JSON.stringify({durationMs:duration}),contentType:'application/json'});
+  }
   if(process.env.LIVE_TILDA_LOCAL_WIDGET==='true')await expect(page.getByRole('heading',{name:'Каталог загородных домов',level:1})).toBeVisible();
   const timeOrigin=await page.evaluate(()=>{
     const state={flashes:0};Object.assign(window,{domkazanHeroCheck:state});

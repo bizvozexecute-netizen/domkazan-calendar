@@ -1,5 +1,10 @@
 # Public gateway for the Tilda test page
 
+Prepared startup/first-paint and WebKit stabilization (not published):
+[catalog-startup-stability.md](catalog-startup-stability.md). It requires the
+reviewed early T123 as well as the updated modules; changing gateway JS alone
+does not replace the already published bootstrap.
+
 ## Updated catalog, 17 October 2026
 
 The test page now uses `domkazan-catalog.js` and `/api/catalog`, which serves sanitized

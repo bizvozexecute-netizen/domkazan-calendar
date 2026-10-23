@@ -1,38 +1,33 @@
-import { writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 import { Script } from 'node:vm';
 
-const origin = process.argv[2];
+export async function renderTildaTestSnippet(origin) {
 if (origin !== 'https://domkazan-calendar-tilda-test-gatewa.vercel.app') throw new Error('Pass the reviewed test gateway origin.');
-const script = `(async () => {
-  const root = document.getElementById('domkazan-catalog');
-  const status = document.getElementById('domkazan-test-status');
-  try {
-    if (document.readyState === 'loading') await new Promise(resolve => document.addEventListener('DOMContentLoaded', resolve, {once:true}));
-    const page = document.querySelector('[data-tilda-page-id]');
-    if (page?.getAttribute('data-tilda-page-id') !== '311744409') return;
-    root.addEventListener('domkazan:ready', () => { page.classList.add('dkcal-ready'); status.hidden = true; });
-    root.addEventListener('domkazan:error', () => { page.classList.remove('dkcal-ready'); status.hidden = false; });
-    for (const file of ['domkazan-search.js', 'domkazan-catalog.js']) {
-      await new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = '${origin}/embed/' + file;
-        script.onload = resolve; script.onerror = () => reject(new Error('Каталог временно недоступен.'));
-        document.head.append(script);
-      });
-    }
-    window.domkazanTestCatalog = window.DomKazanCatalog.mount({root, apiOrigin:'${origin}', pagePath:'/calendar-test-311744409', testMode:true});
-  } catch(error) { status.textContent = error.message || 'Не удалось загрузить каталог.'; }
-})();`;
+const script = await readFile(new URL('../public/embed/domkazan-test-bootstrap.js', import.meta.url), 'utf8');
 new Script(script);
-const snippet = `<!-- DomKazan: page-local catalog and individual house URLs. Test page 311744409 only. -->
+return `<!-- DomKazan: page-local catalog and individual house URLs. Test page 311744409 only. -->
+<link rel="preconnect" href="${origin}" crossorigin>
 <style>
   #rec4862390501 { padding:0 !important; margin:0 !important; background:#f6f8fb; }
-  #allrecords.dkcal-ready[data-tilda-page-id="311744409"] > .r:not(#rec4862390501) { display:none !important; }
-  #domkazan-test-status { padding:20px; font:14px Arial,sans-serif; }
+  #allrecords:is(.dkcal-pending,.dkcal-ready)[data-tilda-page-id="311744409"] > .r:not(#rec4862390501) { display:none !important; }
+  #domkazan-test-status { margin:0; padding:32px 20px; font:14px/1.6 Arial,sans-serif; color:#42576e; }
+  #domkazan-test-status button { min-height:44px; margin:12px 0 0; padding:8px 16px; cursor:pointer; }
 </style>
 <div id="domkazan-catalog"></div>
-<p id="domkazan-test-status" role="status">Загружаем тестовый каталог. Если он недоступен, ниже остаётся обычный каталог Tilda.</p>
+<p id="domkazan-test-status" role="status">Загружаем каталог домов…</p>
 <script>${script}</script>`;
-await writeFile(fileURLToPath(new URL('../../tilda-311744409-t123.html', import.meta.url)), snippet, 'utf8');
-console.log(`T123 prepared: test page 311744409, catalog and house pages, ${snippet.length} characters.`);
+}
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const snippet = await renderTildaTestSnippet(process.argv[2]);
+  const destination = new URL('../integration/tilda-311744409-t123.html', import.meta.url);
+  await mkdir(new URL('./', destination), {recursive:true});
+  await writeFile(destination, snippet, 'utf8');
+  const initial = JSON.stringify(JSON.parse(await readFile(new URL('../data/tilda-catalog-initial.json', import.meta.url),'utf8')));
+  for (const path of ['../public/embed/', '../ops/tilda-test-gateway/public/embed/']) {
+    await mkdir(new URL(path, import.meta.url), {recursive:true});
+    await writeFile(new URL(`${path}domkazan-catalog-initial.json`, import.meta.url), initial, 'utf8');
+  }
+  console.log(`Prepared ${fileURLToPath(destination)} (${snippet.length} characters). No Tilda page was changed.`);
+}

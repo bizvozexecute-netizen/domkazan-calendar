@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './live-fixture';
 
 test('existing Rutube film really plays after user action and is removed on photo switch',async({page},testInfo)=>{
   await page.goto('/calendar-test-311744409?house=956218018842');
