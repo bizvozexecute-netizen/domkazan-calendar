@@ -18,7 +18,7 @@ test('prepared test-page snippet stays synchronized with the reviewed bootstrap'
   await assert.rejects(renderTildaTestSnippet('https://example.invalid'),/reviewed test gateway/);
 });
 
-test('first-paint cache contains only public Tilda metadata and safe inline JSON',async()=>{
+test('first-paint cache contains only public Tilda metadata and keeps T123 small',async()=>{
   const data=JSON.parse(readFileSync(new URL('../data/tilda-catalog-initial.json',import.meta.url),'utf8'));
   assert.equal(data.products.length,63);
   assert.doesNotMatch(JSON.stringify(data),/clientPhone|clientName|requestId|blockedPeriod|homereserve\.ru|<script/i);
@@ -28,8 +28,13 @@ test('first-paint cache contains only public Tilda metadata and safe inline JSON
     assert.match(product.productUid,/^\d{12}$/);
   }
   const snippet=await renderTildaTestSnippet(gateway);
-  const inline=snippet.match(/<script id="domkazan-catalog-initial" type="application\/json">([\s\S]*?)<\/script>/)[1];
-  assert.ok(!inline.includes('<'));assert.deepEqual(JSON.parse(inline),data);
+  assert.ok(snippet.length < 12000);
+  assert.doesNotMatch(snippet, /type="application\/json"/);
+  for (const path of ['../public/embed/', '../ops/tilda-test-gateway/public/embed/']) {
+    assert.deepEqual(JSON.parse(readFileSync(new URL(`${path}domkazan-catalog-initial.json`,import.meta.url),'utf8')),data);
+  }
+  const config=JSON.parse(readFileSync(new URL('../ops/tilda-test-gateway/vercel.json',import.meta.url),'utf8'));
+  assert.deepEqual(config.headers,[{source:'/embed/domkazan-catalog-initial.json',headers:[{key:'Access-Control-Allow-Origin',value:'https://domkazan116.ru'}]}]);
 });
 
 test('calendar gateway validates UID and source before forwarding',async()=>{

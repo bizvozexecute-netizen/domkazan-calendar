@@ -6,7 +6,6 @@ import { Script } from 'node:vm';
 export async function renderTildaTestSnippet(origin) {
 if (origin !== 'https://domkazan-calendar-tilda-test-gatewa.vercel.app') throw new Error('Pass the reviewed test gateway origin.');
 const script = await readFile(new URL('../public/embed/domkazan-test-bootstrap.js', import.meta.url), 'utf8');
-const initial = JSON.stringify(JSON.parse(await readFile(new URL('../data/tilda-catalog-initial.json', import.meta.url),'utf8'))).replace(/</g,'\\u003c');
 new Script(script);
 return `<!-- DomKazan: page-local catalog and individual house URLs. Test page 311744409 only. -->
 <link rel="preconnect" href="${origin}" crossorigin>
@@ -18,7 +17,6 @@ return `<!-- DomKazan: page-local catalog and individual house URLs. Test page 3
 </style>
 <div id="domkazan-catalog"></div>
 <p id="domkazan-test-status" role="status">Загружаем каталог домов…</p>
-<script id="domkazan-catalog-initial" type="application/json">${initial}</script>
 <script>${script}</script>`;
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -26,5 +24,10 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const destination = new URL('../integration/tilda-311744409-t123.html', import.meta.url);
   await mkdir(new URL('./', destination), {recursive:true});
   await writeFile(destination, snippet, 'utf8');
+  const initial = JSON.stringify(JSON.parse(await readFile(new URL('../data/tilda-catalog-initial.json', import.meta.url),'utf8')));
+  for (const path of ['../public/embed/', '../ops/tilda-test-gateway/public/embed/']) {
+    await mkdir(new URL(path, import.meta.url), {recursive:true});
+    await writeFile(new URL(`${path}domkazan-catalog-initial.json`, import.meta.url), initial, 'utf8');
+  }
   console.log(`Prepared ${fileURLToPath(destination)} (${snippet.length} characters). No Tilda page was changed.`);
 }

@@ -69,24 +69,25 @@
   // Fetch public content and both independent modules at once, without waiting
   // for unrelated Tilda images/scripts or DOMContentLoaded. Availability and
   // booking totals continue to come from fresh server requests after a search.
-  const catalogData = fetch(`${apiOrigin}/api/catalog`, {signal:controller.signal})
-    .then(response => { if (!response.ok) throw new Error('Catalog unavailable'); return response.json(); })
+  function readCatalog(path) {
+    return fetch(`${apiOrigin}${path}`, {signal:controller.signal})
+      .then(response => { if (!response.ok) throw new Error('Catalog unavailable'); return response.json(); })
+      .then(data => { if (!Array.isArray(data?.products)) throw new Error('Invalid catalog'); return data; });
+  }
+  const catalogData = readCatalog('/api/catalog')
     .finally(() => clearTimeout(apiTimer));
-  // This contains public content only, prepared from Tilda. Revalidate in the
-  // background so an origin cold start cannot delay the first usable screen.
+  // Public metadata is a small CDN request, outside Tilda's HTML block limit.
+  // Race it with the live origin; either source can recover from the other failing.
   // Prices/occupancy are never read from this cache to authorize a request.
-  let initial;
-  try { initial=JSON.parse(document.getElementById('domkazan-catalog-initial')?.textContent); }
-  catch { /* A missing/invalid cache falls back to the live content request. */ }
-  if (!Array.isArray(initial?.products) || !initial.products.length) initial=undefined;
-  catalogData.catch(() => {}); // Handled below or by the non-blocking refresh.
+  const initial = readCatalog('/embed/domkazan-catalog-initial.json');
+  const firstCatalog = Promise.any([initial, catalogData]);
   Promise.all([
     loadScript('domkazan-search.js', window.DomKazanCalendar),
     loadScript('domkazan-catalog.js', window.DomKazanCatalog),
-    initial || catalogData,
+    firstCatalog,
   ]).then(([, , data]) => {
     if (active) mounted = window.DomKazanCatalog.mount({root, apiOrigin, pagePath, testMode:true, catalogData:data,
-      refreshCatalogData:initial?catalogData:undefined});
+      refreshCatalogData:catalogData});
   }).catch(fail);
 
   window.domkazanTestCatalog = {

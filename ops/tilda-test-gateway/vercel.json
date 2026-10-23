@@ -1,5 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
-  "rewrites": [{ "source": "/test-policy", "destination": "/test-policy.html" }]
+  "rewrites": [{ "source": "/test-policy", "destination": "/test-policy.html" }],
+  "headers": [{
+    "source": "/embed/domkazan-catalog-initial.json",
+    "headers": [{ "key": "Access-Control-Allow-Origin", "value": "https://domkazan116.ru" }]
+  }]
 }
