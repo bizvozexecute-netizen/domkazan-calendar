@@ -172,3 +172,26 @@ test("a non-clickable grid item can group its link and separate application slot
   assert.equal(doc.getElementById("busy").style.display, "none");
   controller.destroy(); dom.window.close();
 });
+
+test('availability repeats one transient read, but never retries a validation response',async()=>{
+  for(const first of ['network',503,429]){
+    let calls=0;
+    const f=fixture(async()=>{calls++;if(calls>1)return found();if(first==='network')throw new TypeError('Failed to fetch');return{status:first,ok:false,json:async()=>({error:'Synthetic error'})};});
+    f.submit();await tick();assert.equal(calls,first===429?1:2);assert.equal(Boolean(f.action()),first!==429);
+    f.controller.destroy();f.dom.window.close();
+  }
+});
+
+test('persistent network failure stops after two reads and uses a customer-facing message',async()=>{
+  let calls=0;const f=fixture(async()=>{calls++;throw new TypeError('Failed to fetch');});
+  f.submit();await tick();assert.equal(calls,2);assert.equal(f.action(),null);
+  assert.equal(f.shadow.querySelector('.message').textContent,'Не удалось связаться с сервером. Повторите поиск.');
+  f.controller.destroy();f.dom.window.close();
+});
+
+test('changed parameters cancel a failed read before any automatic retry',async()=>{
+  let calls=0;
+  const f=fixture(async()=>{calls++;f.form.querySelector('[name="guests"]').value='4';f.form.dispatchEvent(new f.dom.window.Event('input',{bubbles:true}));throw new TypeError('Failed to fetch');});
+  f.submit();await tick();assert.equal(calls,1);assert.equal(f.action(),null);
+  f.controller.destroy();f.dom.window.close();
+});

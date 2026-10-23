@@ -112,6 +112,26 @@ test('search failure recovers, changes during flight discard old results and req
   await page.getByRole('button',{name:'Проверить стоимость',exact:true}).click();await expect(page.getByRole('button',{name:'Оставить заявку: Вымышленный дом'})).toBeVisible();
 });
 
+test('a transient search network failure or unavailable response retries only the read once',async({context,page})=>{
+  let calls=0;let mode='network';
+  await context.route(`${fixtureOrigin}/api/availability?*`,async route=>{
+    calls++;if(calls===1&&mode==='network')return route.abort('failed');
+    if(mode==='limited'||(calls===1&&mode==='unavailable'))return route.fulfill({status:mode==='limited'?429:503,json:{error:'Повторите поиск позже.'}});
+    return route.fulfill({json:{houses:fixtureHouses}});
+  });
+  for(const next of ['network','unavailable','limited']){
+    mode=next;calls=0;await openFixtureHouse(page);
+    if(mode==='limited'){await expect(page.getByText('Повторите поиск позже.',{exact:true})).toBeVisible();expect(calls).toBe(1);}
+    else{await expect(page.getByRole('button',{name:'Оставить заявку: Вымышленный дом'})).toBeVisible();expect(calls).toBe(2);}
+  }
+});
+
+test('persistent search network failure stops and does not expose browser error text',async({context,page})=>{
+  let calls=0;await context.route(`${fixtureOrigin}/api/availability?*`,route=>{calls++;return route.abort('failed');});
+  await openFixtureHouse(page);await expect(page.getByText('Не удалось связаться с сервером. Повторите поиск.',{exact:true})).toBeVisible();
+  expect(calls).toBe(2);await expect(page.locator('[data-domkazan-action-for]')).toHaveCount(0);
+});
+
 test('consent, ambiguous request retry, immutable payload and stale receipt prevent duplicate or old requests',async({context,page})=>{
   const payloads:unknown[]=[];let release:()=>void=()=>{};
   await context.route(`${fixtureOrigin}/api/requests`,async route=>{payloads.push(route.request().postDataJSON());
