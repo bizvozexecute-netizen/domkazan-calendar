@@ -16,7 +16,7 @@ async function fixture(context:BrowserContext,path=testUrl){
   await context.route(`${origin}/api/availability?*`,route=>route.fulfill({json:{houses:fixtureHouses}}));
 }
 
-for(const arrival of ['before-modules','after-modules'])test(`cold startup with API ${arrival} stays independent of unrelated DOM readiness`,async({page,context})=>{
+for(const arrival of ['before-modules','after-modules'])test(`cold startup with API ${arrival} stays independent of unrelated DOM readiness`,async({page,context},testInfo)=>{
   await fixture(context);const held=deferred(),api=deferred(),unrelated=deferred();const starts=new Set<string>();let catalogCalls=0;
   await context.addInitScript(()=>Object.assign(window,{originalResizeObserver:ResizeObserver}));
   await context.route('**/unrelated.js',async route=>{await unrelated.promise;await route.fulfill({body:''});});
@@ -39,6 +39,11 @@ for(const arrival of ['before-modules','after-modules'])test(`cold startup with 
     expect(await page.evaluate(()=>({started:(window as unknown as {menuObserverStarted:boolean}).menuObserverStarted,native:ResizeObserver===(window as unknown as {originalResizeObserver:typeof ResizeObserver}).originalResizeObserver}))).toEqual({started:false,native:true});
     // A cached description never substitutes for a fresh availability request.
     await expect(page.getByRole('button',{name:'Показать свободные дома'})).toBeVisible();
+  }catch(error){
+    const state=await page.evaluate(()=>({readyState:document.readyState,modules:{search:'DomKazanCalendar' in window,catalog:'DomKazanCatalog' in window},
+      classes:document.getElementById('allrecords')?.className,cards:document.getElementById('domkazan-catalog')?.shadowRoot?.querySelectorAll('.cards article').length,
+      status:document.getElementById('domkazan-test-status')?.textContent,scripts:[...document.scripts].filter(s=>s.src).map(s=>({src:s.src,async:s.async,defer:s.defer}))}));
+    await testInfo.attach('cold-startup-state.json',{body:JSON.stringify(state),contentType:'application/json'});throw error;
   }finally{held.release();api.release();unrelated.release();}
 });
 

@@ -65,6 +65,7 @@ jobs:
             test-results/**/video.webm
             test-results/catalog-startup-*/test-failed-*.png
             test-results/catalog-startup-*/error-context.md
+            test-results/catalog-startup-*/attachments/cold-startup-state*.json
           if-no-files-found: ignore
           retention-days: 7
   containers:
