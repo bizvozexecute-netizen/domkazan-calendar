@@ -51,7 +51,10 @@
   function loadScript(file, present) {
     if (present) return Promise.resolve();
     return new Promise((resolve, reject) => {
-      const script = document.createElement('script'); script.async = true;
+      // Dynamic ordered scripts still download together. WebKit may hold an
+      // explicitly async script until first paint / DOMContentLoaded, behind
+      // unrelated Tilda defer scripts. This queue can execute before either.
+      const script = document.createElement('script'); script.async = false;
       const finish = (error) => {
         script.onload = script.onerror = null; controller.signal.removeEventListener('abort', cancelled);
         if (error) { script.remove(); reject(error); } else resolve();
