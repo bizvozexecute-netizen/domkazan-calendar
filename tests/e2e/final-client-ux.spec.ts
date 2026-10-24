@@ -44,7 +44,7 @@ test('agreed colors and texts reach catalog, gallery and request form with acces
   const video=page.getByRole('button',{name:'Перейти к видео дома',exact:true});
   await expect(video).toHaveText('Посмотреть видео');
   await expect(page.getByRole('button',{name:'Рассчитать поездку',exact:true})).toBeVisible();
-  for(const [action,border] of [[video,'rgb(22, 76, 154)'],[page.getByRole('link',{name:'Позвонить',exact:true}),'rgb(22, 76, 154)'],[page.getByRole('link',{name:'Telegram',exact:true}),'rgb(23, 101, 181)'],[page.getByRole('link',{name:'WhatsApp',exact:true}),'rgb(22, 122, 70)']] as const){
+  for(const [action,border] of [[video,'rgb(22, 76, 154)'],[page.getByRole('link',{name:'Позвонить',exact:true}),'rgb(22, 76, 154)'],[page.getByRole('link',{name:'Telegram',exact:true}),'rgb(23, 101, 181)'],[page.getByRole('link',{name:'WhatsApp',exact:true}),'rgb(20, 108, 60)']] as const){
     const box=await action.boundingBox();expect(box?.height).toBeGreaterThanOrEqual(48);
     await expect(action).toHaveCSS('border-top-color',border);
     await action.hover();

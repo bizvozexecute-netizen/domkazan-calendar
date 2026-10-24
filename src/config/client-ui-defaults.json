@@ -1,5 +1,5 @@
 {
-  "colors": { "primary": "#165BC4", "text": "#172B42", "background": "#F5F7FA", "whatsapp": "#167A46", "telegram": "#1765B5" },
+  "colors": { "primary": "#165BC4", "text": "#172B42", "background": "#F5F7FA", "whatsapp": "#146C3C", "telegram": "#1765B5" },
   "texts": {
     "searchTitle": "Каталог загородных домов",
     "detailTitle": "Проверить даты и стоимость",

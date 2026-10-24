@@ -40,4 +40,8 @@ test('older saved settings gain the new colors and receipt copy without resettin
   older.texts.requestButton='Связаться';
   const parsed=clientUiSchema.parse(older);assert.equal(parsed.texts.requestButton,'Связаться');
   assert.equal(parsed.colors.whatsapp,CLIENT_UI_DEFAULTS.colors.whatsapp);assert.equal(parsed.texts.requestFollowUp,CLIENT_UI_DEFAULTS.texts.requestFollowUp);
+  for(const background of ['#E9E9E9','#EAEAEA']){
+    older.colors={primary:'#000000',text:'#000000',background};
+    assert.equal(clientUiSchema.parse(older).colors.background,background,'A previously valid background must not reset owner settings');
+  }
 });
