@@ -90,7 +90,7 @@ test('gateway accepts only synthetic contacts and a house from its Tilda results
     if (options.method === 'GET') return Response.json({ houses: [tildaHouse] });
     forwardedPost++;
     assert.equal(new URL(url).pathname, '/api/requests');
-    return Response.json({ requestId: 'synthetic-id', contacts: { phone: 'tel:+79999999999' },
+    return Response.json({ requestId: 'synthetic-id', contacts: { phone: 'tel:+70000000001' },
       message: 'A real request was received.' }, { status: 201 });
   };
   const payload = { houseId: tildaHouse.id, checkIn: '2026-10-20', checkOut: '2026-10-22', guestCount: 2,
@@ -105,7 +105,8 @@ test('gateway accepts only synthetic contacts and a house from its Tilda results
     assert.equal(response.status, 201);
     assert.equal(forwardedPost, 1);
     const result = await response.json();
-    assert.equal(result.contacts.phone, null);
+    assert.equal(result.contacts.phone, 'tel:+70000000001');
+    assert.notEqual(result.contacts.phone, `tel:${payload.clientPhone}`);
     assert.match(result.message, /Тестовая заявка/);
     assert.equal((await POST(makeRequest({ ...payload, houseId: 'demo' }))).status, 409);
     assert.equal(forwardedPost, 1);

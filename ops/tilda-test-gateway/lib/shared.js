@@ -61,8 +61,9 @@ export async function proxyJson(request, path, method, body, headers) {
         ? /^\d{12}$/.test(house.tildaProductUid ?? '') : /^tilda-\d{12}$/.test(house.slug)) };
     }
     if (response.ok && path === '/api/requests') {
-      result = { ...result, message: 'Тестовая заявка сохранена. Бронирование и оплата не создаются.',
-        contacts: { phone: null, telegram: null, whatsapp: null } };
+      // These are public owner contacts from server configuration, never the
+      // client's submitted phone. Keep them for the receipt's follow-up actions.
+      result = { ...result, message: 'Тестовая заявка сохранена. Бронирование и оплата не создаются.' };
     }
     const timing = response.headers.get('server-timing');
     return json(result, response.status, { ...headers, ...(timing ? {'Server-Timing':timing} : {}) });
