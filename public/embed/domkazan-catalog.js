@@ -277,7 +277,7 @@
       const top=el('div',{class:'top'},[brand]);
       // A cached previous search module must not crash the newer catalog.
       const owner=window.DomKazanCalendar.safeContacts?.(ui.contacts)||{};
-      if(owner.phone)top.append(link(owner.phone.slice(4),owner.phone,'top-contact dk-secondary'));
+      if(owner.phone)top.append(link(window.DomKazanCalendar.phoneLabel?.(owner.phone)||owner.phone.slice(4),owner.phone,'top-contact dk-secondary'));
       if(!embedded)shell.append(top);
       if (houseUid && !selected) {
         document.title='Дом не найден — DomKazan';
@@ -318,7 +318,7 @@
         const contacts = el('div',{class:'contacts'});
         for(const name of ['phone','whatsapp','telegram'])if(owner[name])contacts.append(link(copy[`${name}Button`],owner[name],`dk-secondary dk-${name}`));
         for (const item of contacts.querySelectorAll('a[href^="https:"]')) { item.target = '_blank'; item.rel = 'noopener noreferrer'; }
-        info.append(contacts);
+        if(contacts.childElementCount)info.append(contacts);
         refreshContent=data=>{const fresh=data.products?.find(product=>product.productUid===selected.productUid);if(!fresh)return;
           const next=houseDescription(fresh).querySelector('.description-content');info.querySelector('.description-content').replaceWith(next);};
         const price = text('p', 'Выберите даты для расчёта', 'price price-placeholder');detailPrice=price;

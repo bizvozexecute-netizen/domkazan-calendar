@@ -16,6 +16,7 @@
     whatsapp:typeof value?.whatsapp==='string'&&/^https:\/\/wa\.me\/(?:\d{10,15}|message\/[A-Za-z0-9]+)\/?$/.test(value.whatsapp)?value.whatsapp:null,
     telegram:typeof value?.telegram==='string'&&/^https:\/\/t\.me\/[A-Za-z][A-Za-z0-9_]{4,31}\/?$/.test(value.telegram)?value.telegram:null,
   };}
+  function phoneLabel(href){const value=String(href).replace(/^tel:/,'');const digits=value.replace(/\D/g,'');return /^[78]\d{10}$/.test(digits)?`8-${digits.slice(1,4)}-${digits.slice(4,7)}-${digits.slice(7,9)}-${digits.slice(9)}`:value;}
   function applyUi(root,value) {
     const ui=uiSettings(value);
     for(const [key,css] of [['primary','--dk-accent'],['text','--dk-ink'],['background','--dk-background'],['whatsapp','--dk-whatsapp'],['telegram','--dk-telegram']])root.style.setProperty(css,ui.colors[key]);
@@ -467,7 +468,7 @@
         }
         const owner=safeContacts(data.contacts||ownerContacts||ui.contacts);
         const followUp=document.createElement('p');followUp.style.marginTop='16px';followUp.textContent=copy.requestFollowUp;
-        const methods=[];if(owner.phone)methods.push(`позвоните по номеру ${owner.phone.slice(4)}`);if(owner.whatsapp||owner.telegram)methods.push(`напишите в ${[owner.whatsapp&&'WhatsApp',owner.telegram&&'Telegram'].filter(Boolean).join(' / ')}`);
+        const methods=[];if(owner.phone)methods.push(`позвоните по номеру ${phoneLabel(owner.phone)}`);if(owner.whatsapp||owner.telegram)methods.push(`напишите в ${[owner.whatsapp&&'WhatsApp',owner.telegram&&'Telegram'].filter(Boolean).join(' / ')}`);
         followUp.append(document.createTextNode(methods.length?` ${methods.join(' или ')}.`:' свяжитесь с владельцем.'));
         receiptText.append(followUp);
         if(priceNotice.startsWith('Цена обновилась.')){const updated=document.createElement('p');updated.textContent='Цена обновилась.';receiptText.append(updated);}
@@ -635,7 +636,7 @@
     return controller;
   }
 
-  window.DomKazanCalendar = { defaultUi, uiSettings, safeContacts, applyUi, actionStyles, mount };
+  window.DomKazanCalendar = { defaultUi, uiSettings, safeContacts, phoneLabel, applyUi, actionStyles, mount };
   function autoMount() {
     document.querySelectorAll("[data-domkazan-search]").forEach((root) => {
       const apiUrl = root.getAttribute("data-api-url");
