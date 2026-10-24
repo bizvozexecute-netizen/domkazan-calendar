@@ -275,7 +275,8 @@
       shadow.replaceChildren(style, shell);
       const brand = link('DOM', houseUrl(null), 'brand'); brand.append(text('span', 'KAZAN'), text('small', 'Казань и рядом', 'city'));
       const top=el('div',{class:'top'},[brand]);
-      const owner=window.DomKazanCalendar.safeContacts(ui.contacts);
+      // A cached previous search module must not crash the newer catalog.
+      const owner=window.DomKazanCalendar.safeContacts?.(ui.contacts)||{};
       if(owner.phone)top.append(link(owner.phone.slice(4),owner.phone,'top-contact dk-secondary'));
       if(!embedded)shell.append(top);
       if (houseUid && !selected) {

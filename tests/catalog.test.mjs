@@ -36,6 +36,16 @@ test('catalog follows the observed Tilda slice pagination and rejects inconsiste
   assert.throws(()=>publicCatalog({total:2,products:[{uid:'111111111111'},{uid:'111111111111'}]}),/UID/);
 });
 
+test('new catalog still starts with the previous cached search module',async()=>{
+  const dom=new JSDOM('<div id="catalog"></div>',{url:'https://domkazan116.ru/calendar-test-311744409',runScripts:'outside-only'});
+  const win=dom.window;win.fetch=async url=>Response.json(String(url).includes('/api/catalog')?{products:details.products.slice(0,1)}:{});
+  for(const file of ['domkazan-search.js','domkazan-catalog.js'])win.eval(readFileSync(new URL(`../public/embed/${file}`,import.meta.url),'utf8'));
+  delete win.DomKazanCalendar.safeContacts;
+  const controller=win.DomKazanCatalog.mount({root:win.document.getElementById('catalog'),apiOrigin:'https://gateway.example.invalid'});
+  try{await flush();assert.equal(win.document.getElementById('catalog').shadowRoot.querySelectorAll('article').length,1);}
+  finally{controller.destroy();dom.window.close();}
+});
+
 test('catalog strips markup and private booking links; images stay on Tilda CDN', () => {
   const result = publicCatalog({ total: 1, products: [{ uid: '111111111111', title: '<b>Дом</b>',
     descr: 'вместимость до 8 гостей<br>3 спальни, 6 спальных мест<br>сауна, бассейн<br>—<br>Будни - 5 000₽',
