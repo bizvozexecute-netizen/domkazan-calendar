@@ -5,6 +5,7 @@ import { equalSecret } from "@/lib/request-security";
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
+  if (process.env.VERCEL_ENV === "preview") return new NextResponse(null, { status: 404 });
   const secret = process.env.TELEGRAM_RETRY_SECRET;
   const supplied = request.headers.get("authorization")?.replace(/^Bearer /, "") ?? "";
   if (!secret || secret.length < 32 || !equalSecret(supplied, secret)) {

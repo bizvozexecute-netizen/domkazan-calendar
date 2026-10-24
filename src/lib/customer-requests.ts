@@ -47,7 +47,8 @@ export async function createCustomerRequest(input: CustomerRequestInput, clientI
           dateOverrides: { where: { date: { gte: checkIn, lt: checkOut } } } },
       });
       if (!house) throw new CustomerRequestError(409, "Дом уже недоступен на выбранные даты. Обновите поиск.");
-      const quote = quoteStay(checkIn, checkOut, house.baseRates, house.dateOverrides);
+      const quote = quoteStay(checkIn, checkOut, house.baseRates, house.dateOverrides,
+        { guests: input.guestCount, includedGuests: house.includedGuests, extraGuestPrice: house.extraGuestPrice, serviceFee: house.serviceFee });
       if (!quote) throw new CustomerRequestError(409, "Для этих дат пока нет тарифа. Выберите другие даты.");
       const booking = await tx.bookingRequest.create({ data: {
         houseId: house.id, checkIn, checkOut, guestCount: input.guestCount,

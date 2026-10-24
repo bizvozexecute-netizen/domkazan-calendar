@@ -6,16 +6,24 @@ const price = z.string().regex(/^\d{1,8}(?:\.\d{1,2})?$/, "Укажите цен
 
 export const houseSchema = z.object({
   name: z.string().trim().min(1).max(120),
+  calendarName: z.string().trim().min(1).max(40).nullable().optional(),
+  tildaProductUid: z.string().regex(/^\d{1,30}$/).nullable().optional(),
   slug: z.string().trim().toLowerCase().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Используйте латинские буквы, цифры и дефисы."),
   tildaUrl: z.string().url().refine((value) => /^https?:\/\//.test(value)).nullable(),
   maxGuests: z.number().int().min(1).max(100),
+  includedGuests: z.number().int().min(1).max(100).nullable().optional(),
+  extraGuestPrice: price.optional(),
+  serviceFee: price.optional(),
   district: optionalText(100),
   bedrooms: z.number().int().min(0).max(50).nullable(),
   bathrooms: z.number().int().min(0).max(50).nullable(),
   amenities: z.array(z.string().trim().min(1).max(40)).max(30),
   petsAllowed: z.boolean().nullable(),
   isActive: z.boolean(),
-});
+}).refine(value => value.includedGuests == null || value.includedGuests <= value.maxGuests,
+  { message: "Число включённых гостей не может превышать вместимость.", path: ["includedGuests"] })
+  .refine(value => !Number(value.extraGuestPrice) || value.includedGuests != null,
+    { message: "Укажите число гостей, включённых в стоимость.", path: ["includedGuests"] });
 
 export const rateSchema = z.object({
   startsOn: z.string(),

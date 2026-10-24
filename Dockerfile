@@ -3,6 +3,7 @@ WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
+COPY tooling/next-eslint-glob ./tooling/next-eslint-glob
 RUN npm ci --no-audit --no-fund
 
 FROM dependencies AS tools

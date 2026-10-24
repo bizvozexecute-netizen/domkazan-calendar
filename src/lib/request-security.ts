@@ -16,9 +16,18 @@ export function clientIp(headers: Headers): string {
 
 export function privacyPolicyUrl(): string | null {
   try {
-    const url = new URL(process.env.PRIVACY_POLICY_URL ?? "");
+    const preview = testPreviewOrigin();
+    const fallback = preview && process.env.TEST_CATALOG_ENABLED === "true" ? `${preview}/test-policy` : "";
+    const url = new URL(process.env.PRIVACY_POLICY_URL || fallback);
     return url.protocol === "https:" && !url.username && !url.password ? url.href : null;
   } catch { return null; }
+}
+
+function testPreviewOrigin(): string | null {
+  if (process.env.VERCEL_ENV !== "preview") return null;
+  const host = process.env.VERCEL_URL ?? "";
+  if (!/^[a-z0-9-]+(?:\.[a-z0-9-]+)*\.vercel\.app$/.test(host)) return null;
+  return `https://${host}`;
 }
 
 export function insecureLocalHttp(): boolean {
@@ -30,8 +39,10 @@ export function insecureLocalHttp(): boolean {
 }
 
 export function appOrigin(request: Request): string {
-  if (!process.env.APP_ORIGIN && process.env.NODE_ENV !== "production") return new URL(request.url).origin;
-  const url = new URL(process.env.APP_ORIGIN ?? "");
+  const configured = process.env.APP_ORIGIN || testPreviewOrigin();
+  if (!configured && process.env.VERCEL_ENV === "preview") throw new Error("Invalid Vercel preview URL");
+  if (!configured && process.env.NODE_ENV !== "production") return new URL(request.url).origin;
+  const url = new URL(configured || "");
   if (url.username || url.password || url.pathname !== "/" || url.search || url.hash ||
     (url.protocol !== "https:" && !insecureLocalHttp())) throw new Error("Invalid APP_ORIGIN");
   return url.origin;

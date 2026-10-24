@@ -14,7 +14,8 @@ export async function GET(request: NextRequest, context: Context) {
   try {
     const { houseId } = await context.params;
     const house = await db.house.findUnique({ where: { id: houseId }, select: {
-      id: true, name: true, slug: true, tildaUrl: true, maxGuests: true, district: true,
+      id: true, name: true, slug: true, calendarName: true, tildaProductUid: true, tildaUrl: true, maxGuests: true, district: true,
+      includedGuests: true, extraGuestPrice: true, serviceFee: true,
       bedrooms: true, bathrooms: true, amenities: true, petsAllowed: true, isActive: true, revision: true,
     } });
     return house ? NextResponse.json({ house }, { headers: { "Cache-Control": "no-store" } })

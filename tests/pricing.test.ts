@@ -36,3 +36,12 @@ test("minimum stay and period boundary are enforced", () => {
   assert.equal(quoteStay(date("2026-11-02"), date("2026-11-03"), [minimum], []), null);
   assert.equal(quoteStay(date("2027-01-01"), date("2027-01-02"), [rate], []), null);
 });
+
+test("additional guests are charged per night and the mandatory fee once", () => {
+  const quote = quoteStay(date("2026-11-02"), date("2026-11-04"), [rate], [],
+    { guests: 7, includedGuests: 5, extraGuestPrice: "200.25", serviceFee: "1500.50" });
+  assert.deepEqual(quote, { nights: 2, total: "4301.50", currency: "RUB",
+    accommodationTotal: "2000.00", extraGuestTotal: "801.00", serviceFee: "1500.50" });
+  assert.equal(quoteStay(date("2026-11-02"), date("2026-11-04"), [rate], [],
+    { guests: 3, includedGuests: 5, extraGuestPrice: "200", serviceFee: "0" })?.total, "2000.00");
+});

@@ -22,6 +22,9 @@ export type PriceQuote = {
   nights: number;
   total: string;
   currency: "RUB";
+  accommodationTotal?: string;
+  extraGuestTotal?: string;
+  serviceFee?: string;
 };
 
 function toCents(value: Money): bigint {
@@ -50,6 +53,7 @@ export function quoteStay(
   checkOut: Date,
   baseRates: RateInput[],
   overrides: OverrideInput[],
+  charges?: { guests: number; includedGuests: number | null; extraGuestPrice: Money; serviceFee: Money },
 ): PriceQuote | null {
   const nights = nightsBetween(checkIn, checkOut);
   if (nights < 1) return null;
@@ -65,5 +69,10 @@ export function quoteStay(
     total += toCents(override?.pricePerNight ?? priceForNight(base!, night));
   }
 
-  return { nights, total: fromCents(total), currency: "RUB" };
+  const extraGuests = charges?.includedGuests == null ? 0 : Math.max(0, charges.guests - charges.includedGuests);
+  const extraGuestTotal = charges ? BigInt(extraGuests * nights) * toCents(charges.extraGuestPrice) : 0n;
+  const serviceFee = charges ? toCents(charges.serviceFee) : 0n;
+  return { nights, total: fromCents(total + extraGuestTotal + serviceFee), currency: "RUB",
+    ...(extraGuestTotal || serviceFee ? { accommodationTotal: fromCents(total),
+      extraGuestTotal: fromCents(extraGuestTotal), serviceFee: fromCents(serviceFee) } : {}) };
 }

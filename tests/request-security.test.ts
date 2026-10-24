@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { appOrigin, clientIp, equalSecret, privacyPolicyUrl } from "../src/lib/request-security.ts";
+import { permittedPreviewRequest } from "../src/lib/preview-request.ts";
+import type { CustomerRequestInput } from "../src/lib/customer-request-validation.ts";
 
 test("proxy IP headers need a shared secret and a single valid address", () => {
   const secret = "synthetic-proxy-secret-with-more-than-32-characters";
@@ -20,4 +22,26 @@ test("canonical origin ignores browser proxy headers and policy requires HTTPS",
   process.env.PRIVACY_POLICY_URL = "https://example.invalid/privacy";
   assert.equal(privacyPolicyUrl(), "https://example.invalid/privacy");
   delete process.env.APP_ORIGIN; delete process.env.PRIVACY_POLICY_URL;
+});
+test("Vercel preview uses its deployment URL only for the synthetic test stand", () => {
+  process.env.VERCEL_ENV = "preview";
+  process.env.VERCEL_URL = "domkazan-calendar-test-abc123.vercel.app";
+  process.env.TEST_CATALOG_ENABLED = "true";
+  const request = new Request("https://evil.example.invalid");
+  assert.equal(appOrigin(request), "https://domkazan-calendar-test-abc123.vercel.app");
+  assert.equal(privacyPolicyUrl(), "https://domkazan-calendar-test-abc123.vercel.app/test-policy");
+  process.env.VERCEL_URL = "evil.example.invalid";
+  assert.throws(() => appOrigin(request));
+  assert.equal(privacyPolicyUrl(), null);
+  delete process.env.VERCEL_ENV;
+  delete process.env.VERCEL_URL;
+  delete process.env.TEST_CATALOG_ENABLED;
+});
+test("preview refuses real contact details", () => {
+  const synthetic = { clientName: "Тестовый Гость", clientPhone: "+70000000000",
+    messenger: null, messengerContact: null } as CustomerRequestInput;
+  assert.equal(permittedPreviewRequest(synthetic), true);
+  assert.equal(permittedPreviewRequest({ ...synthetic, clientPhone: "+79001234567" }), false);
+  assert.equal(permittedPreviewRequest({ ...synthetic, clientName: "Иван" }), false);
+  assert.equal(permittedPreviewRequest({ ...synthetic, messengerContact: "@real_contact" }), false);
 });

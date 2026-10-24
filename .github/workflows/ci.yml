@@ -11,7 +11,7 @@ concurrency:
 jobs:
   checks:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 25
     services:
       postgres:
         image: postgres:16-alpine
@@ -38,13 +38,12 @@ jobs:
       - run: npm test
       - run: npm run test:integration
       - run: npm run build
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps chromium webkit
       - run: npm run test:e2e
       - run: sudo apt-get update && sudo apt-get install -y postgresql-client-16
       - run: npm run test:backup
       - run: npm audit --omit=dev
-      - name: Full dependency audit (known dev advisory requires manual review)
-        continue-on-error: true
+      - name: Full dependency audit
         run: npm audit
       - uses: actions/upload-artifact@v5
         if: always()
@@ -53,7 +52,22 @@ jobs:
           path: |
             test-results/**/widget.png
             test-results/**/admin-calendar.png
+            test-results/**/admin-settings.png
+            test-results/**/arrival-selected.png
+            test-results/**/actions-and-form.png
             test-results/**/tilda-adapter.png
+            test-results/**/catalog.png
+            test-results/**/house.png
+            test-results/**/journey-catalog.png
+            test-results/**/journey-house.png
+            test-results/**/journey-house-detail.png
+            test-results/**/journey-calendar.png
+            test-results/**/catalog-polished.png
+            test-results/**/house-polished.png
+            test-results/**/structured-house.png
+            test-results/**/video.webm
+            test-results/catalog-startup-*/test-failed-*.png
+            test-results/catalog-startup-*/error-context.md
           if-no-files-found: ignore
           retention-days: 7
   containers:

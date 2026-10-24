@@ -5,27 +5,30 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { dateKey, todayInMoscow } from "@/lib/dates";
 
-type HouseData = { id: string; name: string; slug: string; tildaUrl: string | null; maxGuests: number;
+type HouseData = { id: string; name: string; calendarName: string | null; tildaProductUid: string | null; slug: string; tildaUrl: string | null; maxGuests: number;
   district: string | null; bedrooms: number | null; bathrooms: number | null; amenities: string[];
-  petsAllowed: boolean | null; isActive: boolean; revision: number };
-type HouseDraft = { name: string; slug: string; tildaUrl: string; maxGuests: string; district: string;
-  bedrooms: string; bathrooms: string; amenities: string; petsAllowed: boolean; isActive: boolean };
+  petsAllowed: boolean | null; isActive: boolean; revision: number;
+  includedGuests?: number | null; extraGuestPrice?: string; serviceFee?: string };
+type HouseDraft = { name: string; calendarName: string; tildaProductUid: string; slug: string; tildaUrl: string; maxGuests: string; district: string;
+  bedrooms: string; bathrooms: string; amenities: string; petsAllowed: boolean; isActive: boolean;
+  includedGuests: string; extraGuestPrice: string; serviceFee: string };
 type Rate = { id: string; startsOn: string; endsOn: string; weekdayPrice: string; fridayPrice: string;
   saturdayPrice: string; sundayPrice: string; minNights: number };
 type RateDraft = { id: string | null; startsOn: string; lastDay: string; weekdayPrice: string;
   fridayPrice: string; saturdayPrice: string; sundayPrice: string; minNights: string };
 
 const dateOffset = (value: string, days: number) => new Date(new Date(`${value}T00:00:00Z`).getTime() + days * 86_400_000).toISOString().slice(0, 10);
-const emptyHouse: HouseDraft = { name: "", slug: "", tildaUrl: "", maxGuests: "2", district: "", bedrooms: "",
-  bathrooms: "", amenities: "", petsAllowed: false, isActive: true };
+const emptyHouse: HouseDraft = { name: "", calendarName: "", tildaProductUid: "", slug: "", tildaUrl: "", maxGuests: "2", district: "", bedrooms: "",
+  bathrooms: "", amenities: "", petsAllowed: false, isActive: true, includedGuests: "", extraGuestPrice: "0", serviceFee: "0" };
 const newRate = (): RateDraft => ({ id: null, startsOn: dateKey(todayInMoscow()), lastDay: dateOffset(dateKey(todayInMoscow()), 29),
   weekdayPrice: "", fridayPrice: "", saturdayPrice: "", sundayPrice: "", minNights: "1" });
 const fieldClass = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 focus-visible:outline-2 focus-visible:outline-emerald-800";
 
 function toDraft(house: HouseData): HouseDraft {
-  return { name: house.name, slug: house.slug, tildaUrl: house.tildaUrl ?? "", maxGuests: String(house.maxGuests),
+  return { name: house.name, calendarName: house.calendarName ?? "", tildaProductUid: house.tildaProductUid ?? "", slug: house.slug, tildaUrl: house.tildaUrl ?? "", maxGuests: String(house.maxGuests),
     district: house.district ?? "", bedrooms: house.bedrooms?.toString() ?? "", bathrooms: house.bathrooms?.toString() ?? "",
-    amenities: house.amenities.join(", "), petsAllowed: house.petsAllowed ?? false, isActive: house.isActive };
+    amenities: house.amenities.join(", "), petsAllowed: house.petsAllowed ?? false, isActive: house.isActive,
+    includedGuests: house.includedGuests?.toString() ?? "", extraGuestPrice: house.extraGuestPrice ?? "0", serviceFee: house.serviceFee ?? "0" };
 }
 
 function rateToDraft(rate: Rate): RateDraft {
@@ -85,8 +88,10 @@ export function HouseEditor({ houseId, initialNotice = "" }: { houseId: string |
     event.preventDefault();
     setBusy(true); setMessage("");
     try {
-      const payload = { name: house.name, slug: house.slug, tildaUrl: house.tildaUrl.trim() || null,
+      const payload = { name: house.name, calendarName: house.calendarName.trim() || null, tildaProductUid: house.tildaProductUid.trim() || null, slug: house.slug, tildaUrl: house.tildaUrl.trim() || null,
         maxGuests: Number(house.maxGuests), district: house.district.trim() || null,
+        includedGuests: house.includedGuests === "" ? null : Number(house.includedGuests),
+        extraGuestPrice: house.extraGuestPrice, serviceFee: house.serviceFee,
         bedrooms: house.bedrooms === "" ? null : Number(house.bedrooms), bathrooms: house.bathrooms === "" ? null : Number(house.bathrooms),
         amenities: [...new Set(house.amenities.split(",").map((item) => item.trim()).filter(Boolean))],
         petsAllowed: house.petsAllowed, isActive: house.isActive, ...(houseId && { revision: houseRevision }) };
@@ -142,12 +147,17 @@ export function HouseEditor({ houseId, initialNotice = "" }: { houseId: string |
       <h2 className="text-xl font-semibold">Параметры дома</h2>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <label className="grid gap-1 text-sm">Название *<input required maxLength={120} value={house.name} onChange={(e) => updateHouseField("name", e.target.value)} className={fieldClass} /></label>
-        <label className="grid gap-1 text-sm">Код карточки Tilda *<input required pattern="[a-z0-9]+(-[a-z0-9]+)*" title="Латинские буквы, цифры и дефисы" value={house.slug} onChange={(e) => updateHouseField("slug", e.target.value.toLowerCase())} className={fieldClass} /><span className="text-xs text-slate-600">После изменения кода обновите связь карточки на Tilda.</span></label>
+        <label className="grid gap-1 text-sm">Короткое название в шахматке<input maxLength={40} placeholder="Например, НС В1" value={house.calendarName} onChange={(e) => updateHouseField("calendarName", e.target.value)} className={fieldClass} /></label>
+        <label className="grid gap-1 text-sm">Tilda Product UID<input inputMode="numeric" pattern="[0-9]{1,30}" maxLength={30} value={house.tildaProductUid} onChange={(e) => updateHouseField("tildaProductUid", e.target.value)} className={fieldClass} /></label>
+        <label className="grid gap-1 text-sm">Внутренний код дома *<input required pattern="[a-z0-9]+(-[a-z0-9]+)*" title="Латинские буквы, цифры и дефисы" value={house.slug} onChange={(e) => updateHouseField("slug", e.target.value.toLowerCase())} className={fieldClass} /><span className="text-xs text-slate-600">Связь с карточкой каталога определяется Tilda Product UID и сохраняется при изменении кода.</span></label>
         <label className="grid gap-1 text-sm">Ссылка на страницу Tilda<input type="url" value={house.tildaUrl} onChange={(e) => updateHouseField("tildaUrl", e.target.value)} className={fieldClass} /></label>
         <label className="grid gap-1 text-sm">Максимум гостей *<input required type="number" min="1" max="100" value={house.maxGuests} onChange={(e) => updateHouseField("maxGuests", e.target.value)} className={fieldClass} /></label>
         <label className="grid gap-1 text-sm">Район<input maxLength={100} value={house.district} onChange={(e) => updateHouseField("district", e.target.value)} className={fieldClass} /></label>
         <label className="grid gap-1 text-sm">Спален<input type="number" min="0" max="50" value={house.bedrooms} onChange={(e) => updateHouseField("bedrooms", e.target.value)} className={fieldClass} /></label>
         <label className="grid gap-1 text-sm">Санузлов<input type="number" min="0" max="50" value={house.bathrooms} onChange={(e) => updateHouseField("bathrooms", e.target.value)} className={fieldClass} /></label>
+        <label className="grid gap-1 text-sm">Гостей включено в тариф<input type="number" min="1" max={house.maxGuests} value={house.includedGuests} onChange={(e) => updateHouseField("includedGuests", e.target.value)} className={fieldClass} /><span className="text-xs text-slate-600">Оставьте пустым, если доплаты за гостей нет.</span></label>
+        <label className="grid gap-1 text-sm">Доплата за гостя за ночь, ₽<input required inputMode="decimal" value={house.extraGuestPrice} onChange={(e) => updateHouseField("extraGuestPrice", e.target.value)} className={fieldClass} /></label>
+        <label className="grid gap-1 text-sm">Обязательный сбор за весь заезд, ₽<input required inputMode="decimal" value={house.serviceFee} onChange={(e) => updateHouseField("serviceFee", e.target.value)} className={fieldClass} /></label>
         <label className="grid gap-1 text-sm sm:col-span-2">Удобства через запятую<input placeholder="sauna, wifi, pool" value={house.amenities} onChange={(e) => updateHouseField("amenities", e.target.value)} className={fieldClass} /></label>
       </div>
       <div className="flex flex-wrap gap-5"><label className="flex items-center gap-2"><input type="checkbox" checked={house.petsAllowed} onChange={(e) => updateHouseField("petsAllowed", e.target.checked)} /> Можно с животными</label><label className="flex items-center gap-2"><input type="checkbox" checked={house.isActive} onChange={(e) => updateHouseField("isActive", e.target.checked)} /> Дом виден в поиске</label></div>

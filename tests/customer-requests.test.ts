@@ -29,5 +29,9 @@ test("owner contact links are built only from valid configuration", () => {
     whatsapp: "https://wa.me/70000000000" });
   process.env.PUBLIC_OWNER_TELEGRAM = "javascript:evil";
   assert.equal(contactOptions().telegram, null);
+  process.env.PUBLIC_OWNER_WHATSAPP='https://wa.me/message/SYNTHETIC';
+  assert.equal(contactOptions().whatsapp,'https://wa.me/message/SYNTHETIC');
+  process.env.PUBLIC_OWNER_WHATSAPP='https://evil.invalid/12345678901';
+  assert.equal(contactOptions().whatsapp,null);
   delete process.env.PUBLIC_OWNER_PHONE; delete process.env.PUBLIC_OWNER_TELEGRAM; delete process.env.PUBLIC_OWNER_WHATSAPP;
 });

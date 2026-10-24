@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { findAvailableHouses } from "@/lib/availability";
+import { findAvailableHouses, findHouseUnavailability } from "@/lib/availability";
 import { nightsBetween, parseDateOnly, todayInMoscow } from "@/lib/dates";
 
 export const runtime = "nodejs";
@@ -13,6 +13,7 @@ const querySchema = z.object({
   bedrooms: z.coerce.number().int().min(1).max(30).optional(),
   amenities: z.array(z.string().trim().min(1).max(40)).max(10).optional(),
   petsAllowed: z.boolean().optional(),
+  house: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(120).optional(),
 });
 
 function corsHeaders(request: NextRequest): Record<string, string> {
@@ -37,6 +38,7 @@ export async function GET(request: NextRequest) {
     bedrooms: params.get("bedrooms") || undefined,
     amenities: params.get("amenities")?.split(",").filter(Boolean),
     petsAllowed: params.get("petsAllowed") === "true" ? true : undefined,
+    house: params.get("house") || undefined,
   });
   const headers = corsHeaders(request);
   if (!parsed.success) {
@@ -50,8 +52,13 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const started = performance.now();
     const houses = await findAvailableHouses(checkIn, checkOut, parsed.data);
-    return NextResponse.json({ checkIn: parsed.data.checkIn, checkOut: parsed.data.checkOut, guests: parsed.data.guests, houses }, { headers: { ...headers, "Cache-Control": "no-store" } });
+    const unavailability = !houses.length && parsed.data.house ? await findHouseUnavailability(checkIn, checkOut, parsed.data) : undefined;
+    return NextResponse.json({ checkIn: parsed.data.checkIn, checkOut: parsed.data.checkOut, guests: parsed.data.guests, houses,
+      ...(unavailability && {unavailability}) }, { headers: {
+      ...headers, "Cache-Control": "no-store", "Server-Timing": `availability;dur=${(performance.now()-started).toFixed(1)}`,
+    } });
   } catch {
     return NextResponse.json({ error: "Поиск временно недоступен." }, { status: 503, headers });
   }

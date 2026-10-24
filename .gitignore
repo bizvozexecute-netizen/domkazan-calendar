@@ -10,6 +10,8 @@ generated/
 .DS_Store
 .local*
 .vpn-test-credentials.json
+.vercel-preview-credentials.json
+.vercel/
 backups/
 test-results/
 playwright-report/

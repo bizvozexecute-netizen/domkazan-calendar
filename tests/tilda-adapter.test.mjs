@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { JSDOM } from "jsdom";
+import {clientDay} from './client-dates.mjs';
 
 const widget = readFileSync(new URL("../public/embed/domkazan-search.js", import.meta.url), "utf8");
 const adapter = readFileSync(new URL("../public/embed/domkazan-tilda.js", import.meta.url), "utf8");
@@ -28,8 +29,8 @@ function fixture(mapping = [{ productUid: "101", houseSlug: "house-a" }, { produ
   const controller = w.DomKazanTilda.mount({ root, catalog, mapping,
     apiUrl: "https://calendar.example.invalid/api/availability", privacyUrl: "https://example.invalid/privacy" });
   const form = root.shadowRoot.querySelector("form");
-  form.querySelector('[name="checkIn"]').value = "2026-11-02";
-  form.querySelector('[name="checkOut"]').value = "2026-11-04";
+  form.querySelector('[name="checkIn"]').value = clientDay(2);
+  form.querySelector('[name="checkOut"]').value = clientDay(4);
   function search() { form.dispatchEvent(new w.Event("submit", { bubbles: true, cancelable: true })); }
   return { dom, w, root, grid, catalog, controller, calls, form, search };
 }
@@ -39,9 +40,10 @@ test("Tilda adapter waits for asynchronous cards and maps by UID without CSS or 
   f.search(); await tick();
   assert.equal(f.calls.length, 0);
   f.grid.innerHTML = card("101") + card("102"); await tick();
+  assert.equal(f.root.shadowRoot.querySelector(".message").textContent, "");
   f.search(); await tick();
   const [free, busy] = f.grid.children;
-  assert.match(free.querySelector('[data-domkazan-tilda-slot]').textContent, /12345 ₽ за 2 ноч/);
+  assert.match(free.querySelector('[data-domkazan-tilda-slot]').textContent, /12\s345 ₽ за 2 ноч/);
   assert.equal(busy.style.display, "none");
   assert.equal(free.querySelector("span").textContent, "1000 р.");
   assert.equal(free.querySelector("a").getAttribute("href"), "#prodpopup");
@@ -67,6 +69,21 @@ test("Tilda request action stays outside links and does not trigger delegated po
   f.controller.destroy(); f.dom.window.close();
 });
 
+test("Tilda product popup does not create a duplicate catalog card", async () => {
+  const f = fixture();
+  f.grid.innerHTML = card("101"); await tick();
+  f.search(); await tick();
+  const popup = f.w.document.createElement("div");
+  popup.className = "t-store__prod-popup__container";
+  popup.innerHTML = `<div class="js-store-product t-store__product-popup" data-product-uid="101" data-product-url="/tproduct/101-synthetic">Synthetic popup</div>`;
+  f.catalog.append(popup); await tick();
+  assert.doesNotMatch(f.root.shadowRoot.textContent, /Поиск приостановлен/);
+  assert.equal(f.grid.querySelectorAll('[data-domkazan-tilda-slot]').length, 1);
+  popup.remove(); await tick();
+  assert.doesNotMatch(f.root.shadowRoot.textContent, /Поиск приостановлен/);
+  f.controller.destroy(); f.dom.window.close();
+});
+
 test("Tilda redraw and native filter changes clear stale application and preserve selected dates", async () => {
   const f = fixture();
   f.grid.innerHTML = card("101") + card("102"); await tick();
@@ -78,7 +95,7 @@ test("Tilda redraw and native filter changes clear stale application and preserv
   f.grid.innerHTML = card("102") + card("101"); await tick();
   assert.equal(f.grid.querySelector("button"), null);
   assert.equal(f.root.shadowRoot.querySelector(".request-form").hidden, true);
-  assert.equal(f.form.querySelector('[name="checkIn"]').value, "2026-11-02");
+  assert.equal(f.form.querySelector('[name="checkIn"]').value, clientDay(2));
   f.search(); await tick();
   assert.equal(f.grid.firstElementChild.style.display, "none");
   assert.ok(f.grid.lastElementChild.querySelector("button"));

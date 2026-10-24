@@ -11,8 +11,13 @@ model House {
   id              String           @id @default(cuid())
   slug            String           @unique
   name            String
+  calendarName    String?
+  tildaProductUid String?          @unique
   tildaUrl        String?
   maxGuests       Int
+  includedGuests  Int?
+  extraGuestPrice Decimal          @default(0) @db.Decimal(10, 2)
+  serviceFee      Decimal          @default(0) @db.Decimal(10, 2)
   district        String?
   bedrooms        Int?
   bathrooms       Int?
@@ -136,4 +141,12 @@ model LoginThrottle {
   key         String   @id
   attempts    Int
   windowStart DateTime
+}
+
+// One small allowlisted client UI configuration, without Tilda content or HTML.
+model ClientUiSettings {
+  id        String   @id
+  revision  Int      @default(1)
+  settings  Json
+  updatedAt DateTime @updatedAt
 }
