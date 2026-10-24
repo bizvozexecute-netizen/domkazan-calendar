@@ -1,7 +1,9 @@
 import {test,expect} from './live-fixture';
 
 test('existing Rutube film really plays after user action and is removed on photo switch',async({page},testInfo)=>{
-  await page.goto('/calendar-test-311744409?house=956218018842');
+  // Tilda's third-party resources can keep `load` pending after our UI is ready.
+  // Wait for the document, then the actual player and playback assertions below.
+  await page.goto('/calendar-test-311744409?house=956218018842',{waitUntil:'domcontentloaded'});
   await page.getByRole('button',{name:'Видео Rutube',exact:true}).click();
   const iframe=page.locator('iframe[title="Видео дома на Rutube"]');await expect(iframe).not.toHaveAttribute('allow',/autoplay/);
   const frame=page.frameLocator('iframe[title="Видео дома на Rutube"]');

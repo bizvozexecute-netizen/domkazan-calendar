@@ -7,7 +7,7 @@ const day=(offset:number)=>new Date(Date.now()+offset*86400000).toISOString().sl
 test('published TEST Tilda: search, detail, actual photo, safe request and return',async({page},testInfo)=>{
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   let documents=0;page.on('request',request=>{if(request.isNavigationRequest()&&request.frame()===page.mainFrame()&&new URL(request.url()).pathname===path)documents++;});
-  await page.goto(path);await expect(page.locator('.cards article').first()).toBeVisible();
+  await page.goto(path,{waitUntil:'domcontentloaded'});await expect(page.locator('.cards article').first()).toBeVisible();
   if(process.env.LIVE_TILDA_LOCAL_BOOTSTRAP==='true'){
     await expect(page.locator('#rec4862082401')).toHaveAttribute('data-screen-max','0');
     const duration=await page.evaluate(()=>performance.getEntriesByName('domkazan:startup-to-ready')[0]?.duration);
