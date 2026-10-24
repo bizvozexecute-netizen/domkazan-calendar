@@ -55,6 +55,7 @@ test('agreed colors and texts reach catalog, gallery and request form with acces
   await video.focus();await expect(video).toHaveCSS('outline-style','solid');
   await page.getByRole('button',{name:`Оставить заявку: ${fixtureProduct.name}`,exact:true}).click();
   await expect(page.getByRole('form',{name:'Запрос владельцу',exact:true})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'Запрос владельцу',exact:true})).toBeVisible();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
   await page.screenshot({path:testInfo.outputPath('actions-and-form.png')});
 });

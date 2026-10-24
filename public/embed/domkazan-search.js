@@ -391,7 +391,7 @@
       for (const input of requestForm.querySelectorAll('input,select,textarea')) input.disabled=false;
       send.hidden=false; requestMessage.hidden=false;
       send.textContent=copy.submitButton;
-      heading.textContent = "Заявка на проживание";
+      heading.textContent = copy.requestTitle;
       summary.replaceChildren();
       for (const [label, value] of [["Дом", house.name], ["Заезд", dateLabel(snapshot.checkIn)], ["Выезд", dateLabel(snapshot.checkOut)], ["Гостей", snapshot.guests], ["Стоимость", `${money(house.quote.total)} ₽`]]) {
         const row = document.createElement("div"); const name = document.createElement("dt"); name.textContent = `${label}:`;
