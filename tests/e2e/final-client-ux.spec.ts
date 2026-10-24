@@ -65,8 +65,8 @@ test('house rejection reasons remain distinct and technical errors stay private'
   await context.route(`${fixtureOrigin}/api/availability?*`,route=>fail?route.fulfill({status:500,json:{error:'SQL password=secret stack trace'}}):route.fulfill({json:{houses:[],unavailability:reason}}));
   await page.goto(`/resilience-fixture?house=${fixtureProduct.productUid}&checkIn=${fixtureDay(2)}&checkOut=${fixtureDay(4)}&guests=8`);
   const status=page.locator('.message[data-state=error]');
-  await expect(status).toContainText('Максимальная вместимость дома — 4 гостей');
-  for(const [code,text] of [['OCCUPIED','Дом занят на выбранные даты'],['UNPRICED','тариф ещё не установлен'],['MIN_NIGHTS','минимальный срок проживания — 3 ночей']]){
+  await expect(status).toContainText('Максимальная вместимость дома — 4 гостя');
+  for(const [code,text] of [['OCCUPIED','Дом занят на выбранные даты'],['UNPRICED','тариф ещё не установлен'],['MIN_NIGHTS','минимальный срок проживания — 3 ночи']]){
     reason={code,minNights:3};await page.getByRole('button',{name:'Проверить стоимость',exact:true}).click();
     await expect(status).toContainText(text);await expect(page.locator('[data-domkazan-action-for]')).toHaveCount(0);
   }

@@ -241,10 +241,11 @@
   }
 
   function unavailableText(reason,copy) {
-    if(reason?.code==='CAPACITY'&&Number.isInteger(reason.maxGuests)&&reason.maxGuests>0)return `Слишком много гостей. Максимальная вместимость дома — ${reason.maxGuests} гостей. Уменьшите количество гостей.`;
+    const plural=(count,one,few,many)=>count%100>=11&&count%100<=14?many:count%10===1?one:count%10>=2&&count%10<=4?few:many;
+    if(reason?.code==='CAPACITY'&&Number.isInteger(reason.maxGuests)&&reason.maxGuests>0)return `Слишком много гостей. Максимальная вместимость дома — ${reason.maxGuests} ${plural(reason.maxGuests,'гость','гостя','гостей')}. Уменьшите количество гостей.`;
     if(reason?.code==='OCCUPIED')return copy.occupiedMessage;
     if(reason?.code==='UNPRICED')return copy.unpricedMessage;
-    if(reason?.code==='MIN_NIGHTS'&&Number.isInteger(reason.minNights)&&reason.minNights>0)return `На выбранные даты минимальный срок проживания — ${reason.minNights} ночей. Увеличьте период.`;
+    if(reason?.code==='MIN_NIGHTS'&&Number.isInteger(reason.minNights)&&reason.minNights>0)return `На выбранные даты минимальный срок проживания — ${reason.minNights} ${plural(reason.minNights,'ночь','ночи','ночей')}. Увеличьте период.`;
     return copy.unavailableMessage;
   }
   function mount({ root, apiUrl, requestUrl, privacyUrl, cards: explicitCards, getFilters,
