@@ -404,7 +404,6 @@
         resultElement:detailResult,
         calendarUrl:selected?new URL(`/api/house-calendar?house=${selected.slug}`,origin).href:undefined,
         resultsUrl:()=>selected?returnUrl:houseUrl(null,paramsWithFilters(widget.values())),
-        ownerContacts:{phone:'tel:+79053106605',telegram:'https://t.me/viteek_b',whatsapp:'https://wa.me/message/OZ7WM2IJUPIXM1'},
         getFilters:()=>({amenities:filter.amenities.join(',')}),
         renderPrice(target, house) {
           target.classList.remove('price-placeholder');

@@ -151,7 +151,7 @@ test('catalog maps by explicit Product UID after slug rename and submits the dat
   const first=details.products[0];
   const {dom,win,shadow,controller}=await setup(`?${clientStayQuery}`,house=>house.slug===first.slug
     ? {...house,id:'synthetic-database-id',slug:'renamed-internal-code',tildaProductUid:first.productUid}
-    : {...house,tildaProductUid:null});
+    : {...house,tildaProductUid:null},{uiSettings:{contacts:{phone:'tel:+70000000000'}}});
   await flush();assert.match(shadow.querySelector('.count').textContent,/Найдено домов: 1/);
   const widget=shadow.querySelector('.search > div').shadowRoot;
   let sent;
@@ -160,5 +160,7 @@ test('catalog maps by explicit Product UID after slug rename and submits the dat
   const form=widget.querySelector('.request-form');form.elements.clientName.value='Synthetic';form.elements.clientPhone.value='+70000000000';form.elements.consent.checked=true;
   form.dispatchEvent(new win.Event('submit',{cancelable:true}));await flush();
   assert.equal(sent.houseId,'synthetic-database-id');assert.equal(Object.hasOwn(sent,'total'),false);
+  assert.equal(widget.querySelector('.receipt a[href^="tel:"]').getAttribute('href'),'tel:+70000000000');
+  assert.doesNotMatch(widget.querySelector('.receipt').textContent,/synthetic-database-id|Заявка synthetic:/);
   controller.destroy();dom.window.close();
 });
