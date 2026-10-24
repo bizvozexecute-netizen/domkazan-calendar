@@ -39,7 +39,7 @@ test("admin settings save accessible texts and reject a stale revision",async({p
     await expect(page.getByRole('status')).toContainText('Настройки сохранены');
     const saved=await(await request.get('/api/client-settings')).json();
     expect(saved.texts.videoButton).toBe('Видео дома');expect(saved.colors.primary).toBe('#164C9A');
-    expect((await request.put('/api/admin/settings',{headers:{origin:'http://localhost:3100'},data:{revision:0,settings:saved}})).status()).toBe(409);
+    expect((await page.request.put('/api/admin/settings',{headers:{origin:'http://localhost:3100'},data:{revision:0,settings:saved}})).status()).toBe(409);
     await page.getByLabel('Основной цвет кнопок и ссылок: HEX',{exact:true}).fill('#FFFFFF');
     await page.getByRole('button',{name:'Сохранить настройки',exact:true}).click();
     await expect(page.getByRole('alert')).toContainText('Контраст');
