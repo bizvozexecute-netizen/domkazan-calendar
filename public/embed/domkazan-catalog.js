@@ -471,7 +471,9 @@
     history.scrollRestoration='manual';
     const controller=new AbortController();
     const settingsAbort=new AbortController();
-    const settingsTimer=setTimeout(()=>settingsAbort.abort(),1000);
+    // Settings now carry the only owner contact destinations. Give a cold
+    // Preview/API the same bounded budget as startup metadata, not just 1s.
+    const settingsTimer=setTimeout(()=>settingsAbort.abort(),5000);
     const stopSettings=()=>settingsAbort.abort();controller.signal.addEventListener('abort',stopSettings,{once:true});
     const clientSettings=options.uiSettings!==undefined?Promise.resolve(options.uiSettings):fetch(new URL('/api/client-settings',options.apiOrigin),{signal:settingsAbort.signal})
       .then(response=>{if(!response.ok)throw new Error('Settings unavailable');return response.json();}).catch(()=>window.DomKazanCalendar.defaultUi)

@@ -4,6 +4,18 @@ import {CLIENT_UI_DEFAULTS,contrast} from '../../src/lib/client-ui';
 
 test.beforeEach(async({context})=>journeyFixture(context));
 
+test('a slow settings response keeps configured owner contact actions',async({page,context})=>{
+  await context.route(`${fixtureOrigin}/api/client-settings`,async route=>{
+    // A normal cold start must not silently remove all contact buttons.
+    await new Promise(resolve=>setTimeout(resolve,1300));
+    await route.fulfill({json:{contacts:{phone:'tel:+70000000000',telegram:'https://t.me/example_owner',whatsapp:'https://wa.me/70000000000'}}});
+  });
+  await openFixtureHouse(page);
+  await expect(page.locator('.house-copy').getByRole('link',{name:'Позвонить',exact:true})).toHaveAttribute('href','tel:+70000000000');
+  await expect(page.locator('.house-copy').getByRole('link',{name:'Telegram',exact:true})).toHaveAttribute('href','https://t.me/example_owner');
+  await expect(page.locator('.house-copy').getByRole('link',{name:'WhatsApp',exact:true})).toHaveAttribute('href','https://wa.me/70000000000');
+});
+
 test('first arrival is visibly selected, ranges cross months and can be chosen again',async({page},testInfo)=>{
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto('/resilience-fixture');
