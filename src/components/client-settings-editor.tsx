@@ -25,7 +25,7 @@ export function ClientSettingsEditor({initial}: {initial: {revision: number; set
   return <form onSubmit={save} aria-busy={busy} className="grid gap-6">
     <fieldset disabled={busy} className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5">
       <legend className="px-2 text-lg font-semibold">Цвета интерфейса</legend>
-      <p className="text-sm text-slate-600">Контраст текста и основных действий с белым и выбранным фоном — не ниже 4.5:1. Неудачное сочетание сохранить нельзя.</p>
+      <p className="text-sm text-slate-600">Контраст текста и основных действий с белым и выбранным фоном — не ниже 4.5:1. Фон должен оставаться светлым для вспомогательных подписей. Неудачное сочетание сохранить нельзя.</p>
       <div className="grid gap-4 sm:grid-cols-3">{([['primary','Основной цвет кнопок и ссылок'],['text','Основной текст'],['background','Фон каталога']] as const).map(([key,label])=><label key={key} className="grid gap-2 text-sm font-medium">{label}
         <input aria-label={`${label}: выбрать цвет`} type="color" value={settings.colors[key]} className="h-12 w-full cursor-pointer rounded border" onChange={e=>setSettings({...settings,colors:{...settings.colors,[key]:e.target.value}})}/>
         <input aria-label={`${label}: HEX`} value={settings.colors[key]} maxLength={7} pattern="#[0-9A-Fa-f]{6}" required className="min-h-11 rounded border p-2" onChange={e=>setSettings({...settings,colors:{...settings.colors,[key]:e.target.value}})}/>

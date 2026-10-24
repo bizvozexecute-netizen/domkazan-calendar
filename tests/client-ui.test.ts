@@ -18,6 +18,7 @@ test("client settings allow only agreed plain text and accessible colors", () =>
   assert.equal(clientUiSchema.safeParse({...CLIENT_UI_DEFAULTS,html:'unsafe'}).success,false);
   assert.equal(clientUiSchema.safeParse({...CLIENT_UI_DEFAULTS,texts:{...CLIENT_UI_DEFAULTS.texts,policy:'unsafe'}}).success,false);
   assert.equal(clientUiSchema.safeParse({...CLIENT_UI_DEFAULTS,texts:{...CLIENT_UI_DEFAULTS.texts,videoButton:'x'.repeat(41)}}).success,false);
+  assert.equal(clientUiSchema.safeParse({...CLIENT_UI_DEFAULTS,colors:{primary:'#000000',text:'#000000',background:'#999999'}}).success,false);
 });
 
 test("browser defaults stay synchronized; untrusted settings cannot introduce markup or CSS", () => {

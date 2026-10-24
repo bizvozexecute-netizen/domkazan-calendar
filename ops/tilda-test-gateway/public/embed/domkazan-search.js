@@ -6,7 +6,7 @@
     const lum=hex=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);
     const ratio=(a,b)=>(Math.max(lum(a),lum(b))+.05)/(Math.min(lum(a),lum(b))+.05);
     const colors=value?.colors;
-    if(colors&&['primary','text','background'].every(key=>/^#[0-9a-f]{6}$/i.test(colors[key]||''))&&['primary','text'].every(key=>ratio(colors[key],'#FFFFFF')>=4.5&&ratio(colors[key],colors.background)>=4.5))result.colors={primary:colors.primary,text:colors.text,background:colors.background};
+    if(colors&&['primary','text','background'].every(key=>/^#[0-9a-f]{6}$/i.test(colors[key]||''))&&['primary','text'].every(key=>ratio(colors[key],'#FFFFFF')>=4.5&&ratio(colors[key],colors.background)>=4.5)&&ratio(colors.background,'#586B80')>=4.5)result.colors={primary:colors.primary,text:colors.text,background:colors.background};
     for(const key of Object.keys(result.texts)){const text=value?.texts?.[key];if(typeof text==='string'&&text.trim()&&text.length<=(key.endsWith('Button')?40:240)&&!/[<>{}\u0000-\u001f\u007f]/.test(text))result.texts[key]=text.trim();}
     return result;
   }

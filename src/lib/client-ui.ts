@@ -30,6 +30,8 @@ export const clientUiSchema = z.strictObject({
       if (contrast(value[key], "#FFFFFF") < 4.5 || contrast(value[key], value.background) < 4.5)
         ctx.addIssue({code: "custom", path: [key], message: "Контраст с белым и фоном должен быть не ниже 4.5:1."});
     }
+    if (contrast(value.background, "#586B80") < 4.5)
+      ctx.addIssue({code: "custom", path: ["background"], message: "Выберите светлый фон: контраст вспомогательных подписей должен быть не ниже 4.5:1."});
   }),
   texts: z.strictObject(texts),
 });
