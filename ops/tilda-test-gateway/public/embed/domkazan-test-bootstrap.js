@@ -11,8 +11,9 @@
   window.domkazanTestCatalog?.destroy();
   performance.mark('domkazan:startup');
   // Tilda's anchor menu starts a BODY ResizeObserver at DOMContentLoaded.
-  // This exact menu is replaced by the catalog navigation on this test page.
-  // Use its existing viewport guard before initialization; do not patch Tilda
+  // Keep its existing viewport guard for the old anchor observer; the scoped
+  // snippet CSS retains the header and its independently initialized burger.
+  // Do not patch Tilda
   // functions, ResizeObserver, or error handlers. Restore the attribute on failure.
   const navigation = document.getElementById('rec4862082401');
   const previousScreenMax = navigation?.getAttribute('data-screen-max');

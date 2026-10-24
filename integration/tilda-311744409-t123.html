@@ -3,11 +3,13 @@
 <style>
   #rec4862390501 { padding:0 !important; margin:0 !important; background:#f6f8fb; }
   #allrecords:is(.dkcal-pending,.dkcal-ready)[data-tilda-page-id="311744409"] > .r:not(#rec4862390501):not(#rec4862082401):not(#rec4862082801) { display:none !important; }
+  #allrecords:is(.dkcal-pending,.dkcal-ready):not(.dkcal-detail)[data-tilda-page-id="311744409"] > #rec4862082401 { display:block !important; }
   #allrecords.dkcal-detail[data-tilda-page-id="311744409"] > :is(#rec4862082401,#rec4862082801) { display:none !important; }
+  #catalog { scroll-margin-top:80px; }
   #domkazan-test-status { margin:0; padding:32px 20px; font:14px/1.6 Arial,sans-serif; color:#42576e; }
   #domkazan-test-status button { min-height:44px; margin:12px 0 0; padding:8px 16px; cursor:pointer; }
 </style>
-<div id="domkazan-catalog"></div>
+<div id="catalog"><div id="domkazan-catalog"></div></div>
 <p id="domkazan-test-status" role="status">Загружаем каталог домов…</p>
 <script>/* Inlined by render-tilda-test-snippet.mjs; restricted to the isolated Tilda test page. */
 (() => {
@@ -22,8 +24,9 @@
   window.domkazanTestCatalog?.destroy();
   performance.mark('domkazan:startup');
   // Tilda's anchor menu starts a BODY ResizeObserver at DOMContentLoaded.
-  // This exact menu is replaced by the catalog navigation on this test page.
-  // Use its existing viewport guard before initialization; do not patch Tilda
+  // Keep its existing viewport guard for the old anchor observer; the scoped
+  // snippet CSS retains the header and its independently initialized burger.
+  // Do not patch Tilda
   // functions, ResizeObserver, or error handlers. Restore the attribute on failure.
   const navigation = document.getElementById('rec4862082401');
   const previousScreenMax = navigation?.getAttribute('data-screen-max');

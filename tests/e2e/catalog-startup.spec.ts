@@ -36,6 +36,7 @@ for(const arrival of ['before-modules','after-modules'])test(`cold startup with 
     const response=page.waitForResponse(`${origin}/api/catalog`);
     if(arrival==='before-modules'){api.release();await (await response).finished();}
     held.release();await expect(page.locator('.cards article')).toHaveCount(1);
+    await expect(page.getByText('Old menu',{exact:true})).toBeVisible();
     await page.locator('.cards article').evaluate(node=>node.setAttribute('data-first-view','retained'));
     expect(catalogCalls).toBe(1);expect(await page.evaluate(()=>document.readyState)).not.toBe('complete');
     api.release();await (await response).finished();
