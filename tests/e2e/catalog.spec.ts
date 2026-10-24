@@ -66,7 +66,9 @@ test("Tilda catalog, house page, price changes, occupancy and request use the sa
   await page.getByRole("button", { name: "Отправить заявку", exact: true }).click();
   const sentResponse = await sent;
   expect(sentResponse.status(), await sentResponse.text()).toBe(201);
-  await expect(page.locator('.receipt > p')).toHaveText(/Заявка .*Проверочный дом/);
+  await expect(page.locator('.request-form > h2')).toHaveText('Заявка получена');
+  await expect(page.locator('.receipt')).toContainText('Проверочный дом');
+  await expect(page.locator('.receipt')).toContainText(/Стоимость: 3\s300 ₽/);
   await expect(page.locator('.summary div:last-child dd')).toHaveText(/3\s300 ₽/);
   await expect(page.locator('.receipt')).toContainText('Цена обновилась');
   await expect(page.locator('.booking-quote .price')).toHaveText(/3\s300 ₽ за 2 ноч\./);

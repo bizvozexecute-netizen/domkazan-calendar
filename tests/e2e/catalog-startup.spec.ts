@@ -10,7 +10,7 @@ async function fixture(context:BrowserContext,path=testUrl){
   // retain the product hint only in the real-document smoke suite.
   const snippet=(await readFile('integration/tilda-311744409-t123.html','utf8')).replace(/<link rel="preconnect"[^>]*>/g,'');
   await context.route(path,route=>route.fulfill({contentType:'text/html; charset=utf-8',body:`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><script defer src="/unrelated.js"></script><div id="allrecords" data-tilda-page-id="311744409"><div id="rec4862082401" class="r" data-screen-max="980">Old menu</div><div id="rec4862390501" class="r">${snippet}</div><div id="fallback" class="r">Original catalog</div></div><script>document.addEventListener('DOMContentLoaded',()=>{const menu=document.getElementById('rec4862082401');window.menuObserverStarted=!(menu.dataset.screenMax&&innerWidth>Number(menu.dataset.screenMax));if(window.menuObserverStarted)new ResizeObserver(()=>{}).observe(document.body);});</script>`}));
-  await context.route(`${origin}/embed/*.js`,async route=>route.fulfill({contentType:'application/javascript',body:await readFile(`public/embed/${new URL(route.request().url()).pathname.split('/').at(-1)}`,'utf8')}));
+  await context.route(`${origin}/embed/*.js*`,async route=>route.fulfill({contentType:'application/javascript',body:await readFile(`public/embed/${new URL(route.request().url()).pathname.split('/').at(-1)}`,'utf8')}));
   await context.route('https://static.tildacdn.com/**',route=>route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>'}));
   await context.route(`${origin}/api/catalog`,route=>route.fulfill({json:{products:[fixtureProduct]}}));
   await context.route(`${origin}/api/client-settings`,route=>route.fulfill({json:{}}));
@@ -83,8 +83,9 @@ test('background metadata refresh preserves active fields and is used on the nex
 
 test('startup failure restores Tilda visibility and its original menu settings',async({page,context})=>{
   await fixture(context);await context.route('**/unrelated.js',route=>route.fulfill({body:''}));
-  await context.route(`${origin}/embed/domkazan-search.js`,route=>route.abort());
+  let attempts=0;await context.route(`${origin}/embed/domkazan-search.js*`,route=>{attempts++;return route.abort();});
   await page.goto(testUrl);await expect(page.getByRole('button',{name:'Повторить загрузку',exact:true})).toBeVisible();
+  expect(attempts).toBe(2);
   await expect(page.locator('#fallback')).toBeVisible();await expect(page.locator('#rec4862082401')).toHaveAttribute('data-screen-max','980');
   await expect(page.locator('#allrecords')).not.toHaveClass(/dkcal-(pending|ready)/);
 });
