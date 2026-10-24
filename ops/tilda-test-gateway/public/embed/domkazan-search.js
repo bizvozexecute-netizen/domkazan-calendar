@@ -571,7 +571,11 @@
           // The action lives outside the card's links, including fully linked cards.
           const actionHost = document.createElement("div");
           actionHost.setAttribute("data-domkazan-action-for", card.slug);
-          action.style.margin="8px 0";
+          // Legacy Tilda adapters may put this action outside every ShadowRoot.
+          // Keep its essential appearance self-contained in that case as well.
+          Object.assign(action.style,{display:"inline-flex",alignItems:"center",justifyContent:"center",minHeight:"48px",
+            padding:"11px 18px",border:`2px solid ${ui.colors.primary}`,borderRadius:"10px",backgroundColor:ui.colors.primary,
+            color:"#fff",font:"650 14px/1.4 -apple-system,BlinkMacSystemFont,Segoe UI,sans-serif",cursor:"pointer",margin:"8px 0"});
           action.addEventListener("click", (event) => { event.preventDefault(); event.stopPropagation(); openRequest(house, snapshot); });
           action.addEventListener("pointerdown", (event) => event.stopPropagation());
           actionHost.append(action);
