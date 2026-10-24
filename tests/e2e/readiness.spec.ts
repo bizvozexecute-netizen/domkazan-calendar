@@ -40,7 +40,7 @@ test("admin settings save accessible texts and reject a stale revision",async({p
     await expect(editor.getByRole('status')).toContainText('Настройки сохранены');
     const saved=await(await request.get('/api/client-settings')).json();
     expect(saved.texts.videoButton).toBe('Видео дома');expect(saved.colors.primary).toBe('#164C9A');
-    expect((await page.request.put('/api/admin/settings',{headers:{origin:'http://localhost:3100'},data:{revision:0,settings:saved}})).status()).toBe(409);
+    expect((await page.request.put('/api/admin/settings',{headers:{origin:'http://localhost:3100'},data:{revision:0,settings:{colors:saved.colors,texts:saved.texts}}})).status()).toBe(409);
     await page.getByLabel('Основной цвет кнопок и ссылок: HEX',{exact:true}).fill('#FFFFFF');
     await page.getByRole('button',{name:'Сохранить настройки',exact:true}).click();
     await expect(editor.getByRole('alert')).toContainText('Контраст');
@@ -83,7 +83,8 @@ test("catalog search, stale form reset, application and manual confirmation work
   const receipt = await response.json(); created.push(receipt.requestId);
   expect(JSON.stringify(receipt)).not.toContain("Synthetic Browser Guest");
   expect(JSON.stringify(receipt)).not.toContain("+70000000000");
-  await expect(page.getByText(`Заявка ${receipt.requestId}:`, { exact: false })).toBeVisible();
+  await expect(page.locator('.request-form > h2')).toHaveText('Заявка получена');
+  await expect(page.locator('.receipt')).not.toContainText(receipt.requestId);
   const query = `/api/availability?checkIn=${day(2)}&checkOut=${day(4)}&guests=3`;
   expect((await (await request.get(query)).json()).houses.some((house: { slug: string }) => house.slug === "demo-house-01")).toBe(true);
 

@@ -13,7 +13,7 @@ export async function journeyFixture(context:BrowserContext){
   await context.route('https://static.tildacdn.com/fixture-*.svg*',route=>route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="300" height="400"><rect width="300" height="400" fill="#ddebe3"/></svg>'}));
   await context.route('https://rutube.ru/play/embed/**',route=>route.fulfill({contentType:'text/html',body:'<p>Isolated iframe contract fixture, not playback proof</p>'}));
   await context.route(`${fixtureOrigin}/api/catalog`,route=>route.fulfill({json:{products:[fixtureProduct]}}));
-  await context.route(`${fixtureOrigin}/api/client-settings`,route=>route.fulfill({json:{}}));
+  await context.route(`${fixtureOrigin}/api/client-settings`,route=>route.fulfill({json:{contacts:{phone:'tel:+70000000000',telegram:'https://t.me/example_owner',whatsapp:'https://wa.me/70000000000'}}}));
   await context.route(`${fixtureOrigin}/api/availability?*`,route=>route.fulfill({json:{houses:fixtureHouses}}));
   await context.route(`${fixtureOrigin}/api/house-calendar?*`,route=>route.fulfill({json:{days:Array.from({length:90},(_,i)=>({date:fixtureDay(i),price:'5000',minNights:1,status:i===5?'occupied':'available'}))}}));
 }

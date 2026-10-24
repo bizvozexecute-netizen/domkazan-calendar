@@ -1,5 +1,6 @@
 /* Tilda remains the content editor. Calendar quotes and requests come from DomKazan. */
 (() => {
+  const mountedPages=new WeakMap();
   const searchLabels = { pool: 'Бассейн', sauna: 'Баня / сауна', billiards: 'Бильярд' };
   const rub = value => new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format(Number(value));
   const plural = (value, forms) => forms[value % 100 >= 11 && value % 100 <= 14 ? 2 : value % 10 === 1 ? 0 : value % 10 >= 2 && value % 10 <= 4 ? 1 : 2];
@@ -79,23 +80,15 @@
   }
 
   function houseDescription(product) {
-    const groups = descriptionGroups(product);
-    const info = el('div', { class: 'house-copy' }, [text('h2', 'О доме'), amenities(product)]);
-    function section(title, lines, className) {
-      if (!lines.length) return;
-      info.append(el('section', { class: `copy-section ${className}` }, [text('h3', title),
-        el('ul', {}, lines.map(line => text('li', line)))]));
-    }
-    section('Пространство и удобства', groups.spaces, 'spaces');
-    section('Правила проживания', groups.rules, 'rules');
-    if (groups.extras.length) {
-      info.append(el('details', { class: 'extra-conditions' }, [text('summary', 'Доплаты и условия владельца'),
-        text('p', 'Справочные условия из описания дома. Актуальная стоимость проживания — в расчёте по датам. Дополнительные услуги и окончательные условия согласуйте с владельцем.', 'copy-note'),
-        el('ul', {}, groups.extras.map(line => text('li', line)))]));
-    }
-    info.append(el('div', { class: 'booking-explainer' }, [text('h3', 'Как забронировать'),
-      text('p', 'Выберите даты и гостей, проверьте стоимость и оставьте заявку. Владелец уточнит условия, оплату и подтвердит бронирование. Отправка заявки не закрепляет даты за вами.')]));
-    return info;
+    const content=text('p','','description-content');
+    const segments=Array.isArray(product.descriptionContent)?product.descriptionContent:null;
+    if(segments){for(const segment of segments){if(typeof segment.text!=='string')continue;
+      let node=document.createTextNode(segment.text);
+      for(const [key,tag] of [['bold','strong'],['italic','em'],['underline','u']])if(segment[key]===true){const wrapper=el(tag);wrapper.append(node);node=wrapper;}
+      content.append(node);
+    }}else content.textContent=product.description||product.facts||'';
+    content.style.whiteSpace='pre-wrap';content.style.overflowWrap='anywhere';
+    return el('div',{class:'house-copy'},[text('h2','Описание дома'),content]);
   }
 
   function mountCover(cover, product, index) {
@@ -240,7 +233,7 @@
     shadow.append(style,mediaStyle,el('style',{text:window.DomKazanCalendar.actionStyles}),galleryHeading, viewer,videoHelp, navigation, thumbs, modal); render();
     return { destroy() { stopPhoto();stopZoom();if (modal.open) modal.close(); shadow.replaceChildren(document.createElement("slot")); root.replaceChildren(...original); } };
   }
-  function mountPage({ root, apiOrigin, privacyUrl, pagePath = window.location.pathname, testMode = true, catalogData, catalogReturn, uiSettings: configuredUi }) {
+  function mountPage({ root, apiOrigin, privacyUrl, pagePath = window.location.pathname, testMode = true, embedded=false, catalogData, catalogReturn, uiSettings: configuredUi }) {
     if (!root || !window.DomKazanCalendar) throw new Error('Модуль поиска не загружен.');
     const origin = new URL(apiOrigin);
     if (origin.protocol !== 'https:') throw new Error('Требуется HTTPS API.');
@@ -252,6 +245,7 @@
     let resuming = false;
     let lastResult = null;
     let alive = true;
+    let refreshContent=()=>{};
 
     function houseUrl(uid, values = {}) {
       const url = new URL(pagePath, window.location.origin);
@@ -277,10 +271,14 @@
       const selected = products.find(product => product.productUid === houseUid);
       const values = Object.fromEntries(['checkIn', 'checkOut', 'guests', 'amenities', 'sort'].map(name => [name, query.get(name) || '']));
       const style = shadow.querySelector('style');
-      const shell = el('div', { class: 'shell' });
+      const shell = el('div', { class: 'shell' });if(embedded)shell.style.paddingTop='12px';
       shadow.replaceChildren(style, shell);
       const brand = link('DOM', houseUrl(null), 'brand'); brand.append(text('span', 'KAZAN'), text('small', 'Казань и рядом', 'city'));
-      shell.append(el('div', { class: 'top' }, [brand, link('+7 905 310-66-05', 'tel:+79053106605', 'top-contact dk-secondary')]));
+      const top=el('div',{class:'top'},[brand]);
+      // A cached previous search module must not crash the newer catalog.
+      const owner=window.DomKazanCalendar.safeContacts?.(ui.contacts)||{};
+      if(owner.phone)top.append(link(window.DomKazanCalendar.phoneLabel?.(owner.phone)||owner.phone.slice(4),owner.phone,'top-contact dk-secondary'));
+      if(!embedded)shell.append(top);
       if (houseUid && !selected) {
         document.title='Дом не найден — DomKazan';
         shell.append(link('← Все дома', houseUrl(null), 'back'), text('h1', 'Дом не найден'), text('p', 'Возможно, он был удалён из каталога. Выберите другой вариант.', 'subtitle'));
@@ -290,14 +288,13 @@
       }
       const returnUrl=selected&&catalogReturn?.uid===selected.productUid?catalogReturn.url:houseUrl(null,values);
       if (selected) shell.append(link('← К результатам поиска', returnUrl, 'back'));
-      const intro = el('div', { class: 'intro' }, selected ? [text('h1', selected.name), facts(selected)] : [text('h1',copy.searchTitle)]);
-      if(!selected){intro.prepend(text('p','Отдых в Казани и рядом','eyebrow'));intro.append(text('p','Найдите дом для своей компании — с подходящими датами, удобствами и понятной стоимостью.','subtitle'));}
+      const intro = el('div', { class: 'intro' }, selected ? [text('h1', selected.name), facts(selected)] : []);
       shell.append(intro);
       const search = el('div');
       const searchPanel = el('div', { class: 'search' }, selected ? [text('h2', copy.detailTitle), search] : [search]);
       const notice = el('div', { class: 'test-note' }, [text('b', 'ТЕСТОВЫЙ СТЕНД'),
         text('span', 'Фото и описания — из каталога Tilda. Занятость и расчёт тестовые. Бронирование и оплата согласуются с владельцем.')]);
-      if (!selected) shell.append(searchPanel, notice);
+      if (!selected) {shell.append(searchPanel);if(testMode)shell.append(notice);}
       const filter = { amenities: values.amenities.split(',').filter(key => Object.hasOwn(searchLabels, key)),
         sort: ['price', 'price-desc'].includes(values.sort) ? values.sort : 'default' };
       const filterState = () => ({ amenities: [...filter.amenities].sort() });
@@ -318,17 +315,19 @@
         const galleryRoot = el('div', { class:'gallery' }, selected.images.map(src => el('img', { 'data-original':src, alt:selected.name })));
         shell.append(galleryRoot); media = mountGallery({root:galleryRoot, rutubeUrl:selected.rutubeUrl, uiSettings:ui});
         const info = houseDescription(selected);
-        const contacts = el('div', { class: 'contacts' }, [link(copy.phoneButton, 'tel:+79053106605','dk-secondary'),
-          link(copy.telegramButton+' ↗', 'https://t.me/viteek_b','dk-secondary'), link(copy.whatsappButton+' ↗', 'https://wa.me/message/OZ7WM2IJUPIXM1','dk-secondary')]);
+        const contacts = el('div',{class:'contacts'});
+        for(const name of ['phone','whatsapp','telegram'])if(owner[name])contacts.append(link(copy[`${name}Button`],owner[name],`dk-secondary dk-${name}`));
         for (const item of contacts.querySelectorAll('a[href^="https:"]')) { item.target = '_blank'; item.rel = 'noopener noreferrer'; }
-        info.append(contacts, text('p', 'Свяжитесь с владельцем, чтобы уточнить условия. На стенде отправляйте только тестовые заявки.', 'contact-note'));
+        if(contacts.childElementCount)info.append(contacts);
+        refreshContent=data=>{const fresh=data.products?.find(product=>product.productUid===selected.productUid);if(!fresh)return;
+          const next=houseDescription(fresh).querySelector('.description-content');info.querySelector('.description-content').replaceWith(next);};
         const price = text('p', 'Выберите даты для расчёта', 'price price-placeholder');detailPrice=price;
         const action = el('div');
         breakdown = el('div', {class:'breakdown'});
         const quote = el('div', { class: 'booking-quote' }, [price, breakdown, action]);
         detailResult=quote;
         cards.push({ slug: selected.slug, element: quote, priceElement: price, actionElement: action });
-        const booking = el('aside', { class: 'booking','aria-label':'Стоимость и заявка' }, [searchPanel, notice]);
+        const booking = el('aside', { class: 'booking','aria-label':'Стоимость и заявка' }, testMode?[searchPanel,notice]:[searchPanel]);
         // The booking controls precede long descriptions for mobile and keyboard users.
         const layout=el('div', { class: 'house-layout' }, [galleryRoot,booking,info]);
         const layoutStyle=el('style',{text:'.house-layout{grid-template-areas:"gallery booking" "copy booking"}.house-layout>.gallery{grid-area:gallery;margin:0}.house-copy{grid-area:copy}.booking{grid-area:booking}@media(max-width:760px){.house-layout{grid-template-areas:"gallery" "booking" "copy"}}'});
@@ -401,11 +400,10 @@
       }
       widget = window.DomKazanCalendar.mount({ root: search, apiUrl: new URL('/api/availability', origin).href,
         privacyUrl: privacyUrl || new URL('/test-policy', origin).href, cards, initialValues: values, testMode,
-        houseSlug:selected?.slug, showCount:!selected,quietSuccess:!selected,uiSettings:ui,
+        houseSlug:selected?.slug, showCount:!selected,quietSuccess:!selected,uiSettings:ui,ownerContacts:owner,
         resultElement:detailResult,
         calendarUrl:selected?new URL(`/api/house-calendar?house=${selected.slug}`,origin).href:undefined,
         resultsUrl:()=>selected?returnUrl:houseUrl(null,paramsWithFilters(widget.values())),
-        ownerContacts:{phone:'tel:+79053106605',telegram:'https://t.me/viteek_b',whatsapp:'https://wa.me/message/OZ7WM2IJUPIXM1'},
         getFilters:()=>({amenities:filter.amenities.join(',')}),
         renderPrice(target, house) {
           target.classList.remove('price-placeholder');
@@ -461,18 +459,21 @@
     });
     function pageShown(event){if(event.persisted&&widget){resuming=true;widget.search();}}
     window.addEventListener('pageshow',pageShown);
-    return { destroy() { alive = false; abort.abort(); widget?.destroy(); media?.destroy(); window.removeEventListener('pageshow',pageShown); shadow.replaceChildren(); } };
+    return {refreshContent:data=>refreshContent(data), destroy() { alive = false; abort.abort(); widget?.destroy(); media?.destroy(); window.removeEventListener('pageshow',pageShown); shadow.replaceChildren(); } };
   }
   function mount(options) {
     const root=options.root;
     if(!root||!window.DomKazanCalendar)throw new Error('Модуль поиска не загружен.');
+    mountedPages.get(root)?.destroy();
     if(new URL(options.apiOrigin).protocol!=='https:')throw new Error('Требуется HTTPS API.');
     const pagePath=new URL(options.pagePath||location.pathname,location.origin).pathname;
     const previousRestoration=history.scrollRestoration;
     history.scrollRestoration='manual';
     const controller=new AbortController();
     const settingsAbort=new AbortController();
-    const settingsTimer=setTimeout(()=>settingsAbort.abort(),1000);
+    // Settings now carry the only owner contact destinations. Give a cold
+    // Preview/API the same bounded budget as startup metadata, not just 1s.
+    const settingsTimer=setTimeout(()=>settingsAbort.abort(),5000);
     const stopSettings=()=>settingsAbort.abort();controller.signal.addEventListener('abort',stopSettings,{once:true});
     const clientSettings=options.uiSettings!==undefined?Promise.resolve(options.uiSettings):fetch(new URL('/api/client-settings',options.apiOrigin),{signal:settingsAbort.signal})
       .then(response=>{if(!response.ok)throw new Error('Settings unavailable');return response.json();}).catch(()=>window.DomKazanCalendar.defaultUi)
@@ -485,7 +486,7 @@
     let current,overlay,alive=true,revision=0,navigating=false,restorePending=false,engaged=false;
     const engage=()=>{engaged=true;};
     for(const event of ['pointerdown','keydown','input','wheel'])root.addEventListener(event,engage,{passive:true});
-    if(options.refreshCatalogData)Promise.resolve(options.refreshCatalogData).then(async data=>{
+    async function refreshed(data){
       if(!alive||!Array.isArray(data?.products)||!data.products.length)return;
       const previous=await catalogData;
       if(!alive)return;
@@ -493,11 +494,22 @@
       // especially when API and module loads finish in the same browser turn.
       if(JSON.stringify(previous.products)===JSON.stringify(data.products))return;
       catalogData=Promise.resolve(data);
+      current?.refreshContent(data);
       // Never replace an active form, gallery or search result. Navigation uses
       // the fresh content next time; an untouched initial view can refresh now.
       const query=new URLSearchParams(location.search);
       if(!engaged&&!navigating&&!(query.has('checkIn')&&query.has('checkOut')))render();
-    }).catch(()=>{/* Public metadata cache stays usable; search still uses the live API. */});
+    }
+    function staleContent(){
+      if(!alive||root.querySelector('[data-content-retry]'))return;
+      const note=document.createElement('p');note.setAttribute('data-content-retry','');note.setAttribute('role','status');
+      note.style.cssText='padding:12px 20px;font:14px/1.6 sans-serif;color:#42576e';
+      note.append(document.createTextNode('Описание может быть устаревшим. Занятость и итоговую цену проверяйте поиском. '));
+      const retry=document.createElement('button');retry.type='button';retry.textContent='Обновить описание';retry.style.minHeight='44px';
+      retry.addEventListener('click',async()=>{retry.disabled=true;try{const r=await fetch(new URL('/api/catalog',options.apiOrigin),{cache:'no-store',signal:AbortSignal.timeout(8000)});if(!r.ok)throw new Error();const data=await r.json();if(!Array.isArray(data.products))throw new Error();await refreshed(data);note.remove();}catch{retry.disabled=false;}});
+      note.append(retry);root.prepend(note);
+    }
+    if(options.refreshCatalogData)Promise.resolve(options.refreshCatalogData).then(refreshed).catch(staleContent);
     function removeOverlay(){overlay?.remove();overlay=null;root.inert=false;}
     function readReturn(){
       try{
@@ -557,7 +569,8 @@
     root.addEventListener('domkazan:error',removeOverlay);
     window.addEventListener('popstate',popped);
     render();
-    return{destroy(){alive=false;controller.abort();clearTimeout(timer);current?.destroy();removeOverlay();for(const event of ['pointerdown','keydown','input','wheel'])root.removeEventListener(event,engage);root.removeEventListener('click',clicked);root.removeEventListener('domkazan:view-ready',ready);root.removeEventListener('domkazan:error',removeOverlay);window.removeEventListener('popstate',popped);history.scrollRestoration=previousRestoration;}};
+    const instance={destroy(){alive=false;controller.abort();clearTimeout(timer);current?.destroy();removeOverlay();root.querySelector('[data-content-retry]')?.remove();for(const event of ['pointerdown','keydown','input','wheel'])root.removeEventListener(event,engage);root.removeEventListener('click',clicked);root.removeEventListener('domkazan:view-ready',ready);root.removeEventListener('domkazan:error',removeOverlay);window.removeEventListener('popstate',popped);history.scrollRestoration=previousRestoration;}};
+    mountedPages.set(root,instance);return instance;
   }
   window.DomKazanCatalog = { mount };
 })();

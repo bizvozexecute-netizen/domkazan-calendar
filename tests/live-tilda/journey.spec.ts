@@ -7,17 +7,17 @@ const day=(offset:number)=>new Date(Date.now()+offset*86400000).toISOString().sl
 test('published TEST Tilda: search, detail, actual photo, safe request and return',async({page},testInfo)=>{
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   let documents=0;page.on('request',request=>{if(request.isNavigationRequest()&&request.frame()===page.mainFrame()&&new URL(request.url()).pathname===path)documents++;});
-  await page.goto(path);await expect(page.locator('.cards article').first()).toBeVisible();
+  await page.goto(path,{waitUntil:'domcontentloaded'});await expect(page.locator('.cards article').first()).toBeVisible();
   if(process.env.LIVE_TILDA_LOCAL_BOOTSTRAP==='true'){
     await expect(page.locator('#rec4862082401')).toHaveAttribute('data-screen-max','0');
     const duration=await page.evaluate(()=>performance.getEntriesByName('domkazan:startup-to-ready')[0]?.duration);
     expect(duration).toBeGreaterThan(0);
     await testInfo.attach('startup.json',{body:JSON.stringify({durationMs:duration}),contentType:'application/json'});
   }
-  if(process.env.LIVE_TILDA_LOCAL_WIDGET==='true')await expect(page.getByRole('heading',{name:'Каталог загородных домов',level:1})).toBeVisible();
+  if(process.env.LIVE_TILDA_LOCAL_WIDGET==='true')await expect(page.getByRole('heading',{name:'Каталог загородных домов',level:1})).toHaveCount(0);
   const timeOrigin=await page.evaluate(()=>{
     const state={flashes:0};Object.assign(window,{domkazanHeroCheck:state});
-    const check=()=>{const records=document.querySelector('#allrecords');if(records?.classList.contains('dkcal-ready')){for(const node of records.children){if(node.id!=='rec4862390501'&&node.classList.contains('r')&&node.getBoundingClientRect().height>0&&getComputedStyle(node).display!=='none'){state.flashes++;break;}}}else state.flashes++;requestAnimationFrame(check);};
+    const check=()=>{const records=document.querySelector('#allrecords');const catalog=!new URLSearchParams(location.search).has('house');if(records?.classList.contains('dkcal-ready')){for(const node of records.children){if(node.id!=='rec4862390501'&&!(catalog&&['rec4862082401','rec4862082801'].includes(node.id))&&node.classList.contains('r')&&node.getBoundingClientRect().height>0&&getComputedStyle(node).display!=='none'){state.flashes++;break;}}}else state.flashes++;requestAnimationFrame(check);};
     requestAnimationFrame(check);return performance.timeOrigin;
   });
   await selectStay(page,day(2),day(4));await page.getByLabel('Гостей',{exact:true}).fill('8');
@@ -61,7 +61,8 @@ test('published TEST Tilda: search, detail, actual photo, safe request and retur
     await page.getByRole('button',{name:'Отправить заявку',exact:true}).click();const response=await result;
     expect(response.status()).toBe(201);const data=await response.json();
     expect(JSON.stringify(data)).not.toMatch(/Тестовый Гость|\+70000000000/);
-    await expect(page.getByText(new RegExp(`Заявка ${data.requestId}:`))).toBeVisible();
+    await expect(page.locator('.request-form > h2')).toHaveText('Заявка получена');
+    await expect(page.locator('.receipt')).not.toContainText(data.requestId);
     await page.screenshot({path:testInfo.outputPath('real-receipt.png'),fullPage:true});
     // A NEW request never closes dates: repeat the real availability check.
     const available=await page.request.get(`https://domkazan-calendar-tilda-test-gatewa.vercel.app/api/availability?checkIn=${day(2)}&checkOut=${day(4)}&guests=8&house=tilda-${uid}`,{headers:{Origin:'https://domkazan116.ru',Referer:`https://domkazan116.ru${path}`}});

@@ -10,7 +10,7 @@ async function fixture(context:BrowserContext,path=testUrl){
   // retain the product hint only in the real-document smoke suite.
   const snippet=(await readFile('integration/tilda-311744409-t123.html','utf8')).replace(/<link rel="preconnect"[^>]*>/g,'');
   await context.route(path,route=>route.fulfill({contentType:'text/html; charset=utf-8',body:`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><script defer src="/unrelated.js"></script><div id="allrecords" data-tilda-page-id="311744409"><div id="rec4862082401" class="r" data-screen-max="980">Old menu</div><div id="rec4862390501" class="r">${snippet}</div><div id="fallback" class="r">Original catalog</div></div><script>document.addEventListener('DOMContentLoaded',()=>{const menu=document.getElementById('rec4862082401');window.menuObserverStarted=!(menu.dataset.screenMax&&innerWidth>Number(menu.dataset.screenMax));if(window.menuObserverStarted)new ResizeObserver(()=>{}).observe(document.body);});</script>`}));
-  await context.route(`${origin}/embed/*.js`,async route=>route.fulfill({contentType:'application/javascript',body:await readFile(`public/embed/${new URL(route.request().url()).pathname.split('/').at(-1)}`,'utf8')}));
+  await context.route(`${origin}/embed/*.js*`,async route=>route.fulfill({contentType:'application/javascript',body:await readFile(`public/embed/${new URL(route.request().url()).pathname.split('/').at(-1)}`,'utf8')}));
   await context.route('https://static.tildacdn.com/**',route=>route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>'}));
   await context.route(`${origin}/api/catalog`,route=>route.fulfill({json:{products:[fixtureProduct]}}));
   await context.route(`${origin}/api/client-settings`,route=>route.fulfill({json:{}}));
@@ -36,6 +36,7 @@ for(const arrival of ['before-modules','after-modules'])test(`cold startup with 
     const response=page.waitForResponse(`${origin}/api/catalog`);
     if(arrival==='before-modules'){api.release();await (await response).finished();}
     held.release();await expect(page.locator('.cards article')).toHaveCount(1);
+    await expect(page.getByText('Old menu',{exact:true})).toBeVisible();
     await page.locator('.cards article').evaluate(node=>node.setAttribute('data-first-view','retained'));
     expect(catalogCalls).toBe(1);expect(await page.evaluate(()=>document.readyState)).not.toBe('complete');
     api.release();await (await response).finished();
@@ -82,8 +83,9 @@ test('background metadata refresh preserves active fields and is used on the nex
 
 test('startup failure restores Tilda visibility and its original menu settings',async({page,context})=>{
   await fixture(context);await context.route('**/unrelated.js',route=>route.fulfill({body:''}));
-  await context.route(`${origin}/embed/domkazan-search.js`,route=>route.abort());
+  let attempts=0;await context.route(`${origin}/embed/domkazan-search.js*`,route=>{attempts++;return route.abort();});
   await page.goto(testUrl);await expect(page.getByRole('button',{name:'Повторить загрузку',exact:true})).toBeVisible();
+  expect(attempts).toBe(2);
   await expect(page.locator('#fallback')).toBeVisible();await expect(page.locator('#rec4862082401')).toHaveAttribute('data-screen-max','980');
   await expect(page.locator('#allrecords')).not.toHaveClass(/dkcal-(pending|ready)/);
 });
@@ -93,6 +95,25 @@ test('invalid CDN metadata falls back to the live catalog',async({page,context})
   await context.route(`${origin}/embed/domkazan-catalog-initial.json`,route=>route.fulfill({json:{invalid:true}}));
   await page.goto(testUrl);await expect(page.locator('.cards article')).toHaveCount(1);
   await expect(page.locator('#allrecords')).toHaveClass('dkcal-ready');
+});
+
+test('a transient module failure retries in place with no duplicate initialization',async({page,context})=>{
+  await fixture(context);await context.route('**/unrelated.js',route=>route.fulfill({body:''}));let attempts=0;
+  await context.route(`${origin}/embed/domkazan-search.js*`,async route=>{attempts++;if(attempts===1)return route.abort();return route.fulfill({contentType:'application/javascript',body:await readFile('public/embed/domkazan-search.js','utf8')});});
+  await page.goto(testUrl);await expect(page.locator('.cards article')).toHaveCount(1);
+  expect(attempts).toBe(2);await expect(page.getByRole('button',{name:'Показать свободные дома',exact:true})).toHaveCount(1);
+  await expect(page.locator('#allrecords')).toHaveClass('dkcal-ready');
+});
+
+test('temporary live metadata failure recovers and updates owner description without clearing guest input',async({page,context})=>{
+  await fixture(context,testUrl+'?house='+fixtureProduct.productUid);await context.route('**/unrelated.js',route=>route.fulfill({body:''}));let attempts=0;const held=deferred();
+  await context.route(`${origin}/api/catalog`,async route=>{attempts++;if(attempts===1)return route.fulfill({status:503,json:{error:'Temporary'}});await held.promise;return route.fulfill({json:{products:[{...fixtureProduct,description:'Опубликованный владельцем текст\n\nДоплата 700 ₽'}]}});});
+  try{await page.goto(testUrl+'?house='+fixtureProduct.productUid);await expect(page.locator('.description-content')).toBeVisible();
+    await page.getByLabel('Гостей',{exact:true}).fill('7');held.release();
+    await expect(page.locator('.description-content')).toHaveText('Опубликованный владельцем текст\n\nДоплата 700 ₽');
+    await expect(page.getByLabel('Гостей',{exact:true})).toHaveValue('7');expect(attempts).toBe(2);
+    await expect(page.locator('[data-domkazan-action-for]')).toHaveCount(0);
+  }finally{held.release();}
 });
 
 test('both metadata sources failing restores the original Tilda catalog',async({page,context})=>{

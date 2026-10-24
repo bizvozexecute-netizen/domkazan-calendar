@@ -11,11 +11,14 @@ return `<!-- DomKazan: page-local catalog and individual house URLs. Test page 3
 <link rel="preconnect" href="${origin}" crossorigin>
 <style>
   #rec4862390501 { padding:0 !important; margin:0 !important; background:#f6f8fb; }
-  #allrecords:is(.dkcal-pending,.dkcal-ready)[data-tilda-page-id="311744409"] > .r:not(#rec4862390501) { display:none !important; }
+  #allrecords:is(.dkcal-pending,.dkcal-ready)[data-tilda-page-id="311744409"] > .r:not(#rec4862390501):not(#rec4862082401):not(#rec4862082801) { display:none !important; }
+  #allrecords:is(.dkcal-pending,.dkcal-ready):not(.dkcal-detail)[data-tilda-page-id="311744409"] > #rec4862082401 { display:block !important; }
+  #allrecords.dkcal-detail[data-tilda-page-id="311744409"] > :is(#rec4862082401,#rec4862082801) { display:none !important; }
+  #catalog { scroll-margin-top:80px; }
   #domkazan-test-status { margin:0; padding:32px 20px; font:14px/1.6 Arial,sans-serif; color:#42576e; }
   #domkazan-test-status button { min-height:44px; margin:12px 0 0; padding:8px 16px; cursor:pointer; }
 </style>
-<div id="domkazan-catalog"></div>
+<div id="catalog"><div id="domkazan-catalog"></div></div>
 <p id="domkazan-test-status" role="status">Загружаем каталог домов…</p>
 <script>${script}</script>`;
 }

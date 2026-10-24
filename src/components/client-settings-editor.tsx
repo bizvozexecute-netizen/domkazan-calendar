@@ -26,7 +26,7 @@ export function ClientSettingsEditor({initial}: {initial: {revision: number; set
     <fieldset disabled={busy} className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5">
       <legend className="px-2 text-lg font-semibold">Цвета интерфейса</legend>
       <p className="text-sm text-slate-600">Контраст текста и основных действий с белым и выбранным фоном — не ниже 4.5:1. Фон должен оставаться светлым для вспомогательных подписей. Неудачное сочетание сохранить нельзя.</p>
-      <div className="grid gap-4 sm:grid-cols-3">{([['primary','Основной цвет кнопок и ссылок'],['text','Основной текст'],['background','Фон каталога']] as const).map(([key,label])=><label key={key} className="grid gap-2 text-sm font-medium">{label}
+      <div className="grid gap-4 sm:grid-cols-3">{([['primary','Основной цвет кнопок и ссылок'],['text','Основной текст'],['background','Фон каталога'],['whatsapp','Кнопка WhatsApp'],['telegram','Кнопка Telegram']] as const).map(([key,label])=><label key={key} className="grid gap-2 text-sm font-medium">{label}
         <input aria-label={`${label}: выбрать цвет`} type="color" value={settings.colors[key]} className="h-12 w-full cursor-pointer rounded border" onChange={e=>setSettings({...settings,colors:{...settings.colors,[key]:e.target.value}})}/>
         <input aria-label={`${label}: HEX`} value={settings.colors[key]} maxLength={7} pattern="#[0-9A-Fa-f]{6}" required className="min-h-11 rounded border p-2" onChange={e=>setSettings({...settings,colors:{...settings.colors,[key]:e.target.value}})}/>
       </label>)}</div>
@@ -34,6 +34,7 @@ export function ClientSettingsEditor({initial}: {initial: {revision: number; set
         <p className="mb-4 font-semibold">Проверить даты и стоимость</p>
         <div className="flex flex-wrap gap-3"><span className="inline-flex min-h-12 items-center rounded-lg px-5 font-semibold" style={{background:settings.colors.primary,color:'#FFFFFF'}}>Основное действие</span><span className="inline-flex min-h-12 items-center rounded-lg border-2 bg-white px-5 font-semibold" style={{borderColor:settings.colors.primary,color:settings.colors.primary}}>Вторичное действие</span></div>
         <p className="mt-4 text-sm">Контраст кнопки с белым: {contrast(settings.colors.primary,'#FFFFFF').toFixed(2)}:1</p>
+        <div className="mt-3 flex flex-wrap gap-3">{(['whatsapp','telegram'] as const).map(key=><span key={key} className="inline-flex min-h-12 items-center rounded-lg px-5 font-semibold text-white" style={{background:settings.colors[key]}}>{settings.texts[key==='whatsapp'?'whatsappButton':'telegramButton']}</span>)}</div>
       </div>
     </fieldset>
     <fieldset disabled={busy} className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5">

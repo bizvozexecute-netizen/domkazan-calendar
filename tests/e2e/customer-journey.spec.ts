@@ -25,7 +25,7 @@ test("one search, price sorting, house calendar, gallery, receipt and return pre
     return route.fulfill({json:{houses:products.filter(product=>!url.searchParams.get('house')||product.slug===url.searchParams.get('house')).map((product,index)=>({id:product.slug,slug:product.slug,name:product.name,quote:{total:String(10000+index*10000),nights:2}}))}});
   });
   await context.route(`${origin}/api/house-calendar?*`,route=>route.fulfill({json:{days:Array.from({length:90},(_,index)=>({date:day(index),price:index===6?null:"5000",minNights:1,status:index===5?"occupied":index===6?"unpriced":"available"}))}}));
-  await context.route(`${origin}/api/requests`,route=>route.fulfill({status:201,json:{requestId:"synthetic-request",message:"Тестовая заявка получена.",contacts:{}}}));
+  await context.route(`${origin}/api/requests`,route=>route.fulfill({status:201,json:{requestId:"synthetic-request",total:'10000',message:"Тестовая заявка получена.",contacts:{phone:'tel:+70000000000'}}}));
   await page.goto("/journey-fixture");
   await expect(page.getByRole("button",{name:"Заезд",exact:true})).toBeVisible();
   await expect(page.getByLabel('Сортировать',{exact:true})).toBeDisabled();
@@ -76,7 +76,8 @@ test("one search, price sorting, house calendar, gallery, receipt and return pre
   await page.getByRole("button",{name:"Отправить заявку",exact:true}).scrollIntoViewIfNeeded();
   const scroll=await page.evaluate(()=>window.scrollY);
   await page.getByRole("button",{name:"Отправить заявку",exact:true}).click();
-  await expect(page.getByText(/Заявка synthetic-request/)).toBeVisible();
+  await expect(page.locator('.request-form > h2')).toHaveText('Заявка получена');
+  await expect(page.locator('.receipt')).not.toContainText('synthetic-request');
   await expect(page.getByRole('button',{name:'Заявка отправлена: Вымышленный дом 1',exact:true})).toBeDisabled();
   await expect(page.getByRole("link",{name:"Позвонить",exact:true}).last()).toBeVisible();
   expect(Math.abs(await page.evaluate(()=>window.scrollY)-scroll)).toBeLessThan(200);

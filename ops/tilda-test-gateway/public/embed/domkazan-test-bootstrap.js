@@ -11,8 +11,9 @@
   window.domkazanTestCatalog?.destroy();
   performance.mark('domkazan:startup');
   // Tilda's anchor menu starts a BODY ResizeObserver at DOMContentLoaded.
-  // This exact menu is replaced by the catalog navigation on this test page.
-  // Use its existing viewport guard before initialization; do not patch Tilda
+  // Keep its existing viewport guard for the old anchor observer; the scoped
+  // snippet CSS retains the header and its independently initialized burger.
+  // Do not patch Tilda
   // functions, ResizeObserver, or error handlers. Restore the attribute on failure.
   const navigation = document.getElementById('rec4862082401');
   const previousScreenMax = navigation?.getAttribute('data-screen-max');
@@ -20,12 +21,14 @@
   page.classList.add('dkcal-pending');
   status.hidden = false;
   const controller = new AbortController();
-  const apiTimer = setTimeout(() => controller.abort(), 10000);
   let active = true, mounted;
-  const timer = setTimeout(() => fail(), 10000);
+  const timer = setTimeout(() => fail(), 30000);
+  const slowTimer=setTimeout(()=>{if(active&&!page.classList.contains('dkcal-ready'))status.textContent='Загрузка занимает больше времени. Проверяем соединение…';},8000);
+  function mode(){page.classList.toggle('dkcal-detail',new URLSearchParams(location.search).has('house'));}
+  mode();window.addEventListener('popstate',mode);root.addEventListener('domkazan:ready',mode);
 
   function restore() {
-    page.classList.remove('dkcal-pending', 'dkcal-ready');
+    page.classList.remove('dkcal-pending', 'dkcal-ready','dkcal-detail');
     if (navigation) {
       if (previousScreenMax === null) navigation.removeAttribute('data-screen-max');
       else navigation.setAttribute('data-screen-max', previousScreenMax);
@@ -33,49 +36,56 @@
   }
   function fail() {
     if (!active) return;
-    active = false; clearTimeout(timer); clearTimeout(apiTimer); controller.abort(); restore();
+    active = false; clearTimeout(timer);clearTimeout(slowTimer); controller.abort(); restore();
     mounted?.destroy();
     status.hidden = false;
-    status.textContent = 'Тестовый каталог временно недоступен. Ниже доступен обычный каталог Tilda. ';
+    status.textContent = 'Не удалось загрузить поиск. Доступность домов не проверена. Ниже доступен обычный каталог Tilda. ';
     const retry = document.createElement('button'); retry.type = 'button'; retry.textContent = 'Повторить загрузку';
     retry.addEventListener('click', () => location.reload()); status.append(retry);
   }
   function ready() {
     if (!active) return;
     if (page.classList.contains('dkcal-pending')) performance.measure('domkazan:startup-to-ready', 'domkazan:startup');
-    clearTimeout(timer); page.classList.replace('dkcal-pending', 'dkcal-ready');
+    clearTimeout(timer);clearTimeout(slowTimer); page.classList.replace('dkcal-pending', 'dkcal-ready');
     status.hidden = true;
   }
   root.addEventListener('domkazan:ready', ready);
   root.addEventListener('domkazan:error', fail);
-  function loadScript(file, present) {
+  async function loadScript(file, present) {
     if (present) return Promise.resolve();
-    return new Promise((resolve, reject) => {
+    for(let attempt=0;attempt<2;attempt++)try{return await new Promise((resolve, reject) => {
       // Dynamic ordered scripts still download together. WebKit may hold an
       // explicitly async script until first paint / DOMContentLoaded, behind
       // unrelated Tilda defer scripts. This queue can execute before either.
       const script = document.createElement('script'); script.async = false;
+      const deadline=setTimeout(()=>finish(new Error('Script timeout')),8000);
       const finish = (error) => {
+        clearTimeout(deadline);
         script.onload = script.onerror = null; controller.signal.removeEventListener('abort', cancelled);
         if (error) { script.remove(); reject(error); } else resolve();
       };
       const cancelled = () => finish(new Error('Startup cancelled'));
       script.onload = () => finish(); script.onerror = () => finish(new Error('Script unavailable'));
       controller.signal.addEventListener('abort', cancelled, {once:true});
-      script.src = `${apiOrigin}/embed/${file}`; document.head.append(script);
-    });
+      script.src = `${apiOrigin}/embed/${file}${attempt?'?retry=1':''}`; document.head.append(script);
+    });}catch(error){if(controller.signal.aborted||attempt===1)throw error;}
   }
 
   // Fetch public content and both independent modules at once, without waiting
   // for unrelated Tilda images/scripts or DOMContentLoaded. Availability and
   // booking totals continue to come from fresh server requests after a search.
-  function readCatalog(path) {
-    return fetch(`${apiOrigin}${path}`, {signal:controller.signal})
+  async function readCatalog(path) {
+    for(let attempt=0;attempt<2;attempt++){
+      const request=new AbortController(),deadline=setTimeout(()=>request.abort(),5000);
+      const cancelled=()=>request.abort();controller.signal.addEventListener('abort',cancelled,{once:true});
+      try{return await fetch(`${apiOrigin}${path}`, {signal:request.signal,cache:'no-store'})
       .then(response => { if (!response.ok) throw new Error('Catalog unavailable'); return response.json(); })
-      .then(data => { if (!Array.isArray(data?.products)) throw new Error('Invalid catalog'); return data; });
+      .then(data => { if (!Array.isArray(data?.products)) throw new Error('Invalid catalog'); return data; });}
+      catch(error){if(controller.signal.aborted||attempt===1)throw error;}
+      finally{clearTimeout(deadline);controller.signal.removeEventListener('abort',cancelled);}
+    }
   }
-  const catalogData = readCatalog('/api/catalog')
-    .finally(() => clearTimeout(apiTimer));
+  const catalogData = readCatalog('/api/catalog');
   // Public metadata is a small CDN request, outside Tilda's HTML block limit.
   // Race it with the live origin; either source can recover from the other failing.
   // Prices/occupancy are never read from this cache to authorize a request.
@@ -86,13 +96,14 @@
     loadScript('domkazan-catalog.js', window.DomKazanCatalog),
     firstCatalog,
   ]).then(([, , data]) => {
-    if (active) mounted = window.DomKazanCatalog.mount({root, apiOrigin, pagePath, testMode:true, catalogData:data,
+    if (active) mounted = window.DomKazanCatalog.mount({root, apiOrigin, pagePath, testMode:true,embedded:true, catalogData:data,
       refreshCatalogData:catalogData});
   }).catch(fail);
 
   window.domkazanTestCatalog = {
     destroy() {
-      active = false; clearTimeout(timer); clearTimeout(apiTimer); controller.abort(); mounted?.destroy(); restore();
+      active = false; clearTimeout(timer);clearTimeout(slowTimer); controller.abort(); mounted?.destroy(); restore();
+      window.removeEventListener('popstate',mode);root.removeEventListener('domkazan:ready',mode);
       root.removeEventListener('domkazan:ready', ready); root.removeEventListener('domkazan:error', fail);
     },
   };

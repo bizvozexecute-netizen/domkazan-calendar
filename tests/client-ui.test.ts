@@ -33,3 +33,15 @@ test("browser defaults stay synchronized; untrusted settings cannot introduce ma
     assert.equal(dom.window.document.getElementById('root')!.style.getPropertyValue('--dk-accent'),CLIENT_UI_DEFAULTS.colors.primary);
   } finally {dom.window.close();}
 });
+
+test('older saved settings gain the new colors and receipt copy without resetting owner edits',()=>{
+  const older=structuredClone(CLIENT_UI_DEFAULTS) as unknown as {colors:Record<string,string>;texts:Record<string,string>};
+  delete older.colors.whatsapp;delete older.colors.telegram;delete older.texts.requestFollowUp;
+  older.texts.requestButton='Связаться';
+  const parsed=clientUiSchema.parse(older);assert.equal(parsed.texts.requestButton,'Связаться');
+  assert.equal(parsed.colors.whatsapp,CLIENT_UI_DEFAULTS.colors.whatsapp);assert.equal(parsed.texts.requestFollowUp,CLIENT_UI_DEFAULTS.texts.requestFollowUp);
+  for(const background of ['#E9E9E9','#EAEAEA']){
+    older.colors={primary:'#000000',text:'#000000',background};
+    assert.equal(clientUiSchema.parse(older).colors.background,background,'A previously valid background must not reset owner settings');
+  }
+});

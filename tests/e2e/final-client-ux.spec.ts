@@ -4,6 +4,18 @@ import {CLIENT_UI_DEFAULTS,contrast} from '../../src/lib/client-ui';
 
 test.beforeEach(async({context})=>journeyFixture(context));
 
+test('a slow settings response keeps configured owner contact actions',async({page,context})=>{
+  await context.route(`${fixtureOrigin}/api/client-settings`,async route=>{
+    // A normal cold start must not silently remove all contact buttons.
+    await new Promise(resolve=>setTimeout(resolve,1300));
+    await route.fulfill({json:{contacts:{phone:'tel:+70000000000',telegram:'https://t.me/example_owner',whatsapp:'https://wa.me/70000000000'}}});
+  });
+  await openFixtureHouse(page);
+  await expect(page.locator('.house-copy').getByRole('link',{name:'Позвонить',exact:true})).toHaveAttribute('href','tel:+70000000000');
+  await expect(page.locator('.house-copy').getByRole('link',{name:'Telegram',exact:true})).toHaveAttribute('href','https://t.me/example_owner');
+  await expect(page.locator('.house-copy').getByRole('link',{name:'WhatsApp',exact:true})).toHaveAttribute('href','https://wa.me/70000000000');
+});
+
 test('first arrival is visibly selected, ranges cross months and can be chosen again',async({page},testInfo)=>{
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto('/resilience-fixture');
@@ -39,14 +51,14 @@ test('agreed colors and texts reach catalog, gallery and request form with acces
   const settings=structuredClone(CLIENT_UI_DEFAULTS);
   settings.colors.primary='#164C9A';settings.colors.background='#F6F8FA';
   settings.texts.videoButton='Посмотреть видео';settings.texts.requestTitle='Запрос владельцу';settings.texts.quoteButton='Рассчитать поездку';
-  await context.route(`${fixtureOrigin}/api/client-settings`,route=>route.fulfill({json:settings}));
+  await context.route(`${fixtureOrigin}/api/client-settings`,route=>route.fulfill({json:{...settings,contacts:{phone:'tel:+70000000000',telegram:'https://t.me/example_owner',whatsapp:'https://wa.me/70000000000'}}}));
   await openFixtureHouse(page);
   const video=page.getByRole('button',{name:'Перейти к видео дома',exact:true});
   await expect(video).toHaveText('Посмотреть видео');
   await expect(page.getByRole('button',{name:'Рассчитать поездку',exact:true})).toBeVisible();
-  for(const action of [video,page.getByRole('link',{name:'Позвонить',exact:true}),page.getByRole('link',{name:'Telegram ↗',exact:true}),page.getByRole('link',{name:'WhatsApp ↗',exact:true})]){
+  for(const [action,border] of [[video,'rgb(22, 76, 154)'],[page.getByRole('link',{name:'Позвонить',exact:true}),'rgb(22, 76, 154)'],[page.getByRole('link',{name:'Telegram',exact:true}),'rgb(23, 101, 181)'],[page.getByRole('link',{name:'WhatsApp',exact:true}),'rgb(20, 108, 60)']] as const){
     const box=await action.boundingBox();expect(box?.height).toBeGreaterThanOrEqual(48);
-    await expect(action).toHaveCSS('border-top-color','rgb(22, 76, 154)');
+    await expect(action).toHaveCSS('border-top-color',border);
     await action.hover();
     const color=await action.evaluate(node=>{const value=getComputedStyle(node);return {fg:value.color,bg:value.backgroundColor};});
     const hex=(rgb:string)=>'#'+rgb.match(/\d+/g)!.slice(0,3).map(n=>Number(n).toString(16).padStart(2,'0')).join('');
