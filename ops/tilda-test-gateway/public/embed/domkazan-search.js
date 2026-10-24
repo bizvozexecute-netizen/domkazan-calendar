@@ -19,10 +19,11 @@
     .dk-primary,.dk-secondary,.contacts a.dk-secondary{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:11px 18px;border:2px solid var(--dk-accent);border-radius:10px;font:650 14px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;text-align:center;text-decoration:none;cursor:pointer;touch-action:manipulation;overflow-wrap:anywhere}
     .dk-primary,.gallery-heading button.dk-primary{background:var(--dk-accent);color:#fff;border-color:var(--dk-accent);font-size:14px;min-height:48px;border-radius:10px}
     .dk-secondary,.contacts a.dk-secondary{background:#fff;color:var(--dk-accent);border-color:var(--dk-accent)}
-    .dk-primary:hover:not(:disabled){filter:brightness(.9)}.dk-secondary:hover{background:#eef3fa}
+    .dk-primary:hover:not(:disabled){background:var(--dk-accent);color:#fff;border-color:var(--dk-accent);box-shadow:0 3px 10px #172b4233}.dk-secondary:hover,.contacts a.dk-secondary:hover{background:#fff;box-shadow:0 2px 8px #172b4220}
     button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid var(--dk-accent);outline-offset:3px}
     .dk-primary:disabled,.dk-secondary:disabled{cursor:not-allowed;opacity:.65}
     .contacts a.dk-secondary{flex:1 1 130px}.gallery-heading{flex-wrap:wrap}
+    .back,.details-link,.return-link{min-height:44px}
     .calendar-grid button[aria-pressed=true],.calendar-grid button[aria-pressed=true]:hover,.calendar-grid button[aria-pressed=true]:disabled{background:var(--dk-accent);color:#fff;border:2px solid var(--dk-accent);font-weight:750;box-shadow:inset 0 0 0 1px #fff}
     .calendar-grid button.in-range:not([aria-pressed=true]){background:#e5eefb;color:#172b42;border-color:#95afd2}
     .calendar-grid button{min-height:44px}.calendar-nav button{min-height:44px;min-width:44px}

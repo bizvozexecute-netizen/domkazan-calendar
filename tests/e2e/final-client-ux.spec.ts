@@ -47,6 +47,7 @@ test('agreed colors and texts reach catalog, gallery and request form with acces
   for(const action of [video,page.getByRole('link',{name:'Позвонить',exact:true}),page.getByRole('link',{name:'Telegram ↗',exact:true}),page.getByRole('link',{name:'WhatsApp ↗',exact:true})]){
     const box=await action.boundingBox();expect(box?.height).toBeGreaterThanOrEqual(48);
     await expect(action).toHaveCSS('border-top-color','rgb(22, 76, 154)');
+    await action.hover();
     const color=await action.evaluate(node=>{const value=getComputedStyle(node);return {fg:value.color,bg:value.backgroundColor};});
     const hex=(rgb:string)=>'#'+rgb.match(/\d+/g)!.slice(0,3).map(n=>Number(n).toString(16).padStart(2,'0')).join('');
     expect(contrast(hex(color.fg),hex(color.bg))).toBeGreaterThanOrEqual(4.5);
