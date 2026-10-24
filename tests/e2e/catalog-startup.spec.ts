@@ -13,6 +13,7 @@ async function fixture(context:BrowserContext,path=testUrl){
   await context.route(`${origin}/embed/*.js`,async route=>route.fulfill({contentType:'application/javascript',body:await readFile(`public/embed/${new URL(route.request().url()).pathname.split('/').at(-1)}`,'utf8')}));
   await context.route('https://static.tildacdn.com/**',route=>route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>'}));
   await context.route(`${origin}/api/catalog`,route=>route.fulfill({json:{products:[fixtureProduct]}}));
+  await context.route(`${origin}/api/client-settings`,route=>route.fulfill({json:{}}));
   await context.route(`${origin}/embed/domkazan-catalog-initial.json`,route=>route.fulfill({json:{products:[fixtureProduct]}}));
   await context.route(`${origin}/api/availability?*`,route=>route.fulfill({json:{houses:fixtureHouses}}));
 }

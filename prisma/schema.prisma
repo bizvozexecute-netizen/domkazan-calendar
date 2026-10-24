@@ -142,3 +142,11 @@ model LoginThrottle {
   attempts    Int
   windowStart DateTime
 }
+
+// One small allowlisted client UI configuration, without Tilda content or HTML.
+model ClientUiSettings {
+  id        String   @id
+  revision  Int      @default(1)
+  settings  Json
+  updatedAt DateTime @updatedAt
+}

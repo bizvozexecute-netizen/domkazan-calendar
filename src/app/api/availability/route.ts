@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { findAvailableHouses } from "@/lib/availability";
+import { findAvailableHouses, findHouseUnavailability } from "@/lib/availability";
 import { nightsBetween, parseDateOnly, todayInMoscow } from "@/lib/dates";
 
 export const runtime = "nodejs";
@@ -54,7 +54,9 @@ export async function GET(request: NextRequest) {
   try {
     const started = performance.now();
     const houses = await findAvailableHouses(checkIn, checkOut, parsed.data);
-    return NextResponse.json({ checkIn: parsed.data.checkIn, checkOut: parsed.data.checkOut, guests: parsed.data.guests, houses }, { headers: {
+    const unavailability = !houses.length && parsed.data.house ? await findHouseUnavailability(checkIn, checkOut, parsed.data) : undefined;
+    return NextResponse.json({ checkIn: parsed.data.checkIn, checkOut: parsed.data.checkOut, guests: parsed.data.guests, houses,
+      ...(unavailability && {unavailability}) }, { headers: {
       ...headers, "Cache-Control": "no-store", "Server-Timing": `availability;dur=${(performance.now()-started).toFixed(1)}`,
     } });
   } catch {

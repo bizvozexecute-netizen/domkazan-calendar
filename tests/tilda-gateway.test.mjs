@@ -14,7 +14,7 @@ const tildaHouse = { id: 'test-tilda-id', slug: 'tilda-259712110892', quote: { t
 
 test('prepared test-page snippet stays synchronized with the reviewed bootstrap',async()=>{
   const snippet=await renderTildaTestSnippet(gateway);
-  assert.equal(readFileSync(new URL('../integration/tilda-311744409-t123.html',import.meta.url),'utf8'),snippet);
+  assert.equal(readFileSync(new URL('../integration/tilda-311744409-t123.html',import.meta.url),'utf8').replace(/\r\n/g,'\n'),snippet);
   await assert.rejects(renderTildaTestSnippet('https://example.invalid'),/reviewed test gateway/);
 });
 

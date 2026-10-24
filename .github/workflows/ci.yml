@@ -52,6 +52,9 @@ jobs:
           path: |
             test-results/**/widget.png
             test-results/**/admin-calendar.png
+            test-results/**/admin-settings.png
+            test-results/**/arrival-selected.png
+            test-results/**/actions-and-form.png
             test-results/**/tilda-adapter.png
             test-results/**/catalog.png
             test-results/**/house.png

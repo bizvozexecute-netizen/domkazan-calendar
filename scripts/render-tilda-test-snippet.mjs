@@ -5,7 +5,7 @@ import { Script } from 'node:vm';
 
 export async function renderTildaTestSnippet(origin) {
 if (origin !== 'https://domkazan-calendar-tilda-test-gatewa.vercel.app') throw new Error('Pass the reviewed test gateway origin.');
-const script = await readFile(new URL('../public/embed/domkazan-test-bootstrap.js', import.meta.url), 'utf8');
+const script = (await readFile(new URL('../public/embed/domkazan-test-bootstrap.js', import.meta.url), 'utf8')).replace(/\r\n/g,'\n');
 new Script(script);
 return `<!-- DomKazan: page-local catalog and individual house URLs. Test page 311744409 only. -->
 <link rel="preconnect" href="${origin}" crossorigin>

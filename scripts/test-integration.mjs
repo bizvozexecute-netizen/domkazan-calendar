@@ -18,5 +18,5 @@ const generate = spawnSync(process.execPath, [prismaCli, "generate"], { stdio: "
 if (generate.status !== 0) process.exit(generate.status || 1);
 const migration = spawnSync(process.execPath, [prismaCli, "migrate", "deploy"], { stdio: "inherit", env: environment });
 if (migration.status !== 0) process.exit(migration.status || 1);
-const tests = spawnSync(process.execPath, ["--import", "tsx", "--test", "--test-concurrency=1", "tests/integration.test.ts", "tests/admin-integration.test.ts", "tests/requests-integration.test.ts", "tests/public-calendar-integration.test.ts"], { stdio: "inherit", env: environment });
+const tests = spawnSync(process.execPath, ["--import", "tsx", "--test", "--test-concurrency=1", "tests/integration.test.ts", "tests/admin-integration.test.ts", "tests/requests-integration.test.ts", "tests/public-calendar-integration.test.ts", "tests/client-ui-integration.test.ts"], { stdio: "inherit", env: environment });
 process.exit(tests.status ?? 1);

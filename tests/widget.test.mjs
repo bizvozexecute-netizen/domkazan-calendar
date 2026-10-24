@@ -26,6 +26,10 @@ test("widget filters existing catalog cards and updates only their price labels"
   assert.match(free.querySelector("[data-domkazan-price]").textContent, /12\s000 ₽/);
   assert.equal(busy.style.getPropertyValue("display"), "none");
   assert.equal(busy.style.getPropertyPriority("display"), "important");
+  const externalAction=dom.window.document.querySelector('[data-domkazan-action-for="free"] button');
+  assert.equal(externalAction.style.minHeight,"48px");
+  assert.equal(externalAction.style.backgroundColor,"rgb(22, 91, 196)");
+  assert.equal(externalAction.style.color,"rgb(255, 255, 255)");
   dom.window.document.querySelector('[data-domkazan-action-for="free"] button').click();
   assert.equal(dom.window.document.getElementById("search").shadowRoot.querySelector(".request-form").hidden, true);
   controller.reset();

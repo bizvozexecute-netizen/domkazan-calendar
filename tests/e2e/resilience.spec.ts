@@ -1,6 +1,7 @@
 import {test,expect} from '@playwright/test';
 import {fixtureOrigin,fixtureProduct,fixtureHouses,fixtureDay,journeyFixture,openFixtureHouse} from './journey-fixture';
 import {selectStay} from './stay-helper';
+import {CLIENT_UI_DEFAULTS} from '../../src/lib/client-ui';
 
 test.beforeEach(async({context})=>journeyFixture(context));
 
@@ -105,7 +106,8 @@ test('search failure recovers, changes during flight discard old results and req
     if(mode==='slow')await new Promise<void>(resolve=>{release=resolve;});
     await route.fulfill(mode==='error'?{status:503,json:{error:'Поиск временно недоступен.'}}:{json:{houses:fixtureHouses}}).catch(()=>{});
   });
-  await openFixtureHouse(page);await expect(page.getByText('Поиск временно недоступен.',{exact:true})).toBeVisible();
+  await openFixtureHouse(page);await expect(page.getByText(CLIENT_UI_DEFAULTS.texts.searchError,{exact:true})).toBeVisible();
+  await expect(page.getByText('Поиск временно недоступен.',{exact:true})).toHaveCount(0);
   mode='slow';await page.getByRole('button',{name:'Проверить стоимость',exact:true}).click();await expect(page.locator('form[aria-busy=true]')).toBeVisible();
   await page.getByLabel('Гостей',{exact:true}).fill('3');mode='ok';release();
   await expect(page.locator('[data-domkazan-action-for]')).toHaveCount(0);await expect(page.getByText('Параметры изменились. Повторите поиск.',{exact:true})).toBeVisible();
@@ -121,7 +123,7 @@ test('a transient search network failure or unavailable response retries only th
   });
   for(const next of ['network','unavailable','limited']){
     mode=next;calls=0;await openFixtureHouse(page);
-    if(mode==='limited'){await expect(page.getByText('Повторите поиск позже.',{exact:true})).toBeVisible();expect(calls).toBe(1);}
+    if(mode==='limited'){await expect(page.getByText(CLIENT_UI_DEFAULTS.texts.searchError,{exact:true})).toBeVisible();expect(calls).toBe(1);}
     else{await expect(page.getByRole('button',{name:'Оставить заявку: Вымышленный дом'})).toBeVisible();expect(calls).toBe(2);}
   }
 });
