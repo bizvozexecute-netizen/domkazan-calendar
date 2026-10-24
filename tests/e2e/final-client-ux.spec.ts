@@ -52,7 +52,10 @@ test('agreed colors and texts reach catalog, gallery and request form with acces
     const hex=(rgb:string)=>'#'+rgb.match(/\d+/g)!.slice(0,3).map(n=>Number(n).toString(16).padStart(2,'0')).join('');
     expect(contrast(hex(color.fg),hex(color.bg))).toBeGreaterThanOrEqual(4.5);
   }
-  await video.focus();await expect(video).toHaveCSS('outline-style','solid');
+  // :focus-visible follows the input modality. Exercise keyboard navigation
+  // rather than assuming programmatic focus after pointer input is visible.
+  await video.focus();await page.keyboard.press('Tab');await page.keyboard.press('Shift+Tab');
+  await expect(video).toBeFocused();await expect(video).toHaveCSS('outline-style','solid');
   await page.getByRole('button',{name:`Оставить заявку: ${fixtureProduct.name}`,exact:true}).click();
   await expect(page.getByRole('form',{name:'Запрос владельцу',exact:true})).toBeVisible();
   await expect(page.getByRole('heading',{name:'Запрос владельцу',exact:true})).toBeVisible();
