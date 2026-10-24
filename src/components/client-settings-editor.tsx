@@ -22,7 +22,7 @@ export function ClientSettingsEditor({initial}: {initial: {revision: number; set
     } catch {setFailed(true); setMessage("Нет связи с сервером. Изменения не потеряны — повторите сохранение.");}
     finally {setBusy(false);}
   }
-  return <form onSubmit={save} aria-busy={busy} className="grid gap-6">
+  return <form onSubmit={save} aria-busy={busy} aria-label="Настройки клиентского интерфейса" className="grid gap-6">
     <fieldset disabled={busy} className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5">
       <legend className="px-2 text-lg font-semibold">Цвета интерфейса</legend>
       <p className="text-sm text-slate-600">Контраст текста и основных действий с белым и выбранным фоном — не ниже 4.5:1. Фон должен оставаться светлым для вспомогательных подписей. Неудачное сочетание сохранить нельзя.</p>
@@ -40,7 +40,7 @@ export function ClientSettingsEditor({initial}: {initial: {revision: number; set
       <legend className="px-2 text-lg font-semibold">Клиентские тексты</legend>
       <p className="text-sm text-slate-600">Только обычный текст. Фотографии, описания, ссылки связи, юридические согласия и правила расчёта здесь не меняются.</p>
       <div className="grid gap-4 md:grid-cols-2">{Object.entries(TEXT_LABELS).map(([key,label])=><label key={key} className="grid gap-2 text-sm font-medium">{label}
-        <textarea rows={key.endsWith('Button')?2:3} required maxLength={key.endsWith('Button')?40:240} value={settings.texts[key as keyof ClientUi['texts']]} className="w-full rounded-lg border border-slate-300 p-3" onChange={e=>setSettings({...settings,texts:{...settings.texts,[key]:e.target.value}})}/>
+        <textarea aria-label={label} name={key} rows={key.endsWith('Button')?2:3} required maxLength={key.endsWith('Button')?40:240} value={settings.texts[key as keyof ClientUi['texts']]} className="w-full rounded-lg border border-slate-300 p-3" onChange={e=>setSettings({...settings,texts:{...settings.texts,[key]:e.target.value}})}/>
       </label>)}</div>
     </fieldset>
     <div className="flex flex-wrap gap-3"><button disabled={busy} type="submit" className="min-h-12 rounded-lg bg-blue-700 px-6 font-semibold text-white disabled:opacity-60">{busy?'Сохраняем…':'Сохранить настройки'}</button><button disabled={busy} type="button" className="min-h-12 rounded-lg border border-slate-300 bg-white px-5" onClick={()=>{setSettings(structuredClone(CLIENT_UI_DEFAULTS));setMessage('Стандартные значения подставлены. Для применения нажмите «Сохранить настройки».');setFailed(false);}}>Подставить стандартные значения</button></div>
