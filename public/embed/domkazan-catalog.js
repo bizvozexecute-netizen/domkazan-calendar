@@ -4,7 +4,7 @@
   const rub = value => new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format(Number(value));
   const plural = (value, forms) => forms[value % 100 >= 11 && value % 100 <= 14 ? 2 : value % 10 === 1 ? 0 : value % 10 >= 2 && value % 10 <= 4 ? 1 : 2];
   const css = `
-    :host{display:block;--dk-accent:#176bdf;--dk-accent-hover:#1054b7;--dk-ink:#172b42;--dk-muted:#586b80;--dk-line:#e0e7ef;color:var(--dk-ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f7fa;-webkit-font-smoothing:antialiased}
+    :host{display:block;--dk-accent:#176bdf;--dk-accent-hover:#1054b7;--dk-ink:#172b42;--dk-muted:#586b80;--dk-line:#e0e7ef;color:var(--dk-ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--dk-background,#f5f7fa);-webkit-font-smoothing:antialiased}
     *{box-sizing:border-box}[hidden]{display:none!important}a{color:inherit;text-decoration:none}button,input,select{font:inherit}button,a,input,select,summary{-webkit-tap-highlight-color:transparent}button,a{touch-action:manipulation}button{cursor:pointer}button:disabled,select:disabled{cursor:default}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid #176bdf;outline-offset:4px}
     .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
     .shell{max-width:1248px;margin:auto;padding:32px 32px 56px}.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-bottom:25px;margin-bottom:28px;border-bottom:1px solid var(--dk-line)}.brand{display:inline-flex;align-items:baseline;flex-wrap:wrap;font-size:23px;line-height:1.1;font-weight:850;letter-spacing:-1.1px}.brand span{color:var(--dk-accent)}.city{margin-left:18px;color:var(--dk-muted);font-size:13px;font-weight:400;letter-spacing:0}.top-contact{display:inline-flex;align-items:center;gap:8px;min-height:42px;border:1px solid var(--dk-line);background:#fff;border-radius:100px;padding:9px 15px;font-size:14px;font-weight:650;white-space:nowrap}.top-contact:hover{border-color:#a9c6ed;color:var(--dk-accent)}
@@ -18,7 +18,7 @@
     @media(max-width:760px){.shell{padding:20px 18px 36px}.top{margin-bottom:22px;padding-bottom:20px}.brand{font-size:22px}.city{display:none}.top-contact{font-size:12px;min-height:40px;padding:8px 11px}.search{padding:18px;border-radius:16px}.test-note{align-items:flex-start;gap:8px;margin:12px 0 24px;font-size:10px}.test-note b{font-size:9px;margin-top:1px}.toolbar{align-items:flex-start;flex-direction:column;gap:14px;margin:24px 0 18px}.count{font-size:22px}.sort-control{width:100%;justify-content:space-between}.sort-control select{font-size:13px;max-width:72%}.cards{grid-template-columns:1fr;gap:20px}.cover{aspect-ratio:16/10}.cover img{object-fit:contain}.info{padding:20px 20px 14px}.info h2{font-size:23px}.facts{font-size:12px}.price-area{padding:17px 20px 20px}.price{font-size:25px}.house-layout{grid-template-columns:1fr;gap:20px}.house-copy{padding:24px 22px;border-radius:16px}.house-copy h2{font-size:23px}.booking .search{border-radius:16px 16px 0 0}.booking-quote{border-radius:0 0 16px 16px}.gallery{margin:20px 0 24px}.intro .facts{font-size:13px}.contacts a{flex:1}.footer-note{margin-top:28px;line-height:1.7}}
     @media(max-width:380px){.shell{padding:18px 14px 32px}.brand{font-size:20px}.top-contact{font-size:11px;padding:8px 9px}.search{padding:16px}.price-area{flex-wrap:wrap}.price-area>div:has([data-domkazan-action-for]){width:100%}.price-area [data-domkazan-action-for] button{width:100%}.info{padding:18px 18px 12px}.house-copy{padding:22px 18px}.test-note{gap:6px}.facts{column-gap:10px}}
     @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
-    .contacts a{white-space:nowrap}
+    .contacts a{white-space:normal}
     .booking .search{border:1px solid var(--dk-line);border-radius:20px;padding:24px;box-shadow:0 8px 30px #243f6208}
     @media(max-width:760px){.booking .search{padding:20px;border-radius:16px}}
     .cover img{position:absolute;inset:0;object-fit:cover;opacity:0}.cover.has-photo img{opacity:1}.cover-status{position:absolute;inset:0;display:grid;place-content:center;padding:24px;text-align:center;color:var(--dk-muted);font-size:13px;background:linear-gradient(135deg,#e9eff5,#f5f7fa)}
@@ -112,7 +112,8 @@
     image.src = product.images[0]; cover.append(image);
   }
 
-  function mountGallery({ root, rutubeUrl }) {
+  function mountGallery({ root, rutubeUrl, uiSettings }) {
+    const ui=window.DomKazanCalendar.applyUi(root,uiSettings);
     const original = [...root.childNodes];
     const photos = [...root.querySelectorAll("img")].map((image) => ({ src: image.getAttribute("data-original") || image.currentSrc || image.src, alt: image.alt || "Фото дома" }))
       .filter((image) => { try { return ["https:", "http:"].includes(new URL(image.src, location.href).protocol); } catch { return false; } });
@@ -235,16 +236,16 @@
       button.addEventListener("click", () => { current = index; render(); }); thumbs.append(button);
     }
     const galleryHeading=el('div',{class:'gallery-heading'},[text('h2',`${photos.length} ${plural(photos.length,['фотография','фотографии','фотографий'])}`)]);
-    if(video){const videoShortcut=el('button',{type:'button',text:'Смотреть видео', 'aria-label':'Перейти к видео дома'});videoShortcut.addEventListener('click',()=>{current=photos.length;render();viewer.focus({preventScroll:true});});galleryHeading.append(videoShortcut);}
-    shadow.append(style,mediaStyle,galleryHeading, viewer,videoHelp, navigation, thumbs, modal); render();
+    if(video){const videoShortcut=el('button',{type:'button',text:ui.texts.videoButton, class:'dk-primary', 'aria-label':'Перейти к видео дома'});videoShortcut.addEventListener('click',()=>{current=photos.length;render();viewer.focus({preventScroll:true});});galleryHeading.append(videoShortcut);}
+    shadow.append(style,mediaStyle,el('style',{text:window.DomKazanCalendar.actionStyles}),galleryHeading, viewer,videoHelp, navigation, thumbs, modal); render();
     return { destroy() { stopPhoto();stopZoom();if (modal.open) modal.close(); shadow.replaceChildren(document.createElement("slot")); root.replaceChildren(...original); } };
   }
-  function mountPage({ root, apiOrigin, privacyUrl, pagePath = window.location.pathname, testMode = true, catalogData, catalogReturn }) {
+  function mountPage({ root, apiOrigin, privacyUrl, pagePath = window.location.pathname, testMode = true, catalogData, catalogReturn, uiSettings: configuredUi }) {
     if (!root || !window.DomKazanCalendar) throw new Error('Модуль поиска не загружен.');
     const origin = new URL(apiOrigin);
     if (origin.protocol !== 'https:') throw new Error('Требуется HTTPS API.');
     const shadow = root.shadowRoot || root.attachShadow({ mode: 'open' });
-    shadow.replaceChildren(el('style', { text: css }), text('div', 'Загружаем каталог домов…', 'loading'));
+    shadow.replaceChildren(el('style', { text: css + window.DomKazanCalendar.actionStyles }), text('div', 'Загружаем каталог домов…', 'loading'));
     const abort = new AbortController();
     let widget;
     let media;
@@ -265,6 +266,9 @@
       else {const timer=setTimeout(()=>abort.abort(),10000);try{response=await fetch(new URL('/api/catalog', origin), { signal: abort.signal });data=await response.json();}finally{clearTimeout(timer);}if(!response.ok)throw new Error('Каталог временно недоступен.');}
       if (!Array.isArray(data.products)) throw new Error('Каталог временно недоступен.');
       if (!alive) return;
+      const ui=window.DomKazanCalendar.applyUi(root,await configuredUi);
+      if(!alive)return;
+      const copy=ui.texts;
       const products = data.products.filter(product => /^\d{12}$/.test(product.productUid) && product.slug === `tilda-${product.productUid}`);
       const bySlug = new Map(products.map(product => [product.slug, product]));
       const byUid = new Map(products.map(product => [product.productUid, product]));
@@ -276,7 +280,7 @@
       const shell = el('div', { class: 'shell' });
       shadow.replaceChildren(style, shell);
       const brand = link('DOM', houseUrl(null), 'brand'); brand.append(text('span', 'KAZAN'), text('small', 'Казань и рядом', 'city'));
-      shell.append(el('div', { class: 'top' }, [brand, link('+7 905 310-66-05', 'tel:+79053106605', 'top-contact')]));
+      shell.append(el('div', { class: 'top' }, [brand, link('+7 905 310-66-05', 'tel:+79053106605', 'top-contact dk-secondary')]));
       if (houseUid && !selected) {
         document.title='Дом не найден — DomKazan';
         shell.append(link('← Все дома', houseUrl(null), 'back'), text('h1', 'Дом не найден'), text('p', 'Возможно, он был удалён из каталога. Выберите другой вариант.', 'subtitle'));
@@ -286,11 +290,11 @@
       }
       const returnUrl=selected&&catalogReturn?.uid===selected.productUid?catalogReturn.url:houseUrl(null,values);
       if (selected) shell.append(link('← К результатам поиска', returnUrl, 'back'));
-      const intro = el('div', { class: 'intro' }, selected ? [text('h1', selected.name), facts(selected)] : [text('h1','Каталог загородных домов')]);
+      const intro = el('div', { class: 'intro' }, selected ? [text('h1', selected.name), facts(selected)] : [text('h1',copy.searchTitle)]);
       if(!selected){intro.prepend(text('p','Отдых в Казани и рядом','eyebrow'));intro.append(text('p','Найдите дом для своей компании — с подходящими датами, удобствами и понятной стоимостью.','subtitle'));}
       shell.append(intro);
       const search = el('div');
-      const searchPanel = el('div', { class: 'search' }, selected ? [text('h2', 'Проверить даты и стоимость'), search] : [search]);
+      const searchPanel = el('div', { class: 'search' }, selected ? [text('h2', copy.detailTitle), search] : [search]);
       const notice = el('div', { class: 'test-note' }, [text('b', 'ТЕСТОВЫЙ СТЕНД'),
         text('span', 'Фото и описания — из каталога Tilda. Занятость и расчёт тестовые. Бронирование и оплата согласуются с владельцем.')]);
       if (!selected) shell.append(searchPanel, notice);
@@ -312,10 +316,10 @@
       if (selected) {
         document.title = `${selected.name} — DomKazan, тест`;
         const galleryRoot = el('div', { class:'gallery' }, selected.images.map(src => el('img', { 'data-original':src, alt:selected.name })));
-        shell.append(galleryRoot); media = mountGallery({root:galleryRoot, rutubeUrl:selected.rutubeUrl});
+        shell.append(galleryRoot); media = mountGallery({root:galleryRoot, rutubeUrl:selected.rutubeUrl, uiSettings:ui});
         const info = houseDescription(selected);
-        const contacts = el('div', { class: 'contacts' }, [link('Позвонить', 'tel:+79053106605'),
-          link('Telegram ↗', 'https://t.me/viteek_b'), link('WhatsApp ↗', 'https://wa.me/message/OZ7WM2IJUPIXM1')]);
+        const contacts = el('div', { class: 'contacts' }, [link(copy.phoneButton, 'tel:+79053106605','dk-secondary'),
+          link(copy.telegramButton+' ↗', 'https://t.me/viteek_b','dk-secondary'), link(copy.whatsappButton+' ↗', 'https://wa.me/message/OZ7WM2IJUPIXM1','dk-secondary')]);
         for (const item of contacts.querySelectorAll('a[href^="https:"]')) { item.target = '_blank'; item.rel = 'noopener noreferrer'; }
         info.append(contacts, text('p', 'Свяжитесь с владельцем, чтобы уточнить условия. На стенде отправляйте только тестовые заявки.', 'contact-note'));
         const price = text('p', 'Выберите даты для расчёта', 'price price-placeholder');detailPrice=price;
@@ -397,7 +401,7 @@
       }
       widget = window.DomKazanCalendar.mount({ root: search, apiUrl: new URL('/api/availability', origin).href,
         privacyUrl: privacyUrl || new URL('/test-policy', origin).href, cards, initialValues: values, testMode,
-        houseSlug:selected?.slug, showCount:!selected,quietSuccess:!selected,
+        houseSlug:selected?.slug, showCount:!selected,quietSuccess:!selected,uiSettings:ui,
         resultElement:detailResult,
         calendarUrl:selected?new URL(`/api/house-calendar?house=${selected.slug}`,origin).href:undefined,
         resultsUrl:()=>selected?returnUrl:houseUrl(null,paramsWithFilters(widget.values())),
@@ -467,6 +471,12 @@
     const previousRestoration=history.scrollRestoration;
     history.scrollRestoration='manual';
     const controller=new AbortController();
+    const settingsAbort=new AbortController();
+    const settingsTimer=setTimeout(()=>settingsAbort.abort(),1000);
+    const stopSettings=()=>settingsAbort.abort();controller.signal.addEventListener('abort',stopSettings,{once:true});
+    const clientSettings=options.uiSettings!==undefined?Promise.resolve(options.uiSettings):fetch(new URL('/api/client-settings',options.apiOrigin),{signal:settingsAbort.signal})
+      .then(response=>{if(!response.ok)throw new Error('Settings unavailable');return response.json();}).catch(()=>window.DomKazanCalendar.defaultUi)
+      .finally(()=>{clearTimeout(settingsTimer);controller.signal.removeEventListener('abort',stopSettings);});
     const timer=options.catalogData===undefined?setTimeout(()=>controller.abort(),10000):undefined;
     // Content is reused within this visit; every view still rechecks availability.
     let catalogData=options.catalogData!==undefined?Promise.resolve(options.catalogData):fetch(new URL('/api/catalog',options.apiOrigin),{signal:controller.signal})
@@ -517,7 +527,7 @@
     }
     function render(){
       revision++;restorePending=true;current?.destroy();
-      current=mountPage({...options,pagePath,catalogData,catalogReturn:readReturn()});
+      current=mountPage({...options,pagePath,catalogData,uiSettings:clientSettings,catalogReturn:readReturn()});
     }
     function showTransition(isCatalog){
       navigating=true;root.inert=true;

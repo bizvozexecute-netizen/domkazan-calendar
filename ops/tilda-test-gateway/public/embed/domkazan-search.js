@@ -1,5 +1,32 @@
 /* DomKazan catalog adapter. Tilda cards remain the source of catalog content. */
 (() => {
+  const defaultUi = {"colors":{"primary":"#165BC4","text":"#172B42","background":"#F5F7FA"},"texts":{"searchTitle":"Каталог загородных домов","detailTitle":"Проверить даты и стоимость","requestTitle":"Заявка на проживание","searchButton":"Показать свободные дома","quoteButton":"Проверить стоимость","requestButton":"Оставить заявку","submitButton":"Отправить заявку","videoButton":"Смотреть видео","phoneButton":"Позвонить","telegramButton":"Telegram","whatsappButton":"WhatsApp","searchError":"Не удалось проверить доступность. Повторите поиск позже.","requestError":"Не удалось отправить заявку. Проверьте данные и повторите попытку.","requestSuccess":"Заявка получена. Владелец свяжется с вами для уточнения деталей.","occupiedMessage":"Дом занят на выбранные даты. Выберите другой период.","unpricedMessage":"На часть выбранного периода тариф ещё не установлен. Уточните стоимость у владельца.","unavailableMessage":"Дом недоступен по выбранным условиям. Измените параметры поиска."}};
+  function uiSettings(value) {
+    const result=JSON.parse(JSON.stringify(defaultUi));
+    const lum=hex=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);
+    const ratio=(a,b)=>(Math.max(lum(a),lum(b))+.05)/(Math.min(lum(a),lum(b))+.05);
+    const colors=value?.colors;
+    if(colors&&['primary','text','background'].every(key=>/^#[0-9a-f]{6}$/i.test(colors[key]||''))&&['primary','text'].every(key=>ratio(colors[key],'#FFFFFF')>=4.5&&ratio(colors[key],colors.background)>=4.5))result.colors={primary:colors.primary,text:colors.text,background:colors.background};
+    for(const key of Object.keys(result.texts)){const text=value?.texts?.[key];if(typeof text==='string'&&text.trim()&&text.length<=(key.endsWith('Button')?40:240)&&!/[<>{}\u0000-\u001f\u007f]/.test(text))result.texts[key]=text.trim();}
+    return result;
+  }
+  function applyUi(root,value) {
+    const ui=uiSettings(value);
+    for(const [key,css] of [['primary','--dk-accent'],['text','--dk-ink'],['background','--dk-background']])root.style.setProperty(css,ui.colors[key]);
+    return ui;
+  }
+  const actionStyles = `
+    .dk-primary,.dk-secondary,.contacts a.dk-secondary{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:11px 18px;border:2px solid var(--dk-accent);border-radius:10px;font:650 14px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;text-align:center;text-decoration:none;cursor:pointer;touch-action:manipulation;overflow-wrap:anywhere}
+    .dk-primary,.gallery-heading button.dk-primary{background:var(--dk-accent);color:#fff;border-color:var(--dk-accent);font-size:14px;min-height:48px;border-radius:10px}
+    .dk-secondary,.contacts a.dk-secondary{background:#fff;color:var(--dk-accent);border-color:var(--dk-accent)}
+    .dk-primary:hover:not(:disabled){filter:brightness(.9)}.dk-secondary:hover{background:#eef3fa}
+    button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid var(--dk-accent);outline-offset:3px}
+    .dk-primary:disabled,.dk-secondary:disabled{cursor:not-allowed;opacity:.65}
+    .contacts a.dk-secondary{flex:1 1 130px}.gallery-heading{flex-wrap:wrap}
+    .calendar-grid button[aria-pressed=true],.calendar-grid button[aria-pressed=true]:hover,.calendar-grid button[aria-pressed=true]:disabled{background:var(--dk-accent);color:#fff;border:2px solid var(--dk-accent);font-weight:750;box-shadow:inset 0 0 0 1px #fff}
+    .calendar-grid button.in-range:not([aria-pressed=true]){background:#e5eefb;color:#172b42;border-color:#95afd2}
+    .calendar-grid button{min-height:44px}.calendar-nav button{min-height:44px;min-width:44px}
+  `;
   const instances = new WeakMap();
   const DAY = 86400000;
   const validDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value || "") && !Number.isNaN(Date.parse(`${value}T00:00:00Z`)) && new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value;
@@ -70,7 +97,7 @@
         const details = options.getDay?.(day);
         if (details) cell.dataset.status=details.status;
         const blocked = details && details.status !== "available";
-        cell.disabled = day < today() || (choosingEnd ? !canEnd(day) : Boolean(options.getDay && (!details || blocked)));
+        cell.disabled = day < today() || (choosingEnd && day > fields.checkIn.value ? !canEnd(day) : Boolean(options.getDay && (!details || blocked)));
         cell.textContent = String(Number(day.slice(8)));
         if (details) {
           const price = document.createElement("small");
@@ -91,7 +118,7 @@
     }
     function choose(day) {
       status.textContent = "";
-      if (!choosingEnd) { fields.checkIn.value = day; fields.checkOut.value = ""; choosingEnd = true; }
+      if (!choosingEnd || day <= fields.checkIn.value) { fields.checkIn.value = day; fields.checkOut.value = ""; choosingEnd = true; }
       else { if (!canEnd(day)) return; fields.checkOut.value = day; choosingEnd = false; }
       focusDay = day; onChange(); render();
       if (fields.checkOut.value) close();
@@ -212,17 +239,25 @@
     }
   }
 
+  function unavailableText(reason,copy) {
+    if(reason?.code==='CAPACITY'&&Number.isInteger(reason.maxGuests)&&reason.maxGuests>0)return `Слишком много гостей. Максимальная вместимость дома — ${reason.maxGuests} гостей. Уменьшите количество гостей.`;
+    if(reason?.code==='OCCUPIED')return copy.occupiedMessage;
+    if(reason?.code==='UNPRICED')return copy.unpricedMessage;
+    if(reason?.code==='MIN_NIGHTS'&&Number.isInteger(reason.minNights)&&reason.minNights>0)return `На выбранные даты минимальный срок проживания — ${reason.minNights} ночей. Увеличьте период.`;
+    return copy.unavailableMessage;
+  }
   function mount({ root, apiUrl, requestUrl, privacyUrl, cards: explicitCards, getFilters,
     initialValues = {}, getViewState, transformHouses, onResults, onInvalidate, renderPrice, testMode = false,
-    calendarUrl, houseSlug, resultsUrl, ownerContacts, showCount = true, quietSuccess = false, resultElement, onSearchComplete, onRequestSaved }) {
+    calendarUrl, houseSlug, resultsUrl, ownerContacts, showCount = true, quietSuccess = false, resultElement, onSearchComplete, onRequestSaved, uiSettings: configuredUi }) {
     if (!root || !apiUrl) throw new Error("Укажите root и apiUrl для DomKazanCalendar.");
     if (root.closest("a,button")) throw new Error("Форма поиска должна находиться вне ссылки или кнопки.");
     instances.get(root)?.destroy();
+    const ui=applyUi(root,configuredUi);const copy=ui.texts;
     let cards = collectCards(explicitCards);
     const shadow = root.shadowRoot || root.attachShadow({ mode: "open" });
     shadow.replaceChildren();
     const style = document.createElement("style");
-    style.textContent = css;
+    style.textContent = css + actionStyles;
     const form = document.createElement("form");
     const dayDetails = new Map();
     let calendarLoad;
@@ -239,7 +274,7 @@
     picker.refresh();
     const button = document.createElement("button");
     button.type = "submit";
-    button.textContent = houseSlug ? "Проверить стоимость" : "Показать свободные дома";
+    button.textContent = houseSlug ? copy.quoteButton : copy.searchButton;button.className="dk-primary";
     form.append(button);
     const message = document.createElement("p");
     message.className = "message";
@@ -247,9 +282,9 @@
     const requestForm = document.createElement("form");
     requestForm.className = "request-form";
     requestForm.hidden = true;
-    requestForm.setAttribute("aria-label", "Заявка на проживание");
+    requestForm.setAttribute("aria-label", copy.requestTitle);
     const heading = document.createElement("h2");
-    heading.textContent = "Заявка на проживание";
+    heading.textContent = copy.requestTitle;
     heading.className = "wide";
     requestForm.append(heading);
     const summary = document.createElement("dl"); summary.className = "summary"; requestForm.append(summary);
@@ -288,7 +323,7 @@
     if (policy) { const link = document.createElement("a"); link.href = policy; link.target = "_blank"; link.rel = "noopener noreferrer";
       link.textContent = "Политика обработки данных"; consentCopy.append(link); }
     requestForm.append(consentLabel);
-    const send = document.createElement("button"); send.type = "submit"; send.textContent = "Отправить заявку"; requestForm.append(send);
+    const send = document.createElement("button"); send.type = "submit"; send.textContent = copy.submitButton;send.className="dk-primary"; requestForm.append(send);
     const requestMessage = document.createElement("p"); requestMessage.className = "message wide";
     requestMessage.setAttribute("role", "status"); requestForm.append(requestMessage);
     const contacts = document.createElement("div"); contacts.className = "contacts"; contacts.hidden = true;
@@ -354,7 +389,7 @@
       delete requestForm.dataset.submitted;
       for (const input of requestForm.querySelectorAll('input,select,textarea')) input.disabled=false;
       send.hidden=false; requestMessage.hidden=false;
-      send.textContent='Отправить заявку';
+      send.textContent=copy.submitButton;
       heading.textContent = "Заявка на проживание";
       summary.replaceChildren();
       for (const [label, value] of [["Дом", house.name], ["Заезд", dateLabel(snapshot.checkIn)], ["Выезд", dateLabel(snapshot.checkOut)], ["Гостей", snapshot.guests], ["Стоимость", `${money(house.quote.total)} ₽`]]) {
@@ -416,13 +451,13 @@
         const serverTotal=/^\d+(?:\.\d{1,2})?$/.test(String(data.total))&&Number.isFinite(Number(data.total))?String(data.total):null;
         if(serverTotal!==null)summary.lastElementChild.querySelector('dd').textContent=`${money(serverTotal)} ₽`;
         const priceNotice=serverTotal===null?'':`${Number(serverTotal)!==Number(house.quote.total)?'Цена обновилась. ':''}Стоимость заявки по актуальным тарифам: ${money(serverTotal)} ₽. `;
-        receiptText.textContent = `Заявка ${data.requestId}: ${house.name}, ${dateLabel(snapshot.checkIn)} — ${dateLabel(snapshot.checkOut)}. ${priceNotice}${data.message}`;
+        receiptText.textContent = `Заявка ${data.requestId}: ${house.name}, ${dateLabel(snapshot.checkIn)} — ${dateLabel(snapshot.checkOut)}. ${priceNotice}${copy.requestSuccess} Отправка заявки не подтверждает бронь.`;
         receipt.hidden = false;
         contacts.replaceChildren();
         for (const [name, title, prefix] of [["phone", "Позвонить", "tel:"], ["telegram", "Telegram", "https://t.me/"], ["whatsapp", "WhatsApp", "https://wa.me/"]]) {
           const href = data.contacts?.[name] || ownerContacts?.[name];
           if (typeof href !== "string" || !href.startsWith(prefix)) continue;
-          const link = document.createElement("a"); link.href = href; link.textContent = title;
+          const link = document.createElement("a"); link.href = href; link.textContent = copy[`${name}Button`] || title;link.className="dk-secondary";
           link.target = name === "phone" ? "" : "_blank"; link.rel = "noopener noreferrer"; contacts.append(link);
         }
         contacts.hidden = contacts.childElementCount === 0;
@@ -442,11 +477,11 @@
           }
           onRequestSaved?.(verifiedHouse,snapshot);
         }
-      } catch (error) {
+      } catch {
         if(destroyed)return;
         if(responseStatus===409){invalidate(false);message.dataset.state='error';message.textContent='Доступность дома изменилась. Повторите поиск перед новой заявкой.';}
         else if (isCurrent(snapshot)) {
-          if(responseStatus>=400&&responseStatus<500){retryPayload=null;submissionKey=window.crypto.randomUUID();for(const input of requestForm.querySelectorAll('input,select,textarea'))input.disabled=false;requestMessage.textContent=error.message||'Проверьте данные заявки.';}
+          if(responseStatus>=400&&responseStatus<500){retryPayload=null;submissionKey=window.crypto.randomUUID();for(const input of requestForm.querySelectorAll('input,select,textarea'))input.disabled=false;requestMessage.textContent=copy.requestError;}
           else {send.textContent='Повторить эту же заявку';requestMessage.textContent='Не удалось получить подтверждение отправки. Повторите эту же заявку: повторная попытка не создаст дубликат. Данные сохранены.';}
         }
         else message.textContent = "Проверьте результат отправки заявки перед повторной попыткой. Для новых параметров повторите поиск.";
@@ -517,7 +552,7 @@
         const data = await response.json();
         if (generation !== currentGeneration) return;
         if (snapshot.signature !== signature()) { invalidate(); return; }
-        if (!response.ok || !Array.isArray(data.houses)) throw new Error(data.error || "Поиск временно недоступен.");
+        if (!response.ok || !Array.isArray(data.houses)) throw new Error("Search unavailable");
         currentHouses = transformHouses ? transformHouses(data.houses) : data.houses;
         const available = new Map(currentHouses.map((house) => [house.slug, house]));
         successfulSearch = snapshot;
@@ -530,12 +565,12 @@
             if (renderPrice) renderPrice(card.priceElement, house);
             else card.priceElement.textContent = `${money(house.quote.total)} ₽ за ${house.quote.nights} ноч.`;
           }
-          const action = document.createElement("button"); action.type = "button"; action.textContent = "Оставить заявку";
-          action.setAttribute("aria-label", `Оставить заявку: ${house.name}`);
+          const action = document.createElement("button"); action.type = "button"; action.textContent = copy.requestButton;action.className="dk-primary";
+          action.setAttribute("aria-label", `${copy.requestButton}: ${house.name}`);
           // The action lives outside the card's links, including fully linked cards.
           const actionHost = document.createElement("div");
           actionHost.setAttribute("data-domkazan-action-for", card.slug);
-          action.style.cssText = "padding:12px 18px;border:0;border-radius:8px;background:var(--dk-accent,#176348);color:white;font:inherit;cursor:pointer;margin:8px 0";
+          action.style.margin="8px 0";
           action.addEventListener("click", (event) => { event.preventDefault(); event.stopPropagation(); openRequest(house, snapshot); });
           action.addEventListener("pointerdown", (event) => event.stopPropagation());
           actionHost.append(action);
@@ -549,12 +584,13 @@
         }
         message.dataset.state='success';
         message.textContent = quietSuccess ? '' : showCount ? `Свободных домов: ${cards.filter((card) => available.has(card.slug)).length}` :
-          currentHouses.length ? "Дом свободен на выбранные даты." : "Дом недоступен по выбранным датам или условиям. Измените параметры.";
+          currentHouses.length ? "Дом свободен на выбранные даты." : unavailableText(data.unavailability,copy);
+        if(houseSlug&&!currentHouses.length)message.dataset.state="error";
         onResults?.(currentHouses, snapshot);
       } catch (error) {
         if (generation !== currentGeneration) return;
         successfulSearch = null; clearActions();
-        message.dataset.state='error';message.textContent = error?.name === "AbortError" ? "Не удалось проверить стоимость вовремя. Повторите поиск." : error?.name === 'TypeError' ? 'Не удалось связаться с сервером. Повторите поиск.' : error instanceof Error ? error.message : "Поиск временно недоступен.";
+        message.dataset.state='error';message.textContent = error?.name === "AbortError" ? "Не удалось проверить стоимость вовремя. Повторите поиск." : error?.name === 'TypeError' ? 'Не удалось связаться с сервером. Повторите поиск.' : copy.searchError;
       } finally { if (generation === currentGeneration) { clearTimeout(searchTimer); searchTimer=null; button.disabled = false;form.setAttribute('aria-busy','false');onSearchComplete?.(); } }
     });
     const controller = { reset, invalidate: () => invalidate(), search: () => {if(!form.checkValidity())return false;form.requestSubmit();return true;}, values:()=>Object.fromEntries(new FormData(form)),
@@ -576,7 +612,7 @@
     return controller;
   }
 
-  window.DomKazanCalendar = { mount };
+  window.DomKazanCalendar = { defaultUi, uiSettings, applyUi, actionStyles, mount };
   function autoMount() {
     document.querySelectorAll("[data-domkazan-search]").forEach((root) => {
       const apiUrl = root.getAttribute("data-api-url");

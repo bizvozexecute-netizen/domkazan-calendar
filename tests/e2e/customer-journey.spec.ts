@@ -19,6 +19,7 @@ test("one search, price sorting, house calendar, gallery, receipt and return pre
   await context.route("https://static.tildacdn.com/synthetic-*.svg",route=>route.fulfill({contentType:"image/svg+xml",body:'<svg xmlns="http://www.w3.org/2000/svg" width="300" height="400"><rect width="300" height="400" fill="#ddebe3"/></svg>'}));
   await context.route("https://rutube.ru/play/embed/**",route=>route.fulfill({contentType:"text/html",body:"<p>Synthetic video</p>"}));
   await context.route(`${origin}/api/catalog`,route=>route.fulfill({json:{products}}));
+  await context.route(`${origin}/api/client-settings`,route=>route.fulfill({json:{}}));
   await context.route(`${origin}/api/availability?*`,route=>{
     const url=new URL(route.request().url());queries.push(url);
     return route.fulfill({json:{houses:products.filter(product=>!url.searchParams.get('house')||product.slug===url.searchParams.get('house')).map((product,index)=>({id:product.slug,slug:product.slug,name:product.name,quote:{total:String(10000+index*10000),nights:2}}))}});

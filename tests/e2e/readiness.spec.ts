@@ -16,10 +16,36 @@ test.afterAll(async () => {
 });
 
 test("anonymous access cannot expose administrative pages or customer records", async ({ page, request }) => {
-  for (const path of ["/admin", "/admin/houses", "/admin/requests"]) {
+  for (const path of ["/admin", "/admin/houses", "/admin/requests", "/admin/settings"]) {
     await page.goto(path); await expect(page).toHaveURL(/\/admin\/login/);
   }
   expect((await request.get("/api/admin/requests")).status()).toBe(401);
+  expect((await request.get("/api/admin/settings")).status()).toBe(401);
+});
+
+test("admin settings save accessible texts and reject a stale revision",async({page,request},testInfo)=>{
+  await db.clientUiSettings.deleteMany();
+  try {
+    await page.goto('/admin/login');
+    await page.getByLabel('Email',{exact:true}).fill('browser-tester@example.invalid');
+    await page.getByLabel('Пароль',{exact:true}).fill(process.env.E2E_ADMIN_PASSWORD!);
+    await page.getByRole('button',{name:'Войти',exact:true}).click();
+    await expect(page).toHaveURL(/\/admin$/);
+    await page.getByRole('link',{name:'Настройки',exact:true}).click();
+    await expect(page.getByRole('heading',{name:'Настройки каталога',exact:true})).toBeVisible();
+    await page.getByLabel('Кнопка видео',{exact:true}).fill('Видео дома');
+    await page.getByLabel('Основной цвет кнопок и ссылок: HEX',{exact:true}).fill('#164C9A');
+    await page.getByRole('button',{name:'Сохранить настройки',exact:true}).click();
+    await expect(page.getByRole('status')).toContainText('Настройки сохранены');
+    const saved=await(await request.get('/api/client-settings')).json();
+    expect(saved.texts.videoButton).toBe('Видео дома');expect(saved.colors.primary).toBe('#164C9A');
+    expect((await request.put('/api/admin/settings',{headers:{origin:'http://localhost:3100'},data:{revision:0,settings:saved}})).status()).toBe(409);
+    await page.getByLabel('Основной цвет кнопок и ссылок: HEX',{exact:true}).fill('#FFFFFF');
+    await page.getByRole('button',{name:'Сохранить настройки',exact:true}).click();
+    await expect(page.getByRole('alert')).toContainText('Контраст');
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+    await page.screenshot({path:testInfo.outputPath('admin-settings.png'),fullPage:true});
+  } finally {await db.clientUiSettings.deleteMany();}
 });
 
 test("catalog search, stale form reset, application and manual confirmation work together", async ({ page, request }, testInfo) => {
