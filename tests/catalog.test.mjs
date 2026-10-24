@@ -4,9 +4,37 @@ import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import {clientDay,clientStayQuery} from './client-dates.mjs';
 import { publicCatalog,loadCatalog } from '../ops/tilda-test-gateway/lib/catalog.js';
+import {descriptionContent,descriptionText} from '../ops/tilda-test-gateway/lib/description.js';
 
 const details = JSON.parse(readFileSync(new URL('../data/tilda-catalog-details.json', import.meta.url), 'utf8'));
 const flush = () => new Promise(resolve => setTimeout(resolve, 20));
+
+test('full Tilda owner text preserves paragraphs, emphasis, lists and price conditions safely',()=>{
+  const html='<p>Полное <strong>описание</strong> &laquo;дома&raquo;</p><p>Доплата: 500 ₽<br>Заезд в 15:00</p><ul><li>Баня</li><li><em>Без животных</em></li></ul><script>private()</script><a href="https://homereserve.ru/old">Календарь</a>';
+  const product=publicCatalog({total:1,products:[{uid:'111111111111',title:'Дом',descr:'Короткий анонс',text:html}]}).products[0];
+  assert.equal(product.description,'Полное описание «дома»\n\nДоплата: 500 ₽\nЗаезд в 15:00\n\n• Баня\n• Без животных');
+  assert.equal(product.descriptionContent.find(segment=>segment.text==='описание').bold,true);
+  assert.equal(product.descriptionContent.find(segment=>segment.text.includes('Без животных')).italic,true);
+  assert.doesNotMatch(product.description,/private|Календарь|<strong>|Короткий/);
+  assert.equal(descriptionText('<p>Первая</p><p>Вторая</p>'),'Первая\n\nВторая');
+  assert.equal(descriptionText('&#1044;&#x43e;&#1084;'),'Дом');
+  assert.throws(()=>descriptionContent('x'.repeat(200001)),/size/);
+});
+
+test('catalog reads newly published full text and new UIDs without deploying or modifying calendar data',async()=>{
+  const previous=globalThis.fetch;let published='До публикации';let calls=0;
+  globalThis.fetch=async()=>{calls++;return Response.json({total:1,products:[{uid:'111111111111',title:'Дом',descr:'Анонс',text:published}]});};
+  try{assert.equal((await loadCatalog()).products[0].description,'До публикации');published='После публикации\nНовая доплата 700 ₽';assert.equal((await loadCatalog()).products[0].description,published);assert.equal(calls,2);}
+  finally{globalThis.fetch=previous;}
+});
+
+test('catalog follows the observed Tilda slice pagination and rejects inconsistent or duplicate UIDs',async()=>{
+  const previous=globalThis.fetch;const slices=[];
+  globalThis.fetch=async url=>{const slice=Number(new URL(url).searchParams.get('slice'));slices.push(slice);return Response.json({total:2,products:[{uid:slice===1?'111111111111':'222222222222',title:'Новый дом',text:'Описание'}]});};
+  try{const result=await loadCatalog();assert.equal(result.products.length,2);assert.deepEqual(slices,[1,2]);}
+  finally{globalThis.fetch=previous;}
+  assert.throws(()=>publicCatalog({total:2,products:[{uid:'111111111111'},{uid:'111111111111'}]}),/UID/);
+});
 
 test('catalog strips markup and private booking links; images stay on Tilda CDN', () => {
   const result = publicCatalog({ total: 1, products: [{ uid: '111111111111', title: '<b>Дом</b>',
@@ -99,7 +127,7 @@ test('direct house URL renders one full page and test request fields use synthet
   assert.equal(shadow.querySelector('h1').textContent, 'Казанка большой');
   assert.ok(shadow.querySelector('.gallery').shadowRoot.querySelector('img'));
   assert.equal(shadow.querySelectorAll('.card').length, 0);
-  assert.ok(shadow.querySelector('a[href="https://t.me/viteek_b"]'));
+  assert.equal(shadow.querySelector('.house-copy h2').textContent,'Описание дома');
   shadow.querySelector('.search > div').shadowRoot.querySelector('[data-domkazan-action-for] button').click();
   const request = shadow.querySelector('.search > div').shadowRoot.querySelector('.request-form');
   assert.equal(request.hidden, false);

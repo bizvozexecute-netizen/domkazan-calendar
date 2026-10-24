@@ -39,14 +39,14 @@ test('agreed colors and texts reach catalog, gallery and request form with acces
   const settings=structuredClone(CLIENT_UI_DEFAULTS);
   settings.colors.primary='#164C9A';settings.colors.background='#F6F8FA';
   settings.texts.videoButton='Посмотреть видео';settings.texts.requestTitle='Запрос владельцу';settings.texts.quoteButton='Рассчитать поездку';
-  await context.route(`${fixtureOrigin}/api/client-settings`,route=>route.fulfill({json:settings}));
+  await context.route(`${fixtureOrigin}/api/client-settings`,route=>route.fulfill({json:{...settings,contacts:{phone:'tel:+70000000000',telegram:'https://t.me/example_owner',whatsapp:'https://wa.me/70000000000'}}}));
   await openFixtureHouse(page);
   const video=page.getByRole('button',{name:'Перейти к видео дома',exact:true});
   await expect(video).toHaveText('Посмотреть видео');
   await expect(page.getByRole('button',{name:'Рассчитать поездку',exact:true})).toBeVisible();
-  for(const action of [video,page.getByRole('link',{name:'Позвонить',exact:true}),page.getByRole('link',{name:'Telegram ↗',exact:true}),page.getByRole('link',{name:'WhatsApp ↗',exact:true})]){
+  for(const [action,border] of [[video,'rgb(22, 76, 154)'],[page.getByRole('link',{name:'Позвонить',exact:true}),'rgb(22, 76, 154)'],[page.getByRole('link',{name:'Telegram',exact:true}),'rgb(23, 101, 181)'],[page.getByRole('link',{name:'WhatsApp',exact:true}),'rgb(22, 122, 70)']] as const){
     const box=await action.boundingBox();expect(box?.height).toBeGreaterThanOrEqual(48);
-    await expect(action).toHaveCSS('border-top-color','rgb(22, 76, 154)');
+    await expect(action).toHaveCSS('border-top-color',border);
     await action.hover();
     const color=await action.evaluate(node=>{const value=getComputedStyle(node);return {fg:value.color,bg:value.backgroundColor};});
     const hex=(rgb:string)=>'#'+rgb.match(/\d+/g)!.slice(0,3).map(n=>Number(n).toString(16).padStart(2,'0')).join('');

@@ -1,3 +1,4 @@
+import {descriptionContent,descriptionText} from './description.js';
 export const catalogSource = 'https://store.tildaapi.com/api/getproductslist/?storepartuid=213912569062&recid=4148990801&getparts=true&getoptions=true&size=100';
 
 export function plain(value) {
@@ -17,15 +18,18 @@ export function publicCatalog(data) {
     const uid = String(product.uid);
     if (!/^\d{12}$/.test(uid) || seen.has(uid)) throw new Error('Invalid Tilda UID');
     seen.add(uid);
-    // descr excludes the shared booking/contact HTML stored in product.text.
-    const description = plain(product.descr);
-    const facts = description.split(/\n[—–-]\n|\nБудни\s*[-–—:]/i)[0];
+    // Full text is the owner's Tilda editor; descr is only a short preview.
+    const full=descriptionContent(product.text);
+    const content=full.some(segment=>segment.text.trim())?full:descriptionContent(product.descr);
+    const description=content.map(segment=>segment.text).join('');
+    const facts = (descriptionText(product.descr)||description).split(/\n[—–-]\n|\nБудни\s*[-–—:]/i)[0];
     let rawGallery;
     try { rawGallery = typeof product.gallery === 'string' ? JSON.parse(product.gallery) : product.gallery; } catch { rawGallery = []; }
     const images = [...new Set((Array.isArray(rawGallery) ? rawGallery : []).map(item => item.img).filter(value => {
       try { const url = new URL(value); return url.protocol === 'https:' && /(^|\.)tildacdn\.(com|info|net|pub)$/.test(url.hostname); } catch { return false; }
     }))].slice(0, 50);
     const videoCandidates = [...(Array.isArray(rawGallery) ? rawGallery.flatMap(item => [item.video, item.url]) : []),
+      ...(String(product.text||'').match(/https:\/\/rutube\.ru\/(?:video|play\/embed)\/[a-f0-9]{32}\/?/gi)||[]),
       ...(description.match(/https:\/\/rutube\.ru\/(?:video|play\/embed)\/[a-f0-9]{32}\/?/gi) || [])];
     const rutubeUrl = videoCandidates.find(value => {
       try { const url = new URL(value); return url.protocol === 'https:' && url.hostname === 'rutube.ru' && /^\/(?:video|play\/embed)\/[a-f0-9]{32}\/?$/i.test(url.pathname); } catch { return false; }
@@ -47,7 +51,7 @@ export function publicCatalog(data) {
     const supplement = description.match(/(?:цен[аы]|стоимость)[^\n]*?до\s*(\d+)\s*(?:чел|гост)[^\n]*?(?:далее|свыше)[^\d\n]*([\d\s]+)\s*(?:₽|руб)\s*\/\s*чел/i);
     const service = description.match(/сервисный сбор[^\n]*?[-–—:]\s*([\d\s]+)\s*(?:₽|руб)/i);
     return { productUid: uid, slug: `tilda-${uid}`, name: plain(product.title).slice(0, 120),
-      description, facts, images, amenities, rutubeUrl,
+      description, descriptionContent:content, facts, images, amenities, rutubeUrl,
       maxGuests: Number(facts.match(/вместимост[ьи]?\s*(?:до\s*)?(\d+)\s*гост/i)?.[1]) || null,
       bedrooms: Number(facts.match(/(\d+)\s*(?:спальня|спальни|спален)(?![а-яё])/i)?.[1]) || null,
       beds: Number(facts.match(/(\d+)\s*спальн[ыо][хе]\s*мест/i)?.[1]) || null,
@@ -60,17 +64,23 @@ export function publicCatalog(data) {
   return { products };
 }
 
-let cached;
 let inFlight;
 export async function loadCatalog() {
-  if (cached && cached.expires > Date.now()) return cached.value;
   if (inFlight) return inFlight;
   inFlight = (async () => {
-    const response = await fetch(catalogSource, { signal: AbortSignal.timeout(8000) });
-    if (!response.ok) throw new Error('Tilda unavailable');
-    const value = publicCatalog(await response.json());
-    cached = { value, expires: Date.now() + 60000 };
-    return value;
+    // Coalesce concurrent reads, but do not keep a process-local content cache:
+    // publishing Tilda and reloading must not require a new app deployment.
+    const products=[];let total;
+    for(let page=1;page<=5;page++){
+      const url=new URL(catalogSource);url.searchParams.set('slice',String(page));
+      const response=await fetch(url,{cache:'no-store',signal:AbortSignal.timeout(4000)});
+      if(!response.ok)throw new Error('Tilda unavailable');
+      const data=await response.json();total??=Number(data.total);
+      if(!Number.isInteger(total)||total<0||total>500||Number(data.total)!==total||!Array.isArray(data.products))throw new Error('Incomplete Tilda catalog');
+      products.push(...data.products);if(products.length===total)return publicCatalog({products,total});
+      if(!data.products.length||products.length>total)throw new Error('Incomplete Tilda catalog');
+    }
+    throw new Error('Incomplete Tilda catalog');
   })();
   try { return await inFlight; }
   finally { inFlight = null; }

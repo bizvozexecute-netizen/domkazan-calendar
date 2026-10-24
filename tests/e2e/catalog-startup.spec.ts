@@ -95,6 +95,25 @@ test('invalid CDN metadata falls back to the live catalog',async({page,context})
   await expect(page.locator('#allrecords')).toHaveClass('dkcal-ready');
 });
 
+test('a transient module failure retries in place with no duplicate initialization',async({page,context})=>{
+  await fixture(context);await context.route('**/unrelated.js',route=>route.fulfill({body:''}));let attempts=0;
+  await context.route(`${origin}/embed/domkazan-search.js*`,async route=>{attempts++;if(attempts===1)return route.abort();return route.fulfill({contentType:'application/javascript',body:await readFile('public/embed/domkazan-search.js','utf8')});});
+  await page.goto(testUrl);await expect(page.locator('.cards article')).toHaveCount(1);
+  expect(attempts).toBe(2);await expect(page.getByRole('button',{name:'Показать свободные дома',exact:true})).toHaveCount(1);
+  await expect(page.locator('#allrecords')).toHaveClass('dkcal-ready');
+});
+
+test('temporary live metadata failure recovers and updates owner description without clearing guest input',async({page,context})=>{
+  await fixture(context,testUrl+'?house='+fixtureProduct.productUid);await context.route('**/unrelated.js',route=>route.fulfill({body:''}));let attempts=0;const held=deferred();
+  await context.route(`${origin}/api/catalog`,async route=>{attempts++;if(attempts===1)return route.fulfill({status:503,json:{error:'Temporary'}});await held.promise;return route.fulfill({json:{products:[{...fixtureProduct,description:'Опубликованный владельцем текст\n\nДоплата 700 ₽'}]}});});
+  try{await page.goto(testUrl+'?house='+fixtureProduct.productUid);await expect(page.locator('.description-content')).toBeVisible();
+    await page.getByLabel('Гостей',{exact:true}).fill('7');held.release();
+    await expect(page.locator('.description-content')).toHaveText('Опубликованный владельцем текст\n\nДоплата 700 ₽');
+    await expect(page.getByLabel('Гостей',{exact:true})).toHaveValue('7');expect(attempts).toBe(2);
+    await expect(page.locator('[data-domkazan-action-for]')).toHaveCount(0);
+  }finally{held.release();}
+});
+
 test('both metadata sources failing restores the original Tilda catalog',async({page,context})=>{
   await fixture(context);const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   await context.route('**/unrelated.js',route=>route.fulfill({body:''}));

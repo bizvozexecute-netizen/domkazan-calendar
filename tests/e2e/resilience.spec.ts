@@ -147,7 +147,8 @@ test('consent, ambiguous request retry, immutable payload and stale receipt prev
   await retry.click();await expect(retry).toBeDisabled();expect(payloads).toHaveLength(2);expect(payloads[1]).toEqual(payloads[0]);
   expect(payloads[0]).not.toHaveProperty('total');expect(payloads[0]).not.toHaveProperty('status');
   await page.getByLabel('Гостей',{exact:true}).fill('4');release();
-  await expect(page.getByText(/Заявка synthetic-retry получена для прежних параметров/)).toBeVisible();
+  await expect(page.getByText('Заявка получена для прежних параметров. Для новых дат выполните поиск заново.',{exact:true})).toBeVisible();
+  await expect(page.locator('.message').first()).not.toContainText('synthetic-retry');
   await expect(page.getByRole('form',{name:'Заявка на проживание'})).toBeHidden();await expect(page.locator('[data-domkazan-action-for]')).toHaveCount(0);
 });
 

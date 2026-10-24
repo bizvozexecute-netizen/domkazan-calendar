@@ -9,6 +9,7 @@ export const TEXT_LABELS: Record<keyof ClientUi["texts"], string> = {
   videoButton: "Кнопка видео", phoneButton: "Кнопка звонка", telegramButton: "Кнопка Telegram", whatsappButton: "Кнопка WhatsApp",
   searchError: "Ошибка поиска", requestError: "Ошибка данных заявки", requestSuccess: "Заявка получена",
   occupiedMessage: "Выбранные даты заняты", unpricedMessage: "Отсутствует тариф", unavailableMessage: "Другие условия недоступности",
+  requestFollowUp: "После отправки: подтверждение и оплата",
 };
 
 export function contrast(a: string, b: string): number {
@@ -23,10 +24,10 @@ export function contrast(a: string, b: string): number {
 const color = z.string().regex(/^#[0-9a-f]{6}$/i, "Укажите цвет в формате #RRGGBB.");
 const text = (max: number) => z.string().trim().min(1).max(max)
   .refine(value => !/[<>{}\u0000-\u001f\u007f]/.test(value), "Допустим только обычный текст без HTML и управляющих символов.");
-const texts = Object.fromEntries(Object.keys(defaults.texts).map(key => [key, text(key.endsWith("Button") ? 40 : 240)])) as Record<keyof ClientUi["texts"], ReturnType<typeof text>>;
+const texts = Object.fromEntries(Object.keys(defaults.texts).map(key => [key, text(key.endsWith("Button") ? 40 : 240).default(defaults.texts[key as keyof ClientUi['texts']])])) as Record<keyof ClientUi["texts"], z.ZodDefault<ReturnType<typeof text>>>;
 export const clientUiSchema = z.strictObject({
-  colors: z.strictObject({ primary: color, text: color, background: color }).superRefine((value, ctx) => {
-    for (const key of ["primary", "text"] as const) {
+  colors: z.strictObject({ primary: color, text: color, background: color,whatsapp:color.default(defaults.colors.whatsapp),telegram:color.default(defaults.colors.telegram) }).superRefine((value, ctx) => {
+    for (const key of ["primary", "text", "whatsapp", "telegram"] as const) {
       if (contrast(value[key], "#FFFFFF") < 4.5 || contrast(value[key], value.background) < 4.5)
         ctx.addIssue({code: "custom", path: [key], message: "Контраст с белым и фоном должен быть не ниже 4.5:1."});
     }

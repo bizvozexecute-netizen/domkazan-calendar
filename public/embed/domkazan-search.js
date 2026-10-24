@@ -1,24 +1,32 @@
 /* DomKazan catalog adapter. Tilda cards remain the source of catalog content. */
 (() => {
-  const defaultUi = {"colors":{"primary":"#165BC4","text":"#172B42","background":"#F5F7FA"},"texts":{"searchTitle":"Каталог загородных домов","detailTitle":"Проверить даты и стоимость","requestTitle":"Заявка на проживание","searchButton":"Показать свободные дома","quoteButton":"Проверить стоимость","requestButton":"Оставить заявку","submitButton":"Отправить заявку","videoButton":"Смотреть видео","phoneButton":"Позвонить","telegramButton":"Telegram","whatsappButton":"WhatsApp","searchError":"Не удалось проверить доступность. Повторите поиск позже.","requestError":"Не удалось отправить заявку. Проверьте данные и повторите попытку.","requestSuccess":"Заявка получена. Владелец свяжется с вами для уточнения деталей.","occupiedMessage":"Дом занят на выбранные даты. Выберите другой период.","unpricedMessage":"На часть выбранного периода тариф ещё не установлен. Уточните стоимость у владельца.","unavailableMessage":"Дом недоступен по выбранным условиям. Измените параметры поиска."}};
+  const defaultUi = {"colors":{"primary":"#165BC4","text":"#172B42","background":"#F5F7FA","whatsapp":"#167A46","telegram":"#1765B5"},"texts":{"searchTitle":"Каталог загородных домов","detailTitle":"Проверить даты и стоимость","requestTitle":"Заявка на проживание","searchButton":"Показать свободные дома","quoteButton":"Проверить стоимость","requestButton":"Оставить заявку","submitButton":"Отправить заявку","videoButton":"Смотреть видео","phoneButton":"Позвонить","telegramButton":"Telegram","whatsappButton":"WhatsApp","searchError":"Не удалось проверить доступность. Повторите поиск позже.","requestError":"Не удалось отправить заявку. Проверьте данные и повторите попытку.","requestSuccess":"Заявка получена","requestFollowUp":"Для подтверждения бронирования и оплаты","occupiedMessage":"Дом занят на выбранные даты. Выберите другой период.","unpricedMessage":"На часть выбранного периода тариф ещё не установлен. Уточните стоимость у владельца.","unavailableMessage":"Дом недоступен по выбранным условиям. Измените параметры поиска."}};
   function uiSettings(value) {
     const result=JSON.parse(JSON.stringify(defaultUi));
     const lum=hex=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);
     const ratio=(a,b)=>(Math.max(lum(a),lum(b))+.05)/(Math.min(lum(a),lum(b))+.05);
     const colors=value?.colors;
-    if(colors&&['primary','text','background'].every(key=>/^#[0-9a-f]{6}$/i.test(colors[key]||''))&&['primary','text'].every(key=>ratio(colors[key],'#FFFFFF')>=4.5&&ratio(colors[key],colors.background)>=4.5)&&ratio(colors.background,'#586B80')>=4.5)result.colors={primary:colors.primary,text:colors.text,background:colors.background};
+    if(colors&&['primary','text','background'].every(key=>/^#[0-9a-f]{6}$/i.test(colors[key]||''))&&['primary','text'].every(key=>ratio(colors[key],'#FFFFFF')>=4.5&&ratio(colors[key],colors.background)>=4.5)&&ratio(colors.background,'#586B80')>=4.5)result.colors={...result.colors,primary:colors.primary,text:colors.text,background:colors.background};
+    for(const key of ['whatsapp','telegram'])if(/^#[0-9a-f]{6}$/i.test(colors?.[key]||'')&&ratio(colors[key],'#FFFFFF')>=4.5&&ratio(colors[key],result.colors.background)>=4.5)result.colors[key]=colors[key];
     for(const key of Object.keys(result.texts)){const text=value?.texts?.[key];if(typeof text==='string'&&text.trim()&&text.length<=(key.endsWith('Button')?40:240)&&!/[<>{}\u0000-\u001f\u007f]/.test(text))result.texts[key]=text.trim();}
-    return result;
+    result.contacts=safeContacts(value?.contacts);return result;
   }
+  function safeContacts(value){return {
+    phone:typeof value?.phone==='string'&&/^tel:\+?\d{10,15}$/.test(value.phone)?value.phone:null,
+    whatsapp:typeof value?.whatsapp==='string'&&/^https:\/\/wa\.me\/(?:\d{10,15}|message\/[A-Za-z0-9]+)\/?$/.test(value.whatsapp)?value.whatsapp:null,
+    telegram:typeof value?.telegram==='string'&&/^https:\/\/t\.me\/[A-Za-z][A-Za-z0-9_]{4,31}\/?$/.test(value.telegram)?value.telegram:null,
+  };}
   function applyUi(root,value) {
     const ui=uiSettings(value);
-    for(const [key,css] of [['primary','--dk-accent'],['text','--dk-ink'],['background','--dk-background']])root.style.setProperty(css,ui.colors[key]);
+    for(const [key,css] of [['primary','--dk-accent'],['text','--dk-ink'],['background','--dk-background'],['whatsapp','--dk-whatsapp'],['telegram','--dk-telegram']])root.style.setProperty(css,ui.colors[key]);
     return ui;
   }
   const actionStyles = `
     .dk-primary,.dk-secondary,.contacts a.dk-secondary{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:11px 18px;border:2px solid var(--dk-accent);border-radius:10px;font:650 14px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;text-align:center;text-decoration:none;cursor:pointer;touch-action:manipulation;overflow-wrap:anywhere}
     .dk-primary,.gallery-heading button.dk-primary{background:var(--dk-accent);color:#fff;border-color:var(--dk-accent);font-size:14px;min-height:48px;border-radius:10px}
     .dk-secondary,.contacts a.dk-secondary{background:#fff;color:var(--dk-accent);border-color:var(--dk-accent)}
+    .contacts a.dk-secondary.dk-whatsapp,.contacts a.dk-secondary.dk-whatsapp:hover{background:var(--dk-whatsapp);border-color:var(--dk-whatsapp);color:#fff}
+    .contacts a.dk-secondary.dk-telegram,.contacts a.dk-secondary.dk-telegram:hover{background:var(--dk-telegram);border-color:var(--dk-telegram);color:#fff}
     .dk-primary:hover:not(:disabled){background:var(--dk-accent);color:#fff;border-color:var(--dk-accent);box-shadow:0 3px 10px #172b4233}.dk-secondary:hover,.contacts a.dk-secondary:hover{background:#fff;box-shadow:0 2px 8px #172b4220}
     button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid var(--dk-accent);outline-offset:3px}
     .dk-primary:disabled,.dk-secondary:disabled{cursor:not-allowed;opacity:.65}
@@ -330,7 +338,7 @@
     requestMessage.setAttribute("role", "status"); requestForm.append(requestMessage);
     const contacts = document.createElement("div"); contacts.className = "contacts"; contacts.hidden = true;
     const receipt = document.createElement("section"); receipt.hidden = true; receipt.className = "receipt"; receipt.setAttribute("role", "status");
-    const receiptText = document.createElement("p"); receipt.append(receiptText, contacts);
+    const receiptText = document.createElement("div"); receipt.append(receiptText, contacts);
     shadow.append(style, form, message, ...(resultElement?[resultElement]:[]), requestForm, receipt);
     let selectedHouse = null;
     let submissionKey = null;
@@ -441,25 +449,34 @@
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Заявку не удалось отправить.");
         if (destroyed)return;
-        if (!isCurrent(snapshot)){message.textContent=`Заявка ${data.requestId} получена для прежних параметров. Для новых дат выполните поиск заново.`;return;}
+        if (!isCurrent(snapshot)){message.textContent='Заявка получена для прежних параметров. Для новых дат выполните поиск заново.';return;}
         // Retain the filled, read-only form: replacing it with a short receipt
         // would shrink the document and jump the mobile viewport upward.
         requestForm.dataset.submitted='true';
         for(const card of cards)if(card.slug===house.slug&&card.action){const action=card.action.querySelector('button');action.disabled=true;action.textContent='Заявка отправлена';action.setAttribute('aria-label',`Заявка отправлена: ${house.name}`);}
         for (const input of requestForm.querySelectorAll('input,select,textarea')) input.disabled=true;
-        send.hidden=true; requestMessage.hidden=true; heading.textContent='Заявка отправлена';
+        send.hidden=true; requestMessage.hidden=true; heading.textContent=copy.requestSuccess;
         requestForm.append(receipt);
         selectedHouse = null; submissionKey = null; retryPayload = null;
         const serverTotal=/^\d+(?:\.\d{1,2})?$/.test(String(data.total))&&Number.isFinite(Number(data.total))?String(data.total):null;
         if(serverTotal!==null)summary.lastElementChild.querySelector('dd').textContent=`${money(serverTotal)} ₽`;
         const priceNotice=serverTotal===null?'':`${Number(serverTotal)!==Number(house.quote.total)?'Цена обновилась. ':''}Стоимость заявки по актуальным тарифам: ${money(serverTotal)} ₽. `;
-        receiptText.textContent = `Заявка ${data.requestId}: ${house.name}, ${dateLabel(snapshot.checkIn)} — ${dateLabel(snapshot.checkOut)}. ${priceNotice}${copy.requestSuccess} Отправка заявки не подтверждает бронь.`;
+        receiptText.replaceChildren();
+        for(const line of [house.name,`Заезд: ${dateLabel(snapshot.checkIn)}`,`Выезд: ${dateLabel(snapshot.checkOut)}`,serverTotal===null?'Стоимость уточнит владелец':`Стоимость: ${money(serverTotal)} ₽`]){
+          const row=document.createElement('span');row.style.display='block';row.textContent=line;receiptText.append(row);
+        }
+        const owner=safeContacts(data.contacts||ownerContacts||ui.contacts);
+        const followUp=document.createElement('p');followUp.style.marginTop='16px';followUp.textContent=copy.requestFollowUp;
+        const methods=[];if(owner.phone)methods.push(`позвоните по номеру ${owner.phone.slice(4)}`);if(owner.whatsapp||owner.telegram)methods.push(`напишите в ${[owner.whatsapp&&'WhatsApp',owner.telegram&&'Telegram'].filter(Boolean).join(' / ')}`);
+        followUp.append(document.createTextNode(methods.length?` ${methods.join(' или ')}.`:' свяжитесь с владельцем.'));
+        receiptText.append(followUp);
+        if(priceNotice.startsWith('Цена обновилась.')){const updated=document.createElement('p');updated.textContent='Цена обновилась.';receiptText.append(updated);}
+        const manual=document.createElement('p');manual.textContent='Отправка заявки не подтверждает бронь.';receiptText.append(manual);
         receipt.hidden = false;
         contacts.replaceChildren();
-        for (const [name, title, prefix] of [["phone", "Позвонить", "tel:"], ["telegram", "Telegram", "https://t.me/"], ["whatsapp", "WhatsApp", "https://wa.me/"]]) {
-          const href = data.contacts?.[name] || ownerContacts?.[name];
-          if (typeof href !== "string" || !href.startsWith(prefix)) continue;
-          const link = document.createElement("a"); link.href = href; link.textContent = copy[`${name}Button`] || title;link.className="dk-secondary";
+        for (const name of ['phone','whatsapp','telegram']) {
+          const href=owner[name];if(!href)continue;
+          const link = document.createElement("a"); link.href = href; link.textContent = copy[`${name}Button`];link.className=`dk-secondary dk-${name}`;
           link.target = name === "phone" ? "" : "_blank"; link.rel = "noopener noreferrer"; contacts.append(link);
         }
         contacts.hidden = contacts.childElementCount === 0;
@@ -618,7 +635,7 @@
     return controller;
   }
 
-  window.DomKazanCalendar = { defaultUi, uiSettings, applyUi, actionStyles, mount };
+  window.DomKazanCalendar = { defaultUi, uiSettings, safeContacts, applyUi, actionStyles, mount };
   function autoMount() {
     document.querySelectorAll("[data-domkazan-search]").forEach((root) => {
       const apiUrl = root.getAttribute("data-api-url");

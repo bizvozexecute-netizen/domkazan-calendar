@@ -94,16 +94,12 @@ test('structured description, current quote and request explain the stay without
   await expect(page.getByText('Дом свободен на выбранные даты.', { exact: true })).toBeVisible();
   await expect(page.locator('.booking-quote .price')).toHaveText(/13\s500 ₽ за 2 ноч\./);
   const copy = page.locator('.house-copy');
-  await expect(copy.getByRole('heading', { name: 'Пространство и удобства', exact: true })).toBeVisible();
-  await expect(copy.locator('.rules')).toContainText('С животными нельзя');
-  await expect(copy).not.toContainText('Будни - 5 000₽');
-  await expect(copy).not.toContainText('Суббота - 9 000₽');
-  await expect(copy.getByText('Баня оплачивается отдельно 1000₽', { exact: true })).toBeHidden();
-  await copy.locator('summary').focus(); await page.keyboard.press('Enter');
-  await expect(copy.getByText('Баня оплачивается отдельно 1000₽', { exact: true })).toBeVisible();
+  await expect(copy.getByRole('heading', { name: 'Описание дома', exact: true })).toBeVisible();
+  await expect(copy.locator('.description-content')).toHaveText(product.description);
+  await expect(copy.locator('h3,details')).toHaveCount(0);
+  await expect(copy.locator('.description-content')).toBeVisible();
   await expect(copy).toContainText('Свяжитесь с владельцем за специальным тарифом в будни 6000₽');
   await expect(page.locator('.quote-lines')).toHaveText(/Проживание10\s000 ₽Дополнительные гости3\s000 ₽Сервисный сбор500 ₽/);
-  await expect(copy).toContainText('Отправка заявки не закрепляет даты');
   await expect(page.locator('.gallery .photo-button img')).toHaveClass('loaded');
   const stage = await page.locator('.photo-button').boundingBox();
   expect(stage!.height / stage!.width).toBeLessThanOrEqual(0.76);
@@ -176,10 +172,8 @@ test('public Tilda content fits catalog and house on every viewport', async ({ p
       await thumb.evaluate((img: HTMLImageElement) => img.decode());
     }
   }
-  await expect(page.locator('.house-copy .rules')).toContainText('возраст от 20 лет');
-  await expect(page.locator('.house-copy')).not.toContainText('Будни -');
-  await page.locator('.extra-conditions summary').click();
-  await expect(page.getByText('Баня оплачивается отдельно 1000₽', { exact: true })).toBeVisible();
+  await expect(page.locator('.house-copy .description-content')).toHaveText(products[0].description);
+  await expect(page.locator('.house-copy h3,.house-copy details')).toHaveCount(0);
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
   await page.screenshot({ path: testInfo.outputPath('house-polished.png'), fullPage: true });
   await page.getByRole('button', { name: 'Увеличить фото', exact: true }).click();

@@ -74,6 +74,9 @@ test("widget submits selected house without trusting a browser price and shows o
   assert.match(shadow.querySelector('.summary div:last-child dd').textContent,/13\s500 ₽/);
   assert.match(shadow.querySelector('.receipt').textContent,/Цена обновилась/);
   assert.match(shadow.querySelector('.receipt').textContent,/13\s500 ₽/);
+  assert.doesNotMatch(shadow.querySelector('.receipt').textContent,/request-1/);
+  assert.match(shadow.querySelector('.receipt').textContent,/Заезд: \d{2}\.\d{2}\.\d{4}/);
+  assert.match(shadow.querySelector('.receipt').textContent,/Стоимость: 13\s500 ₽/);
 });
 
 function fixture(fetch, getFilters) {
