@@ -134,7 +134,7 @@
 }
 @media(max-width:360px) {
   .admin-main:has(.calendar-card) { padding-inline:4px; }
-  .calendar-card[data-density=compact] .calendar-grid-scroll { --calendar-house-width:48px; --calendar-min-date:30px; }
+  .calendar-card[data-density=compact] .calendar-grid-scroll { --calendar-house-width:40px; --calendar-min-date:30px; }
   .calendar-card[data-density=compact] .calendar-table,.calendar-card[data-density=compact] .calendar-price { font-size:9.5px; }
 }
 
