@@ -1,12 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
+import { attachCalendarAxisLock } from "@/lib/calendar-axis-lock";
 import type { CalendarBoardData } from "@/lib/calendar-board";
 import { dateKey, parseDateOnly, todayInMoscow } from "@/lib/dates";
 
 type Selection = { houseId: string; start: string; end: string; complete: boolean };
 type Action = "close" | "open" | "setPrice" | "clearPrice";
+type Density = "compact" | "comfortable";
+const densityKey = "domkazan.calendar-density.v1";
+function readDensity(): Density {
+  try { return window.localStorage.getItem(densityKey) === "comfortable" ? "comfortable" : "compact"; } catch { return "compact"; }
+}
+function subscribeDensity(listener: () => void) {
+  window.addEventListener("storage", listener);
+  return () => window.removeEventListener("storage", listener);
+}
+const defaultDensity = (): Density => "compact";
 const weekdays = ["вс", "пн", "вт", "ср", "чт", "пт", "сб"];
 const today = () => dateKey(todayInMoscow());
 const nextDay = (day: string) => new Date(new Date(`${day}T00:00:00Z`).getTime() + 86_400_000).toISOString().slice(0, 10);
@@ -33,6 +44,26 @@ async function responseJson(response: Response) {
   return data;
 }
 
+const CalendarRow = memo(function CalendarRow({ house, selection, compact, onSelect, onInspect }: {
+  house: CalendarBoardData["houses"][number]; selection: Selection | null; compact: boolean;
+  onSelect: (houseId: string, day: string, button: HTMLButtonElement) => void;
+  onInspect: (house: CalendarBoardData["houses"][number]) => void;
+}) {
+  return <tr><th scope="row" className="calendar-house-cell sticky left-0 z-10 border-b border-r bg-white align-middle">
+    <button type="button" className="calendar-house-name" title={house.name} aria-label={`Полное название: ${house.name}`} onClick={() => onInspect(house)}>{house.calendarName || house.name}</button>
+    {!house.isActive && <span className="calendar-inactive">Отключён</span>}
+  </th>{house.cells.map(cell => {
+    const selected = Boolean(selection && cell.date >= selection.start && cell.date <= selection.end);
+    const status = cell.status === "booked" ? "Заявка подтверждена" : cell.status === "closed" ? "Закрыто" : "Свободно";
+    const description = `${house.name}, ${cell.date}, ${status}, ${cell.price ? `${cell.price} рублей` : "цена не задана"}${cell.source === "manual" ? ", ручная цена" : ""}`;
+    return <td key={cell.date} className="border-b border-r p-0"><button type="button" title={description} aria-pressed={selected} aria-label={description}
+      onClick={event => onSelect(house.id, cell.date, event.currentTarget)}
+      className={`calendar-price focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-emerald-900 ${cell.status === "booked" || cell.status === "closed" ? "bg-blue-600 text-white" : "bg-white text-slate-800"}`}>
+      {cell.price ? Number(cell.price).toLocaleString("ru-RU", { useGrouping: !compact }) : "—"}
+    </button></td>;
+  })}</tr>;
+});
+
 export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFrom = "", initialTo = "" }: {
   initialMonth?: string; initialHouse?: string; initialFrom?: string; initialTo?: string;
 }) {
@@ -45,6 +76,14 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
       end: end && end > start ? new Date(end.getTime() - 86_400_000).toISOString().slice(0, 10) : initialFrom,
       complete: true } : null;
   });
+  const savedDensity = useSyncExternalStore(subscribeDensity, readDensity, defaultDensity);
+  const [densityChoice, setDensity] = useState<Density | null>(null);
+  const density = densityChoice ?? savedDensity;
+  const [inspectedHouse, setInspectedHouse] = useState<CalendarBoardData["houses"][number] | null>(null);
+  const houseDialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    if (inspectedHouse && houseDialog.current && !houseDialog.current.open) houseDialog.current.showModal();
+  }, [inspectedHouse]);
   const [price, setPrice] = useState("");
   const [houseSearch, setHouseSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -52,6 +91,7 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState<{ action: Action; houseId: string; revision: number; start: string; end: string; price: string; label: string } | null>(null);
   const scrollRegion = useRef<HTMLDivElement>(null);
+  useEffect(() => scrollRegion.current ? attachCalendarAxisLock(scrollRegion.current) : undefined, []);
   const scrollToToday = useRef(false);
   const initialScrollDone = useRef(false);
   const restorePosition = useRef<{ left: number; top: number } | null>(null);
@@ -112,7 +152,7 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
     } else changeMonth(currentMonth);
   }
 
-  function selectCell(houseId: string, day: string, button: HTMLButtonElement) {
+  const selectCell = useCallback((houseId: string, day: string, button: HTMLButtonElement) => {
     actionsTrigger.current=button;
     const box = button.getBoundingClientRect();
     setPanel({ left: Math.max(16, Math.min(box.left, window.innerWidth - 736)), top: Math.max(16, Math.min(box.bottom + 8, window.innerHeight - 340)) });
@@ -121,7 +161,7 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
       : { houseId, start: current.start < day ? current.start : day,
         end: current.start > day ? current.start : day, complete: true });
     setMessage("");
-  }
+  }, []);
 
   function apply(action: Action) {
     if (!selection || !board) return;
@@ -160,6 +200,11 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
   const actionsOpen=Boolean(selection||manualOpen);
   function closeActions(){setSelection(null);setManualOpen(false);setPending(null);actionsTrigger.current?.focus({preventScroll:true});}
   const visibleHouses = board?.houses.filter(house => `${house.name} ${house.calendarName || ""}`.toLocaleLowerCase("ru").includes(houseSearch.trim().toLocaleLowerCase("ru"))) ?? [];
+  const priceChars = useMemo(() => Math.max(5, ...(board?.houses.flatMap(house => house.cells.map(cell => cell.price ? Number(cell.price).toLocaleString("ru-RU", { useGrouping: density !== "compact" }).length : 1)) ?? [])), [board, density]);
+  function changeDensity(value: "compact" | "comfortable") {
+    setDensity(value);
+    try { window.localStorage.setItem(densityKey, value); } catch { /* Usable without persistent storage. */ }
+  }
   const buttonStyle = "rounded-lg border px-3 py-2 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800";
   return <section className="space-y-6">
     <div className="calendar-heading">
@@ -203,25 +248,32 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
       </div>}
     </div>
 
-    <div className="calendar-card">
+    <div className="calendar-card" data-density={density}>
+      <div className="calendar-density" role="group" aria-label="Плотность шахматки">
+        <span>Вид:</span>{([['compact','Компактный'],['comfortable','Обычный']] as const).map(([value,label]) => <button key={value} type="button" aria-pressed={density===value} onClick={() => changeDensity(value)}>{label}</button>)}
+        <span className="calendar-density-help">Нажмите название дома, чтобы увидеть его полностью.</span>
+      </div>
       <div className="calendar-card-header"><label className="block font-medium">Найти дом в шахматке<input type="search" placeholder="Название дома" value={houseSearch} onChange={event => setHouseSearch(event.target.value)} className="w-full rounded-lg border px-3 py-2" /></label><p>{visibleHouses.length} домов · цены за ночь</p></div>
-    <div ref={scrollRegion} className="calendar-grid-scroll" aria-busy={loading}>
+    <div ref={scrollRegion} className="calendar-grid-scroll" role="region" aria-label="Цены и занятость домов" tabIndex={0} aria-busy={loading} style={{"--calendar-days":board?.dates.length ?? 31,"--calendar-price-ch":priceChars} as CSSProperties}>
       {loading && <p className="p-4">Загружаем календарь…</p>}
       {!loading && board?.houses.length === 0 && <p className="p-6">Домов пока нет. <Link className="underline" href="/admin/houses/new">Добавьте первый дом</Link>.</p>}
-      {!loading && board && board.houses.length > 0 && <table className="border-separate border-spacing-0 text-left text-sm">
+      {!loading && board && board.houses.length > 0 && <table className="calendar-table border-separate border-spacing-0 text-left text-sm">
         <caption className="sr-only">Занятость и цены домов за {month}</caption>
-        <thead><tr><th scope="col" className="sticky top-0 left-0 z-30 min-w-28 max-w-40 border-b border-r bg-slate-100 px-2 py-1 font-normal sm:min-w-40">Дом</th>{board.dates.map((day) => {
+        <colgroup><col className="calendar-house-col"/>{board.dates.map(day=><col key={day}/>)}</colgroup>
+        <thead><tr><th scope="col" className="calendar-house-cell sticky top-0 left-0 z-30 border-b border-r bg-slate-100 font-normal">Дом</th>{board.dates.map((day) => {
           const weekDay = new Date(`${day}T00:00:00Z`).getUTCDay();
-          return <th scope="col" key={day} data-calendar-date={day} data-today={day===today()?"":undefined} className={`sticky top-0 z-20 min-w-[72px] border-b border-r px-1 py-2 text-center text-xs font-normal ${weekDay === 0 || weekDay === 6 ? "bg-slate-200" : "bg-slate-50"}`}><span className="block">{day.slice(8)}</span><span className="text-slate-600">{weekdays[weekDay]}</span></th>;
+          return <th scope="col" key={day} data-calendar-date={day} data-today={day===today()?"":undefined} data-weekend={weekDay === 5 || weekDay === 6 ? "" : undefined} className="calendar-day sticky top-0 z-20 border-b border-r text-center font-normal"><span className="block">{day.slice(8)}</span><span className="text-slate-600">{weekdays[weekDay]}</span></th>;
         })}</tr></thead>
-        <tbody>{visibleHouses.map((house) => <tr key={house.id}><th scope="row" className="sticky left-0 z-10 max-w-40 border-b border-r bg-white px-2 py-1 align-middle"><Link title={house.name} className="block max-w-36 truncate text-xs font-normal text-emerald-900 underline" href={`/admin/houses/${house.id}`}>{house.calendarName || house.name}</Link>{!house.isActive && <span className="block text-xs font-normal text-slate-500">Отключён</span>}</th>{house.cells.map((cell) => {
-          const selected = selection?.houseId === house.id && cell.date >= selection.start && cell.date <= selection.end;
-          const status = cell.status === "booked" ? "Заявка подтверждена" : cell.status === "closed" ? "Закрыто" : "Свободно";
-          const description = `${house.name}, ${cell.date}, ${status}, ${cell.price ? `${cell.price} рублей` : "цена не задана"}${cell.source === "manual" ? ", ручная цена" : ""}`;
-          return <td key={cell.date} className="border-b border-r p-0"><button type="button" title={description} aria-pressed={selected} aria-label={description} onClick={(event) => selectCell(house.id, cell.date, event.currentTarget)} className={`min-h-10 w-full whitespace-nowrap px-1 py-2 text-center text-xs font-normal focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-emerald-900 ${selected ? "ring-2 ring-inset ring-emerald-900" : ""} ${cell.status === "booked" || cell.status === "closed" ? "bg-blue-600 text-white" : "bg-white text-slate-800"}`}>{cell.price ? Number(cell.price).toLocaleString("ru-RU") : "—"}</button></td>;
-        })}</tr>)}</tbody>
+        <tbody>{visibleHouses.map(house => <CalendarRow key={house.id} house={house} compact={density === "compact"}
+          selection={selection?.houseId === house.id ? selection : null} onSelect={selectCell} onInspect={setInspectedHouse}/>)}</tbody>
       </table>}
     </div>
     </div>
+    <dialog ref={houseDialog} aria-labelledby="calendar-house-title" onClose={() => setInspectedHouse(null)} className="calendar-house-dialog">
+      <h2 id="calendar-house-title">{inspectedHouse?.name}</h2>
+      <p>{inspectedHouse?.calendarName}</p>
+      <div><button type="button" onClick={() => houseDialog.current?.close()}>Закрыть название</button>
+      {inspectedHouse && <Link href={`/admin/houses/${inspectedHouse.id}`}>Редактировать дом</Link>}</div>
+    </dialog>
   </section>;
 }

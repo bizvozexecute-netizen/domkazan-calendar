@@ -7,6 +7,7 @@ export const runtime = "nodejs";
 export async function GET(request: NextRequest) {
   const headers = {"Cache-Control": "no-store", Vary: "Origin",
     ...(process.env.TILDA_ORIGIN && request.headers.get("origin") === process.env.TILDA_ORIGIN ? {"Access-Control-Allow-Origin": process.env.TILDA_ORIGIN} : {})};
-  try { return NextResponse.json({...((await readClientUi()).settings),contacts:contactOptions()}, {headers}); }
-  catch { return NextResponse.json({...CLIENT_UI_DEFAULTS,contacts:contactOptions()}, {headers}); }
+  const testEnvironment = process.env.TEST_CATALOG_ENABLED === "true" || process.env.VERCEL_ENV === "preview";
+  try { return NextResponse.json({...((await readClientUi()).settings),contacts:contactOptions(),testEnvironment}, {headers}); }
+  catch { return NextResponse.json({...CLIENT_UI_DEFAULTS,contacts:contactOptions(),testEnvironment}, {headers}); }
 }

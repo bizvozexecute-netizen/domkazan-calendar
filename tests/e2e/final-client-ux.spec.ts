@@ -4,6 +4,26 @@ import {CLIENT_UI_DEFAULTS,contrast} from '../../src/lib/client-ui';
 
 test.beforeEach(async({context})=>journeyFixture(context));
 
+test('phone actions are black with white text, distinct pressed/focus states and intact tel links',async({page})=>{
+  await openFixtureHouse(page);
+  const phones=page.locator('a[href="tel:+70000000000"]');
+  await expect(phones.first()).toBeVisible();
+  for(const phone of await phones.all()){
+    await expect(phone).toHaveCSS('background-color','rgb(0, 0, 0)');
+    await expect(phone).toHaveCSS('color','rgb(255, 255, 255)');
+    expect((await phone.boundingBox())!.height).toBeGreaterThanOrEqual(48);
+    await phone.focus();await page.keyboard.press('Tab');await page.keyboard.press('Shift+Tab');
+    await expect(phone).toBeFocused();await expect(phone).toHaveCSS('outline-style','solid');
+    await expect(phone).toHaveCSS('outline-width','3px');
+    const box=(await phone.boundingBox())!;
+    await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();
+    await expect(phone).toHaveCSS('background-color','rgb(38, 38, 38)');
+    // Release away from the link: checking styles must not place a call.
+    await page.mouse.move(0,0);await page.mouse.up();
+    await expect(phone).toHaveAttribute('href','tel:+70000000000');
+  }
+});
+
 test('a slow settings response keeps configured owner contact actions',async({page,context})=>{
   await context.route(`${fixtureOrigin}/api/client-settings`,async route=>{
     // A normal cold start must not silently remove all contact buttons.

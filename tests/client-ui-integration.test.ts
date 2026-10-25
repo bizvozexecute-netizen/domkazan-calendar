@@ -27,19 +27,33 @@ test('settings migration, admin access, public read, validation and concurrent s
     assert.equal((await saveAdmin(req('PUT',{revision:0,settings:CLIENT_UI_DEFAULTS}))).status,401);
     assert.equal((await saveAdmin(req('PUT',{revision:0,settings:CLIENT_UI_DEFAULTS},token,'https://evil.invalid'))).status,403);
     const defaults=await readPublic(new NextRequest('http://localhost:3000/api/client-settings'));
-    assert.deepEqual(await defaults.json(),{...CLIENT_UI_DEFAULTS,contacts:{phone:null,telegram:null,whatsapp:null}});
+    assert.deepEqual(await defaults.json(),{...CLIENT_UI_DEFAULTS,contacts:{phone:null,telegram:null,whatsapp:null},testEnvironment:process.env.TEST_CATALOG_ENABLED==='true'||process.env.VERCEL_ENV==='preview'});
     const settings=structuredClone(CLIENT_UI_DEFAULTS);settings.texts.videoButton='Видео дома';settings.colors.primary='#164C9A';
     const results=await Promise.all([saveAdmin(req('PUT',{revision:0,settings},token)),saveAdmin(req('PUT',{revision:0,settings},token))]);
     assert.deepEqual(results.map(r=>r.status).sort(),[200,409]);
     const publicResponse=await readPublic(new NextRequest('http://localhost:3000/api/client-settings',{headers:{origin:process.env.TILDA_ORIGIN!}}));
     assert.equal(publicResponse.headers.get('access-control-allow-origin'),process.env.TILDA_ORIGIN);
-    assert.deepEqual(await publicResponse.json(),{...settings,contacts:{phone:null,telegram:null,whatsapp:null}});
+    assert.deepEqual(await publicResponse.json(),{...settings,contacts:{phone:null,telegram:null,whatsapp:null},testEnvironment:process.env.TEST_CATALOG_ENABLED==='true'||process.env.VERCEL_ENV==='preview'});
     const admin=await(await readAdmin(req('GET',undefined,token))).json();assert.equal(admin.revision,1);
     assert.equal((await saveAdmin(req('PUT',{revision:1,settings:{...settings,texts:{...settings.texts,videoButton:'<script>alert(1)</script>'}}},token))).status,400);
     assert.equal((await saveAdmin(req('PUT',{revision:1,settings:{...settings,colors:{...settings.colors,primary:'#FFFFFF'}}},token))).status,400);
     assert.equal((await saveAdmin(req('PUT',{revision:1,settings},token))).status,200);
     assert.equal((await saveAdmin(req('PUT',{revision:1,settings},token))).status,409);
   }finally{await revokeAdminSession(token);await db.clientUiSettings.deleteMany();}
+});
+
+test('public environment marker is server controlled and never disables a test Preview',async()=>{
+  const previous={test:process.env.TEST_CATALOG_ENABLED,vercel:process.env.VERCEL_ENV};
+  try{
+    for(const [testFlag,vercel,expected] of [['true','production',true],['false','preview',true],['false','production',false]] as const){
+      process.env.TEST_CATALOG_ENABLED=testFlag;process.env.VERCEL_ENV=vercel;
+      const response=await readPublic(new NextRequest('http://localhost:3000/api/client-settings?testEnvironment=false'));
+      assert.equal((await response.json()).testEnvironment,expected);
+    }
+  }finally{
+    if(previous.test===undefined)delete process.env.TEST_CATALOG_ENABLED;else process.env.TEST_CATALOG_ENABLED=previous.test;
+    if(previous.vercel===undefined)delete process.env.VERCEL_ENV;else process.env.VERCEL_ENV=previous.vercel;
+  }
 });
 
 test('specific house availability distinguishes capacity, occupation, missing price and minimum nights',async()=>{
