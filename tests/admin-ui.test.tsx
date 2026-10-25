@@ -4,6 +4,19 @@ import { JSDOM } from "jsdom";
 import { createElement, act } from "react";
 import { dateKey, todayInMoscow } from "../src/lib/dates.ts";
 import { attachCalendarAxisLock } from "../src/lib/calendar-axis-lock.ts";
+import { matchesHouseSearch } from "../src/lib/house-search.ts";
+
+test("house search handles mobile spaces, ё, punctuation, joined numbers and calendar aliases", () => {
+  assert.ok(matchesHouseSearch("  ЩЕРБАКОВКА\u202f3  ", "Щербаковка 3"));
+  assert.ok(matchesHouseSearch("чистое озеро", "Чистое озёро"));
+  assert.ok(matchesHouseSearch("Мирный2", "Мирный 2"));
+  assert.ok(matchesHouseSearch("2 мирный", "Мирный 2"));
+  assert.ok(matchesHouseSearch("Слобода № 1", "Суконная Слобода 1"));
+  assert.ok(matchesHouseSearch("КЗ1", "Дом у озера", "КЗ 1"));
+  assert.ok(matchesHouseSearch("", "Дом"));
+  assert.equal(matchesHouseSearch("Мирный3", "Мирный 2"), false);
+  assert.equal(matchesHouseSearch("Мирный", "Щербаковка 3"), false);
+});
 
 test("native touch scroll locks the initial axis, keeps inertia and releases for wheel/pinch", () => {
   const dom = new JSDOM('<div id="scroll"></div>');

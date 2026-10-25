@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
+import { memo, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
+import { matchesHouseSearch } from "@/lib/house-search";
 import { attachCalendarAxisLock } from "@/lib/calendar-axis-lock";
 import type { CalendarBoardData } from "@/lib/calendar-board";
 import { dateKey, parseDateOnly, todayInMoscow } from "@/lib/dates";
@@ -29,6 +30,8 @@ const mobileServerSnapshot = () => true;
 const weekdays = ["вс", "пн", "вт", "ср", "чт", "пт", "сб"];
 const today = () => dateKey(todayInMoscow());
 const nextDay = (day: string) => new Date(new Date(`${day}T00:00:00Z`).getTime() + 86_400_000).toISOString().slice(0, 10);
+const compactPrice = new Intl.NumberFormat("ru-RU", { useGrouping: false });
+const regularPrice = new Intl.NumberFormat("ru-RU");
 
 function shiftedMonth(month: string, delta: number) {
   const [year, number] = month.split("-").map(Number);
@@ -67,7 +70,7 @@ const CalendarRow = memo(function CalendarRow({ house, selection, compact, onSel
     return <td key={cell.date} className="border-b border-r p-0"><button type="button" title={description} aria-pressed={selected} aria-label={description}
       onClick={event => onSelect(house.id, cell.date, event.currentTarget)}
       className={`calendar-price focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-emerald-900 ${cell.status === "booked" || cell.status === "closed" ? "bg-blue-600 text-white" : "bg-white text-slate-800"}`}>
-      {cell.price ? Number(cell.price).toLocaleString("ru-RU", { useGrouping: !compact }) : "—"}
+      {cell.price ? (compact ? compactPrice : regularPrice).format(Number(cell.price)) : "—"}
     </button></td>;
   })}</tr>;
 });
@@ -100,11 +103,13 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
   }, [inspectedHouse]);
   const [price, setPrice] = useState("");
   const [houseSearch, setHouseSearch] = useState("");
+  const deferredSearch = useDeferredValue(houseSearch);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState<{ action: Action; houseId: string; revision: number; start: string; end: string; price: string; label: string } | null>(null);
   const scrollRegion = useRef<HTMLDivElement>(null);
+  const houseSearchInput = useRef<HTMLInputElement>(null);
   useEffect(() => scrollRegion.current ? attachCalendarAxisLock(scrollRegion.current) : undefined, []);
   const scrollToToday = useRef(false);
   const initialScrollDone = useRef(false);
@@ -213,8 +218,13 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
   const selectedHouse = board?.houses.find((house) => house.id === selection?.houseId);
   const actionsOpen=Boolean(selection||manualOpen);
   function closeActions(){setSelection(null);setManualOpen(false);setPending(null);actionsTrigger.current?.focus({preventScroll:true});}
-  const visibleHouses = board?.houses.filter(house => `${house.name} ${house.calendarName || ""}`.toLocaleLowerCase("ru").includes(houseSearch.trim().toLocaleLowerCase("ru"))) ?? [];
-  const priceChars = useMemo(() => Math.max(5, ...(board?.houses.flatMap(house => house.cells.map(cell => cell.price ? Number(cell.price).toLocaleString("ru-RU", { useGrouping: density !== "compact" }).length : 1)) ?? [])), [board, density]);
+  const visibleHouses = useMemo(() => board?.houses.filter(house => matchesHouseSearch(deferredSearch, house.name, house.calendarName)) ?? [], [board, deferredSearch]);
+  useLayoutEffect(() => {
+    // A match must be visible even when the previous result was scrolled down.
+    if (scrollRegion.current) scrollRegion.current.scrollTop = 0;
+  }, [deferredSearch]);
+  const priceChars = useMemo(() => Math.max(5, ...(board?.houses.flatMap(house => house.cells.map(cell => cell.price ? (density === "compact" ? compactPrice : regularPrice).format(Number(cell.price)).length : 1)) ?? [])), [board, density]);
+  const todayKey = today();
   function changeDensity(value: "compact" | "comfortable") {
     setDensity(value);
     try { window.localStorage.setItem(densityKey, value); } catch { /* Usable without persistent storage. */ }
@@ -268,7 +278,7 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
         <span>Вид:</span>{([['compact','Компактный'],['comfortable','Обычный']] as const).map(([value,label]) => <button key={value} type="button" aria-pressed={density===value} onClick={() => changeDensity(value)}>{label}</button>)}
         <span className="calendar-density-help">Нажмите название дома, чтобы увидеть его полностью.</span>
       </div>
-      <div className="calendar-card-header"><label className="block font-medium"><span className="calendar-search-label">Найти дом в шахматке</span><input type="search" placeholder="Найти дом" value={houseSearch} onChange={event => setHouseSearch(event.target.value)} className="w-full rounded-lg border px-3 py-2" /></label><p>{visibleHouses.length} домов · цены за ночь</p><button type="button" aria-label="Выбрать даты вручную" className={`calendar-mobile-manual ${buttonStyle}`} onClick={event=>{actionsTrigger.current=event.currentTarget;setManualOpen(true);}}>Выбрать даты</button></div>
+      <div className="calendar-card-header"><label className="block font-medium"><span className="calendar-search-label">Найти дом в шахматке</span><input ref={houseSearchInput} type="search" placeholder="Найти дом" value={houseSearch} onChange={event => setHouseSearch(event.target.value)} className="w-full rounded-lg border px-3 py-2" /></label><p>{visibleHouses.length} домов · цены за ночь</p><span className="sr-only" role="status">{houseSearch !== deferredSearch ? "Ищем дом…" : `Найдено домов: ${visibleHouses.length}`}</span><button type="button" aria-label="Выбрать даты вручную" className={`calendar-mobile-manual ${buttonStyle}`} onClick={event=>{actionsTrigger.current=event.currentTarget;setManualOpen(true);}}>Выбрать даты</button></div>
     <div ref={scrollRegion} className="calendar-grid-scroll" role="region" aria-label="Цены и занятость домов" tabIndex={0} aria-busy={loading} style={{"--calendar-days":board?.dates.length ?? 31,"--calendar-price-ch":priceChars} as CSSProperties}>
       <div className="calendar-mobile-nav" role="group" aria-label="Навигация по месяцам">
         <button type="button" disabled={month <= "2000-01"} onClick={() => changeMonth(shiftedMonth(month, -1))} aria-label="Предыдущий месяц">←</button>
@@ -278,12 +288,13 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
       </div>
       {loading && <p className="p-4">Загружаем календарь…</p>}
       {!loading && board?.houses.length === 0 && <p className="p-6">Домов пока нет. <Link className="underline" href="/admin/houses/new">Добавьте первый дом</Link>.</p>}
-      {!loading && board && board.houses.length > 0 && <table className="calendar-table border-separate border-spacing-0 text-left text-sm">
+      {!loading && board && board.houses.length > 0 && visibleHouses.length === 0 && <div className="p-4" role="status"><p>Домов по запросу «{deferredSearch}» не найдено. Попробуйте часть названия.</p><button type="button" className={`${buttonStyle} mt-3 min-h-11`} onClick={() => {setHouseSearch("");houseSearchInput.current?.focus({preventScroll:true});}}>Очистить поиск</button></div>}
+      {!loading && board && visibleHouses.length > 0 && <table className="calendar-table border-separate border-spacing-0 text-left text-sm">
         <caption className="sr-only">Занятость и цены домов за {month}</caption>
         <colgroup><col className="calendar-house-col"/>{board.dates.map(day=><col key={day}/>)}</colgroup>
         <thead><tr><th scope="col" className="calendar-house-cell sticky top-0 left-0 z-30 border-b border-r bg-slate-100 font-normal">Дом</th>{board.dates.map((day) => {
           const weekDay = new Date(`${day}T00:00:00Z`).getUTCDay();
-          return <th scope="col" key={day} data-calendar-date={day} data-today={day===today()?"":undefined} data-weekend={weekDay === 5 || weekDay === 6 ? "" : undefined} className="calendar-day sticky top-0 z-20 border-b border-r text-center font-normal"><span className="block">{day.slice(8)}</span><span className="text-slate-600">{weekdays[weekDay]}</span></th>;
+          return <th scope="col" key={day} data-calendar-date={day} data-today={day===todayKey?"":undefined} data-weekend={weekDay === 5 || weekDay === 6 ? "" : undefined} className="calendar-day sticky top-0 z-20 border-b border-r text-center font-normal"><span className="block">{day.slice(8)}</span><span className="text-slate-600">{weekdays[weekDay]}</span></th>;
         })}</tr></thead>
         <tbody>{visibleHouses.map(house => <CalendarRow key={house.id} house={house} compact={density === "compact"}
           selection={selection?.houseId === house.id ? selection : null} onSelect={selectCell} onInspect={inspectHouse}/>)}</tbody>

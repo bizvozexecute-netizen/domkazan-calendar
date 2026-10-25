@@ -6,6 +6,12 @@ on:
       - Dockerfile
       - .dockerignore
       - ops/server/**
+      - src/**
+      - public/**
+      - package.json
+      - package-lock.json
+      - prisma/**
+      - next.config.*
 permissions:
   contents: read
 jobs:
