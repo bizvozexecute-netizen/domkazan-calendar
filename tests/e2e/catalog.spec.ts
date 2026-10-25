@@ -101,7 +101,7 @@ test("Tilda catalog, house page, price changes, occupancy and request use the sa
   await page.getByLabel("По дату включительно", { exact: true }).fill(day(11));
   await page.getByRole("button", { name: "Закрыть даты", exact: true }).click();
   await page.getByRole("button", { name: "Подтвердить изменение", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("Изменения сохранены");
+  await expect(page.getByRole("status").filter({hasText:"Изменения сохранены"})).toBeVisible();
   await page.goto(path);
   await expect(page.getByText("Найдено домов: 0", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Подходящих домов не нашлось" })).toBeVisible();
