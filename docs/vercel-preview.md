@@ -29,7 +29,9 @@ https://domkazan-calendar-test-aponge33w-iss-projects-5d0a08b3.vercel.app/admin/
 Share the URL and existing test application credentials privately. A local ignored
 `.local-customer-access.txt` contains the handoff details; never commit it. This is
 the same single test administrator account, not a separate customer role. Signing in
-replaces its previous session. No production credentials or customer records are used.
+keeps up to five eight-hour sessions so phone and desktop access can coexist. A sixth
+login removes the oldest session; logout revokes only that browser's token. Changing
+the password invalidates all previous sessions. No production credentials or customer records are used.
 
 Application authentication remains required: anonymous admin pages redirect to
 login; admin APIs return 401; wrong-origin writes return 403. Successful login uses

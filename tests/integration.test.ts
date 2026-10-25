@@ -1,6 +1,6 @@
 import test, { after, before } from "node:test";
 import assert from "node:assert/strict";
-import { randomBytes, scryptSync } from "node:crypto";
+import { createHash, randomBytes, scryptSync } from "node:crypto";
 import { db } from "../src/lib/db.ts";
 import { findAvailableHouses } from "../src/lib/availability.ts";
 import { parseDateOnly } from "../src/lib/dates.ts";
@@ -95,4 +95,42 @@ test("admin sessions are revocable and login attempts are throttled", async () =
   assert.equal(await getAdminSessionFromToken(token), null);
   for (let attempt = 0; attempt < 5; attempt++) assert.equal(await allowLoginAttempt(), true);
   assert.equal(await allowLoginAttempt(), false);
+});
+
+test("phone and desktop sessions coexist; logout and expiry affect only the matching session", async () => {
+  const { createAdminSession, getAdminSessionFromToken, revokeAdminSession } = await import("../src/lib/auth.ts");
+  const desktop = await createAdminSession("admin@example.invalid");
+  const phone = await createAdminSession("admin@example.invalid");
+  try {
+    assert.deepEqual(await getAdminSessionFromToken(desktop), { email: "admin@example.invalid" });
+    assert.deepEqual(await getAdminSessionFromToken(phone), { email: "admin@example.invalid" });
+    await revokeAdminSession(desktop);
+    assert.equal(await getAdminSessionFromToken(desktop), null);
+    assert.deepEqual(await getAdminSessionFromToken(phone), { email: "admin@example.invalid" });
+    await db.adminSession.update({ where: { tokenHash: createHash("sha256").update(phone).digest("hex") }, data: { expiresAt: new Date(Date.now()-1000) } });
+    assert.equal(await getAdminSessionFromToken(phone), null);
+  } finally { await revokeAdminSession(desktop); await revokeAdminSession(phone); }
+});
+
+test("concurrent logins retain at most five sessions and a password change invalidates every old token", async () => {
+  const { createAdminSession, getAdminSessionFromToken, revokeAdminSession } = await import("../src/lib/auth.ts");
+  const email = "admin@example.invalid";
+  const previousHash = process.env.ADMIN_PASSWORD_HASH;
+  await db.adminSession.deleteMany({ where: { email } });
+  const tokens = await Promise.all(Array.from({length:7},()=>createAdminSession(email)));
+  let replacement: string | undefined;
+  try {
+    assert.equal((await Promise.all(tokens.map(getAdminSessionFromToken))).filter(Boolean).length, 5);
+    assert.equal(await db.adminSession.count({ where: { email } }), 5);
+    const salt = randomBytes(16).toString("hex");
+    process.env.ADMIN_PASSWORD_HASH = `scrypt:${salt}:${scryptSync("replacement-test-only", salt, 64).toString("hex")}`;
+    assert.ok((await Promise.all(tokens.map(getAdminSessionFromToken))).every(session=>session===null));
+    replacement = await createAdminSession(email);
+    assert.deepEqual(await getAdminSessionFromToken(replacement), { email });
+    assert.equal(await db.adminSession.count({ where: { email } }), 1);
+  } finally {
+    process.env.ADMIN_PASSWORD_HASH = previousHash;
+    for (const token of tokens) await revokeAdminSession(token);
+    if (replacement) await revokeAdminSession(replacement);
+  }
 });

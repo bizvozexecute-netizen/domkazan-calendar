@@ -5,6 +5,7 @@ import { insecureLocalHttp } from "./request-security";
 
 export const SESSION_COOKIE = "domkazan_admin_session";
 const SESSION_DURATION_SECONDS = 60 * 60 * 8;
+const MAX_ADMIN_SESSIONS = 5;
 const WINDOW_MS = 15 * 60 * 1000;
 const ACCOUNT_LIMIT = 5;
 const GLOBAL_LIMIT = 100;
@@ -66,13 +67,20 @@ export async function clearAccountThrottle(): Promise<void> {
 
 export async function createAdminSession(email: string): Promise<string> {
   const token = randomBytes(32).toString("base64url");
-  await db.$transaction([
-    db.adminSession.deleteMany({ where: { email } }),
-    db.adminSession.create({ data: {
-      tokenHash: tokenHash(token), email, credentialTag: credentialTag(),
-      expiresAt: new Date(Date.now() + SESSION_DURATION_SECONDS * 1000),
-    } }),
-  ]);
+  const tag = credentialTag();
+  await db.$transaction(async tx => {
+    // Serialize logins for this account so concurrent devices cannot exceed the cap.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`admin-session:${email}`}, 0))`;
+    const now = new Date();
+    await tx.adminSession.deleteMany({ where: { email, OR: [{ expiresAt: { lte: now } }, { credentialTag: { not: tag } }] } });
+    const excess = await tx.adminSession.findMany({ where: { email },
+      orderBy: [{ createdAt: "desc" }, { tokenHash: "asc" }], skip: MAX_ADMIN_SESSIONS - 1, select: { tokenHash: true } });
+    if (excess.length) await tx.adminSession.deleteMany({ where: { tokenHash: { in: excess.map(session => session.tokenHash) } } });
+    await tx.adminSession.create({ data: {
+      tokenHash: tokenHash(token), email, credentialTag: tag, createdAt: now,
+      expiresAt: new Date(now.getTime() + SESSION_DURATION_SECONDS * 1000),
+    } });
+  });
   return token;
 }
 
