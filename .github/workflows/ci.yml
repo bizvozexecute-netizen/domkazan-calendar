@@ -53,6 +53,7 @@ jobs:
             test-results/**/widget.png
             test-results/**/admin-calendar.png
             test-results/**/compact-calendar.png
+            test-results/**/calendar-metrics.json
             test-results/**/admin-settings.png
             test-results/**/arrival-selected.png
             test-results/**/actions-and-form.png

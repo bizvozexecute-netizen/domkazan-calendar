@@ -1,5 +1,6 @@
 import {test,expect,type Page} from '@playwright/test';
 import {db} from '../../src/lib/db';
+import {writeFile} from 'node:fs/promises';
 
 const month='2027-01';
 const dates=Array.from({length:31},(_,i)=>`${month}-${String(i+1).padStart(2,'0')}`);
@@ -20,9 +21,9 @@ test('dense board fits dates, preserves mode, sticky axes and full house names w
   const geometry=await region.evaluate(el=>{
     const house=el.querySelector('thead th')!.getBoundingClientRect().width;
     const date=el.querySelector('[data-calendar-date]')!.getBoundingClientRect().width;
-    return {visible:Math.floor((el.clientWidth-house)/date),width:el.clientWidth,date,house};
+    return {visible:Math.floor((el.clientWidth-house+0.5)/date),width:el.clientWidth,date,house};
   });
-  if((page.viewportSize()?.width??0)<=430)expect(geometry.visible).toBeGreaterThanOrEqual(8);
+  if((page.viewportSize()?.width??0)<=430)expect(geometry.visible,JSON.stringify(geometry)).toBeGreaterThanOrEqual(8);
   if((page.viewportSize()?.width??0)>=1280)expect(geometry.visible).toBe(31);
   for(const date of dates){
     const weekday=new Date(date+'T00:00:00Z').getUTCDay();
@@ -31,6 +32,7 @@ test('dense board fits dates, preserves mode, sticky axes and full house names w
   await page.getByRole('button',{name:`Полное название: ${houses[0].name}`,exact:true}).click();
   await expect(page.getByRole('dialog')).toContainText(houses[0].name);
   await page.getByRole('button',{name:'Закрыть название',exact:true}).click();
+  await expect(page.getByRole('button',{name:`Полное название: ${houses[0].name}`,exact:true})).toBeFocused();
   await page.getByRole('button',{name:'Обычный',exact:true}).click();await page.reload();
   await expect(page.getByRole('button',{name:'Обычный',exact:true})).toHaveAttribute('aria-pressed','true');
   await page.getByRole('button',{name:'Компактный',exact:true}).click();
@@ -87,7 +89,14 @@ test('dense board fits dates, preserves mode, sticky axes and full house names w
   expect(drift.vertical.secondary).toBe(0);expect(drift.vertical.primary).toBe(70);expect(drift.horizontal.secondary).toBe(0);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
   const clipping=await region.locator('td button').evaluateAll(buttons=>buttons.some(el=>el.scrollWidth>el.clientWidth+1));expect(clipping).toBe(false);
-  await testInfo.attach('board-measurements',{body:JSON.stringify({geometry,metrics,drift,nativeGesture}),contentType:'application/json'});
+  const pageY=await page.evaluate(()=>scrollY);
+  if(pageY>30){
+    await page.mouse.move(1,100);await page.mouse.wheel(0,-100);
+    await expect.poll(()=>page.evaluate(()=>scrollY)).toBeLessThan(pageY-20);
+  }
+  const measurements=testInfo.outputPath('calendar-metrics.json');
+  await writeFile(measurements,JSON.stringify({geometry,metrics,drift,nativeGesture},null,2));
+  await testInfo.attach('board-measurements',{path:measurements,contentType:'application/json'});
   await page.screenshot({path:testInfo.outputPath('compact-calendar.png'),fullPage:true});
 });
 

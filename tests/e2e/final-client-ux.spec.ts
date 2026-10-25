@@ -12,9 +12,12 @@ test('phone actions are black with white text, distinct pressed/focus states and
     await expect(phone).toHaveCSS('background-color','rgb(0, 0, 0)');
     await expect(phone).toHaveCSS('color','rgb(255, 255, 255)');
     expect((await phone.boundingBox())!.height).toBeGreaterThanOrEqual(48);
-    await phone.focus();await page.keyboard.press('Tab');await page.keyboard.press('Shift+Tab');
+    // Safari's default Tab preference can skip links. Establish keyboard
+    // modality on this action, then focus the link explicitly in both engines.
+    await phone.press('Tab');await phone.focus();
     await expect(phone).toBeFocused();await expect(phone).toHaveCSS('outline-style','solid');
     await expect(phone).toHaveCSS('outline-width','3px');
+    await phone.scrollIntoViewIfNeeded();
     const box=(await phone.boundingBox())!;
     await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();
     await expect(phone).toHaveCSS('background-color','rgb(38, 38, 38)');

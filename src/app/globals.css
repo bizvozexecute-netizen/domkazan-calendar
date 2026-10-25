@@ -122,8 +122,12 @@
 .calendar-house-dialog>div { display:flex; flex-wrap:wrap; gap:12px; margin-top:18px; }
 .calendar-house-dialog :is(button,a) { display:inline-flex; align-items:center; min-height:44px; padding:8px 12px; border:1px solid var(--dk-line); border-radius:8px; }
 @media(max-width:760px) {
+  /* Mobile WebKit can reserve two scrollbar gutters (page + grid). Native
+     touch/keyboard scrolling stays enabled; do not spend date space on a gutter. */
+  .calendar-grid-scroll { scrollbar-width:none; }
+  .calendar-grid-scroll::-webkit-scrollbar { width:0; height:0; }
   .admin-main:has(.calendar-card) { padding:20px 8px; }
-  .calendar-card[data-density=compact] .calendar-grid-scroll { --calendar-house-width:64px; --calendar-min-date:31px; }
+  .calendar-card[data-density=compact] .calendar-grid-scroll { --calendar-house-width:64px; --calendar-min-date:clamp(31px,8vw,35px); }
   .calendar-card-header { padding:8px 10px; gap:4px; }
   .calendar-density-help { width:100%; margin-left:0; }
   .calendar-grid-scroll th.calendar-house-cell { padding:0 3px; }
