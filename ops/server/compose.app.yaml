@@ -1,0 +1,33 @@
+name: domkazan
+services:
+  migrate:
+    image: ${TOOLS_IMAGE:?Select an immutable tools image}
+    env_file: /srv/domkazan/config/migration.env
+    networks: [database]
+    restart: "no"
+    mem_limit: 512m
+    pids_limit: 128
+    security_opt: [no-new-privileges:true]
+  app:
+    image: ${APP_IMAGE:?Select an immutable app image}
+    env_file: /srv/domkazan/config/app.env
+    restart: unless-stopped
+    ports: ["127.0.0.1:3000:3000"]
+    networks: [database, outbound]
+    mem_limit: 768m
+    pids_limit: 128
+    init: true
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+networks:
+  database:
+    external: true
+    name: domkazan_database
+  outbound:
+    name: domkazan_outbound
