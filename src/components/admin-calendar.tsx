@@ -109,6 +109,7 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState<{ action: Action; houseId: string; revision: number; start: string; end: string; price: string; label: string } | null>(null);
   const scrollRegion = useRef<HTMLDivElement>(null);
+  const houseSearchInput = useRef<HTMLInputElement>(null);
   useEffect(() => scrollRegion.current ? attachCalendarAxisLock(scrollRegion.current) : undefined, []);
   const scrollToToday = useRef(false);
   const initialScrollDone = useRef(false);
@@ -277,7 +278,7 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
         <span>Вид:</span>{([['compact','Компактный'],['comfortable','Обычный']] as const).map(([value,label]) => <button key={value} type="button" aria-pressed={density===value} onClick={() => changeDensity(value)}>{label}</button>)}
         <span className="calendar-density-help">Нажмите название дома, чтобы увидеть его полностью.</span>
       </div>
-      <div className="calendar-card-header"><label className="block font-medium"><span className="calendar-search-label">Найти дом в шахматке</span><input type="search" placeholder="Найти дом" value={houseSearch} onChange={event => setHouseSearch(event.target.value)} className="w-full rounded-lg border px-3 py-2" /></label><p>{visibleHouses.length} домов · цены за ночь</p><span className="sr-only" role="status">{houseSearch !== deferredSearch ? "Ищем дом…" : `Найдено домов: ${visibleHouses.length}`}</span><button type="button" aria-label="Выбрать даты вручную" className={`calendar-mobile-manual ${buttonStyle}`} onClick={event=>{actionsTrigger.current=event.currentTarget;setManualOpen(true);}}>Выбрать даты</button></div>
+      <div className="calendar-card-header"><label className="block font-medium"><span className="calendar-search-label">Найти дом в шахматке</span><input ref={houseSearchInput} type="search" placeholder="Найти дом" value={houseSearch} onChange={event => setHouseSearch(event.target.value)} className="w-full rounded-lg border px-3 py-2" /></label><p>{visibleHouses.length} домов · цены за ночь</p><span className="sr-only" role="status">{houseSearch !== deferredSearch ? "Ищем дом…" : `Найдено домов: ${visibleHouses.length}`}</span><button type="button" aria-label="Выбрать даты вручную" className={`calendar-mobile-manual ${buttonStyle}`} onClick={event=>{actionsTrigger.current=event.currentTarget;setManualOpen(true);}}>Выбрать даты</button></div>
     <div ref={scrollRegion} className="calendar-grid-scroll" role="region" aria-label="Цены и занятость домов" tabIndex={0} aria-busy={loading} style={{"--calendar-days":board?.dates.length ?? 31,"--calendar-price-ch":priceChars} as CSSProperties}>
       <div className="calendar-mobile-nav" role="group" aria-label="Навигация по месяцам">
         <button type="button" disabled={month <= "2000-01"} onClick={() => changeMonth(shiftedMonth(month, -1))} aria-label="Предыдущий месяц">←</button>
@@ -287,7 +288,7 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
       </div>
       {loading && <p className="p-4">Загружаем календарь…</p>}
       {!loading && board?.houses.length === 0 && <p className="p-6">Домов пока нет. <Link className="underline" href="/admin/houses/new">Добавьте первый дом</Link>.</p>}
-      {!loading && board && board.houses.length > 0 && visibleHouses.length === 0 && <div className="p-4" role="status"><p>Домов по запросу «{deferredSearch}» не найдено. Попробуйте часть названия.</p><button type="button" className={`${buttonStyle} mt-3`} onClick={() => setHouseSearch("")}>Очистить поиск</button></div>}
+      {!loading && board && board.houses.length > 0 && visibleHouses.length === 0 && <div className="p-4" role="status"><p>Домов по запросу «{deferredSearch}» не найдено. Попробуйте часть названия.</p><button type="button" className={`${buttonStyle} mt-3 min-h-11`} onClick={() => {setHouseSearch("");houseSearchInput.current?.focus({preventScroll:true});}}>Очистить поиск</button></div>}
       {!loading && board && visibleHouses.length > 0 && <table className="calendar-table border-separate border-spacing-0 text-left text-sm">
         <caption className="sr-only">Занятость и цены домов за {month}</caption>
         <colgroup><col className="calendar-house-col"/>{board.dates.map(day=><col key={day}/>)}</colgroup>

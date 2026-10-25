@@ -39,6 +39,7 @@ test('mobile house search handles keyboard spelling, reveals matches and recover
   await expect(region.locator('table')).toHaveCount(0);
   await region.getByRole('button',{name:'Очистить поиск',exact:true}).click();
   await expect(search).toHaveValue('');
+  await expect(search).toBeFocused();
   await expect(region.locator('tbody tr')).toHaveCount(80);
   expect(reads).toBe(initialReads);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
