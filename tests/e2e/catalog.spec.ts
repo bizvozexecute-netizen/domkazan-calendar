@@ -91,7 +91,7 @@ test("Tilda catalog, house page, price changes, occupancy and request use the sa
   await page.getByLabel("Ручная цена, ₽", { exact: true }).fill("2000");
   await page.getByRole("button", { name: "Изменить стоимость", exact: true }).click();
   await page.getByRole("button", { name: "Подтвердить изменение", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("Изменения сохранены");
+  await expect(page.getByRole("status").filter({hasText:"Изменения сохранены"})).toBeVisible();
   await page.goto(path);
   await expect(page.locator(".price")).toHaveText(/4\s900 ₽ за 2 ноч\./);
   await page.goto(`/admin?month=${day(10).slice(0, 7)}`);
