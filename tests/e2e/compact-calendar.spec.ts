@@ -9,7 +9,12 @@ const houses=Array.from({length:80},(_,i)=>({id:`density-${i}`,slug:`density-${i
 async function login(page:Page){
   await page.goto('/admin/login');await page.getByLabel('Email',{exact:true}).fill('browser-tester@example.invalid');
   await page.getByLabel('Пароль',{exact:true}).fill(process.env.E2E_ADMIN_PASSWORD!);
-  await page.getByRole('button',{name:'Войти',exact:true}).click();await expect(page).toHaveURL(/\/admin$/);
+  const [response]=await Promise.all([
+    page.waitForResponse(r=>r.url().endsWith('/api/admin/login')&&r.request().method()==='POST',{timeout:30000}),
+    page.getByRole('button',{name:'Войти',exact:true}).click(),
+  ]);
+  expect(response.status()).toBe(303);
+  await expect(page).toHaveURL(/\/admin$/,{timeout:20000});
 }
 test.afterAll(async()=>{await db.$disconnect();});
 
@@ -90,7 +95,9 @@ test('dense board fits dates, preserves mode, sticky axes and full house names w
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
   const clipping=await region.locator('td button').evaluateAll(buttons=>buttons.some(el=>el.scrollWidth>el.clientWidth+1));expect(clipping).toBe(false);
   const pageY=await page.evaluate(()=>scrollY);
-  if(pageY>30){
+  // Playwright intentionally does not implement mouse.wheel for mobile WebKit.
+  // Real iPhone finger scrolling outside the grid remains a manual acceptance.
+  if(pageY>30 && !(browserName==='webkit'&&testInfo.project.use.isMobile)){
     await page.mouse.move(1,100);await page.mouse.wheel(0,-100);
     await expect.poll(()=>page.evaluate(()=>scrollY)).toBeLessThan(pageY-20);
   }

@@ -47,10 +47,10 @@ async function responseJson(response: Response) {
 const CalendarRow = memo(function CalendarRow({ house, selection, compact, onSelect, onInspect }: {
   house: CalendarBoardData["houses"][number]; selection: Selection | null; compact: boolean;
   onSelect: (houseId: string, day: string, button: HTMLButtonElement) => void;
-  onInspect: (house: CalendarBoardData["houses"][number]) => void;
+  onInspect: (house: CalendarBoardData["houses"][number], trigger: HTMLButtonElement) => void;
 }) {
   return <tr><th scope="row" className="calendar-house-cell sticky left-0 z-10 border-b border-r bg-white align-middle">
-    <button type="button" className="calendar-house-name" title={house.name} aria-label={`Полное название: ${house.name}`} onClick={() => onInspect(house)}>{house.calendarName || house.name}</button>
+    <button type="button" className="calendar-house-name" title={house.name} aria-label={`Полное название: ${house.name}`} onClick={event => onInspect(house,event.currentTarget)}>{house.calendarName || house.name}</button>
     {!house.isActive && <span className="calendar-inactive">Отключён</span>}
   </th>{house.cells.map(cell => {
     const selected = Boolean(selection && cell.date >= selection.start && cell.date <= selection.end);
@@ -81,6 +81,11 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
   const density = densityChoice ?? savedDensity;
   const [inspectedHouse, setInspectedHouse] = useState<CalendarBoardData["houses"][number] | null>(null);
   const houseDialog = useRef<HTMLDialogElement>(null);
+  const houseDialogTrigger = useRef<HTMLButtonElement | null>(null);
+  const inspectHouse = useCallback((house: CalendarBoardData["houses"][number], trigger: HTMLButtonElement) => {
+    houseDialogTrigger.current = trigger;
+    setInspectedHouse(house);
+  }, []);
   useEffect(() => {
     if (inspectedHouse && houseDialog.current && !houseDialog.current.open) houseDialog.current.showModal();
   }, [inspectedHouse]);
@@ -266,11 +271,11 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
           return <th scope="col" key={day} data-calendar-date={day} data-today={day===today()?"":undefined} data-weekend={weekDay === 5 || weekDay === 6 ? "" : undefined} className="calendar-day sticky top-0 z-20 border-b border-r text-center font-normal"><span className="block">{day.slice(8)}</span><span className="text-slate-600">{weekdays[weekDay]}</span></th>;
         })}</tr></thead>
         <tbody>{visibleHouses.map(house => <CalendarRow key={house.id} house={house} compact={density === "compact"}
-          selection={selection?.houseId === house.id ? selection : null} onSelect={selectCell} onInspect={setInspectedHouse}/>)}</tbody>
+          selection={selection?.houseId === house.id ? selection : null} onSelect={selectCell} onInspect={inspectHouse}/>)}</tbody>
       </table>}
     </div>
     </div>
-    <dialog ref={houseDialog} aria-labelledby="calendar-house-title" onClose={() => setInspectedHouse(null)} className="calendar-house-dialog">
+    <dialog ref={houseDialog} aria-labelledby="calendar-house-title" onClose={() => {setInspectedHouse(null);houseDialogTrigger.current?.focus({preventScroll:true});}} className="calendar-house-dialog">
       <h2 id="calendar-house-title">{inspectedHouse?.name}</h2>
       <p>{inspectedHouse?.calendarName}</p>
       <div><button type="button" onClick={() => houseDialog.current?.close()}>Закрыть название</button>
