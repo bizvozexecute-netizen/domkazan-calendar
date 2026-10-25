@@ -55,6 +55,14 @@
     if (!active) return;
     active = false; clearTimeout(timer);clearTimeout(slowTimer); controller.abort(); restore();
     mounted?.destroy();
+    // The legacy catalog contains links used during acceptance. On failure,
+    // direct clients to the existing public phone rather than a test booking form.
+    for(const anchor of page.querySelectorAll('#rec4148990801 a[href]'))try{
+      const url=new URL(anchor.href,location.href);
+      if(url.origin===location.origin&&url.pathname.startsWith('/calendar-test-')){
+        anchor.href='tel:+79053106605';anchor.textContent='Уточнить по телефону';anchor.removeAttribute('target');
+      }
+    }catch{/* Leave unrelated Tilda links untouched. */}
     status.hidden = false;
     status.textContent = 'Не удалось загрузить поиск. Доступность домов не проверена. Ниже доступен обычный каталог Tilda. ';
     const retry = document.createElement('button'); retry.type = 'button'; retry.textContent = 'Повторить загрузку';
@@ -113,7 +121,7 @@
     loadScript('domkazan-catalog.js', window.DomKazanCatalog),
     firstCatalog,
   ]).then(([, , data]) => {
-    if (active) mounted = window.DomKazanCatalog.mount({root, apiOrigin, pagePath, testMode:false,privacyUrl:"https://45.147.31.241/privacy",embedded:true, catalogData:data,
+    if (active) mounted = window.DomKazanCatalog.mount({root, apiOrigin, pagePath, testMode:false,privacyUrl:"https://45.147.31.241/privacy-2026-10-26.html",consentUrl:"https://45.147.31.241/consent-2026-10-26.html",embedded:true, catalogData:data,
       refreshCatalogData:catalogData});
   }).catch(fail);
 

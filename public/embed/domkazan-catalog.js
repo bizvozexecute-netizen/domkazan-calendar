@@ -233,7 +233,7 @@
     shadow.append(style,mediaStyle,el('style',{text:window.DomKazanCalendar.actionStyles}),galleryHeading, viewer,videoHelp, navigation, thumbs, modal); render();
     return { destroy() { stopPhoto();stopZoom();if (modal.open) modal.close(); shadow.replaceChildren(document.createElement("slot")); root.replaceChildren(...original); } };
   }
-  function mountPage({ root, apiOrigin, privacyUrl, pagePath = window.location.pathname, testMode = true, embedded=false, catalogData, catalogReturn, uiSettings: configuredUi }) {
+  function mountPage({ root, apiOrigin, privacyUrl, consentUrl, pagePath = window.location.pathname, testMode = true, embedded=false, catalogData, catalogReturn, uiSettings: configuredUi }) {
     if (!root || !window.DomKazanCalendar) throw new Error('Модуль поиска не загружен.');
     const origin = new URL(apiOrigin);
     if (origin.protocol !== 'https:') throw new Error('Требуется HTTPS API.');
@@ -399,8 +399,16 @@
         }
         lastResult={houses,snapshot}; resuming=false;
       }
+      if(!testMode&&privacyUrl)try{
+        const policy=new URL(privacyUrl);
+        if(policy.protocol==='https:'&&!policy.username&&!policy.password){
+          const policyLink=link('Политика обработки персональных данных',policy.href,'back');
+          policyLink.target='_blank';policyLink.rel='noopener noreferrer';
+          shell.append(el('footer',{class:'footer-note'},[policyLink]));
+        }
+      }catch{/* Do not turn an invalid configuration into a clickable URL. */}
       widget = window.DomKazanCalendar.mount({ root: search, apiUrl: new URL('/api/availability', origin).href,
-        privacyUrl: privacyUrl || new URL('/test-policy', origin).href, cards, initialValues: values, testMode,
+        privacyUrl: privacyUrl || new URL('/test-policy', origin).href, consentUrl, cards, initialValues: values, testMode,
         houseSlug:selected?.slug, showCount:!selected,quietSuccess:!selected,uiSettings:ui,ownerContacts:owner,
         resultElement:detailResult,
         calendarUrl:selected?new URL(`/api/house-calendar?house=${selected.slug}`,origin).href:undefined,

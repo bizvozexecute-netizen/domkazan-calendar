@@ -14,12 +14,13 @@ const query = 'checkIn=2026-10-20&checkOut=2026-10-22&guests=2';
 const tildaHouse = { id: 'test-tilda-id', slug: 'tilda-259712110892', quote: { total: '14000.00' } };
 
 test('working-page integration is pinned to reviewed page, block, server and policy',async()=>{
-  const snippet=await renderTildaProductionSnippet('https://45.147.31.241/privacy');
+  const snippet=await renderTildaProductionSnippet('https://45.147.31.241/privacy-2026-10-26.html');
   assert.equal(readFileSync(new URL('../integration/tilda-70446131-t123.html',import.meta.url),'utf8').replace(/\r\n/g,'\n'),snippet);
   assert.match(snippet,/70446131/);
   assert.match(snippet,/rec1184803096/);
-  assert.match(snippet,/testMode:false,privacyUrl:"https:\/\/45\.147\.31\.241\/privacy"/);
-  assert.doesNotMatch(snippet,/testMode:true|calendar-test-|homereserve\.ru|4862390501/);
+  assert.match(snippet,/testMode:false,privacyUrl:"https:\/\/45\.147\.31\.241\/privacy-2026-10-26.html"/);
+  assert.match(snippet,/consentUrl:"https:\/\/45\.147\.31\.241\/consent-2026-10-26.html"/);
+  assert.doesNotMatch(snippet,/testMode:true|https:\/\/[^'"\s]*calendar-test-|homereserve\.ru|4862390501/);
   assert.ok(snippet.length<12000);
   await assert.rejects(renderTildaProductionSnippet('https://example.invalid/privacy'),/reviewed production policy/);
   await assert.rejects(renderTildaProductionSnippet('https://45.147.31.241/test-policy'),/reviewed production policy/);

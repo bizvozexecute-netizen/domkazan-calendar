@@ -18,7 +18,7 @@ class ServerNginxTests(unittest.TestCase):
         return module.render(self.template, {**self.env, **flags})
 
     def allows(self, config, path):
-        pattern = re.search(r'location ~ (\S+) \{', config)[1]
+        pattern = re.search(r'location ~ (\S*admin\S*) \{', config)[1]
         return bool(re.search(pattern, path))
 
     def test_default_remains_admin_only(self):
@@ -54,6 +54,14 @@ class ServerNginxTests(unittest.TestCase):
                       dict(PUBLIC_CATALOG_ENABLED='yes'), dict(APP_ORIGIN='https://user@192.0.2.1')]:
             with self.assertRaises(AssertionError):
                 self.config(**flags)
+
+    def test_public_documents_are_fixed_versioned_files_with_no_script_execution(self):
+        config=self.config()
+        self.assertIn('location = /privacy { return 302 /privacy-2026-10-26.html; }',config)
+        self.assertIn('root /var/www/domkazan;',config)
+        self.assertIn('try_files $uri =404;',config)
+        self.assertIn("default-src 'none'",config)
+        self.assertNotIn('/srv/domkazan/config',config)
 
 
 if __name__ == '__main__':
