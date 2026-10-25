@@ -18,6 +18,14 @@ function subscribeDensity(listener: () => void) {
   return () => window.removeEventListener("storage", listener);
 }
 const defaultDensity = (): Density => "compact";
+const mobileQuery = "(max-width: 760px)";
+function readMobile() { return window.matchMedia?.(mobileQuery).matches ?? false; }
+function subscribeMobile(listener: () => void) {
+  const query = window.matchMedia?.(mobileQuery);
+  query?.addEventListener("change", listener);
+  return () => query?.removeEventListener("change", listener);
+}
+const mobileServerSnapshot = () => true;
 const weekdays = ["вс", "пн", "вт", "ср", "чт", "пт", "сб"];
 const today = () => dateKey(todayInMoscow());
 const nextDay = (day: string) => new Date(new Date(`${day}T00:00:00Z`).getTime() + 86_400_000).toISOString().slice(0, 10);
@@ -78,7 +86,8 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
   });
   const savedDensity = useSyncExternalStore(subscribeDensity, readDensity, defaultDensity);
   const [densityChoice, setDensity] = useState<Density | null>(null);
-  const density = densityChoice ?? savedDensity;
+  const mobile = useSyncExternalStore(subscribeMobile, readMobile, mobileServerSnapshot);
+  const density = mobile ? "compact" : densityChoice ?? savedDensity;
   const [inspectedHouse, setInspectedHouse] = useState<CalendarBoardData["houses"][number] | null>(null);
   const houseDialog = useRef<HTMLDialogElement>(null);
   const houseDialogTrigger = useRef<HTMLButtonElement | null>(null);
@@ -211,13 +220,13 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
     try { window.localStorage.setItem(densityKey, value); } catch { /* Usable without persistent storage. */ }
   }
   const buttonStyle = "rounded-lg border px-3 py-2 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800";
-  return <section className="space-y-6">
+  return <section className="calendar-page space-y-6">
     <div className="calendar-heading">
       <div><h1 className="text-3xl font-bold">Шахматка занятости</h1><p className="mt-2 text-slate-600">Выберите дом и одну дату, затем вторую для диапазона. Цена указана за ночь.</p></div>
       <Link className="rounded-lg border bg-white px-4 py-2 font-medium text-blue-700" href="/admin/houses/new">Добавить дом</Link>
     </div>
 
-    <div className="calendar-tools" aria-label="Навигация по календарю">
+    <div className="calendar-tools calendar-desktop-tools" aria-label="Навигация по календарю">
       <button type="button" disabled={month <= "2000-01"} onClick={() => changeMonth(shiftedMonth(month, -1))} className={`${buttonStyle} disabled:opacity-50`} aria-label="Предыдущий месяц">←</button>
       <label className="grid gap-1 text-sm font-medium">Месяц<input type="month" min="2000-01" max="2100-12" value={month} onChange={(event) => changeMonth(event.target.value)} className="rounded-lg border px-3 py-2" /></label>
       <button type="button" disabled={month >= "2100-12"} onClick={() => changeMonth(shiftedMonth(month, 1))} className={`${buttonStyle} disabled:opacity-50`} aria-label="Следующий месяц">→</button>
@@ -259,8 +268,14 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
         <span>Вид:</span>{([['compact','Компактный'],['comfortable','Обычный']] as const).map(([value,label]) => <button key={value} type="button" aria-pressed={density===value} onClick={() => changeDensity(value)}>{label}</button>)}
         <span className="calendar-density-help">Нажмите название дома, чтобы увидеть его полностью.</span>
       </div>
-      <div className="calendar-card-header"><label className="block font-medium">Найти дом в шахматке<input type="search" placeholder="Название дома" value={houseSearch} onChange={event => setHouseSearch(event.target.value)} className="w-full rounded-lg border px-3 py-2" /></label><p>{visibleHouses.length} домов · цены за ночь</p></div>
+      <div className="calendar-card-header"><label className="block font-medium"><span className="calendar-search-label">Найти дом в шахматке</span><input type="search" placeholder="Найти дом" value={houseSearch} onChange={event => setHouseSearch(event.target.value)} className="w-full rounded-lg border px-3 py-2" /></label><p>{visibleHouses.length} домов · цены за ночь</p><button type="button" className={`calendar-mobile-manual ${buttonStyle}`} onClick={event=>{actionsTrigger.current=event.currentTarget;setManualOpen(true);}}>Выбрать даты</button></div>
     <div ref={scrollRegion} className="calendar-grid-scroll" role="region" aria-label="Цены и занятость домов" tabIndex={0} aria-busy={loading} style={{"--calendar-days":board?.dates.length ?? 31,"--calendar-price-ch":priceChars} as CSSProperties}>
+      <div className="calendar-mobile-nav" role="group" aria-label="Навигация по месяцам">
+        <button type="button" disabled={month <= "2000-01"} onClick={() => changeMonth(shiftedMonth(month, -1))} aria-label="Предыдущий месяц">←</button>
+        <label><span className="sr-only">Месяц</span><input type="month" min="2000-01" max="2100-12" value={month} onChange={event => changeMonth(event.target.value)} /></label>
+        <button type="button" disabled={month >= "2100-12"} onClick={() => changeMonth(shiftedMonth(month, 1))} aria-label="Следующий месяц">→</button>
+        <button type="button" onClick={goToToday}>Сегодня</button>
+      </div>
       {loading && <p className="p-4">Загружаем календарь…</p>}
       {!loading && board?.houses.length === 0 && <p className="p-6">Домов пока нет. <Link className="underline" href="/admin/houses/new">Добавьте первый дом</Link>.</p>}
       {!loading && board && board.houses.length > 0 && <table className="calendar-table border-separate border-spacing-0 text-left text-sm">

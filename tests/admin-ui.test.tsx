@@ -49,11 +49,24 @@ test("calendar cells are keyboard buttons and selected range reaches the admin A
     },
   });
   dom.window.confirm = () => true;
+  let mobile = true;
+  const mediaListeners = new Set<() => void>();
+  Object.assign(dom.window, { matchMedia: () => ({ matches: mobile,
+    addEventListener: (_: string, listener: () => void) => mediaListeners.add(listener),
+    removeEventListener: (_: string, listener: () => void) => mediaListeners.delete(listener),
+  }) });
+  dom.window.localStorage.setItem('domkazan.calendar-density.v1', 'comfortable');
   const { createRoot } = await import("react-dom/client");
   const { AdminCalendar } = await import("../src/components/admin-calendar.tsx");
   const container = dom.window.document.getElementById("root")!;
   const root = createRoot(container);
   await act(async () => { root.render(createElement(AdminCalendar)); });
+  assert.equal(container.querySelector('.calendar-card')?.getAttribute('data-density'), 'compact');
+  await act(async () => { mobile = false; mediaListeners.forEach(listener => listener()); });
+  assert.equal(container.querySelector('.calendar-card')?.getAttribute('data-density'), 'comfortable');
+  await act(async () => { mobile = true; mediaListeners.forEach(listener => listener()); });
+  assert.equal(container.querySelector('.calendar-card')?.getAttribute('data-density'), 'compact');
+  assert.equal(dom.window.localStorage.getItem('domkazan.calendar-density.v1'), 'comfortable');
   const cells = [...container.querySelectorAll<HTMLButtonElement>(".calendar-price[aria-pressed]")];
   assert.equal(cells.length, 2);
   assert.equal(cells[0].getAttribute("aria-label")?.includes(first), true);

@@ -19,7 +19,14 @@ async function login(page:Page){
 test.afterAll(async()=>{await db.$disconnect();});
 
 test('dense board fits dates, preserves mode, sticky axes and full house names without scroll rerenders',async({page,browserName},testInfo)=>{
-  await page.route('**/api/admin/calendar?*',route=>route.fulfill({json:{month,dates,houses}}));
+  const mobile=(page.viewportSize()?.width??0)<=760;
+  if(mobile)await page.addInitScript(()=>localStorage.setItem('domkazan.calendar-density.v1','comfortable'));
+  await page.route('**/api/admin/calendar?*',route=>{
+    const target=new URL(route.request().url()).searchParams.get('month')!;
+    const [year,number]=target.split('-').map(Number);
+    const targetDates=Array.from({length:new Date(Date.UTC(year,number,0)).getUTCDate()},(_,i)=>`${target}-${String(i+1).padStart(2,'0')}`);
+    return route.fulfill({json:{month:target,dates:targetDates,houses:houses.map(house=>({...house,cells:targetDates.map((date,i)=>({...house.cells[i],date}))}))}});
+  });
   await login(page);await page.goto(`/admin?month=${month}`);
   const region=page.getByRole('region',{name:'Цены и занятость домов',exact:true});
   await expect(region.locator('tbody tr')).toHaveCount(80);
@@ -38,9 +45,21 @@ test('dense board fits dates, preserves mode, sticky axes and full house names w
   await expect(page.getByRole('dialog')).toContainText(houses[0].name);
   await page.getByRole('button',{name:'Закрыть название',exact:true}).click();
   await expect(page.getByRole('button',{name:`Полное название: ${houses[0].name}`,exact:true})).toBeFocused();
-  await page.getByRole('button',{name:'Обычный',exact:true}).click();await page.reload();
-  await expect(page.getByRole('button',{name:'Обычный',exact:true})).toHaveAttribute('aria-pressed','true');
-  await page.getByRole('button',{name:'Компактный',exact:true}).click();
+  if(mobile){
+    await expect(page.getByRole('group',{name:'Плотность шахматки'})).toBeHidden();
+    await expect(page.locator('.calendar-card')).toHaveAttribute('data-density','compact');
+    await page.reload();
+    await expect(region.locator('tbody tr')).toHaveCount(80);
+    await expect(page.locator('.calendar-card')).toHaveAttribute('data-density','compact');
+    expect(await page.evaluate(()=>localStorage.getItem('domkazan.calendar-density.v1'))).toBe('comfortable');
+    await page.getByRole('searchbox',{name:'Найти дом в шахматке'}).fill('Дом 7');
+    await expect(region.locator('tbody tr')).toHaveCount(11);
+    await page.getByRole('searchbox',{name:'Найти дом в шахматке'}).fill('');
+  }else{
+    await page.getByRole('button',{name:'Обычный',exact:true}).click();await page.reload();
+    await expect(page.getByRole('button',{name:'Обычный',exact:true})).toHaveAttribute('aria-pressed','true');
+    await page.getByRole('button',{name:'Компактный',exact:true}).click();
+  }
   await expect(region.locator('tbody tr')).toHaveCount(80);
   await region.scrollIntoViewIfNeeded();
   const metrics=await region.evaluate(async el=>{
@@ -53,9 +72,11 @@ test('dense board fits dates, preserves mode, sticky axes and full house names w
     for(let i=0;i<20;i++){await new Promise(requestAnimationFrame);const now=performance.now();frames.push(now-previous);previous=now;el.scrollTop+=5;}
     observer.disconnect();
     const box=el.getBoundingClientRect(),header=el.querySelector('thead th:nth-child(2)')!.getBoundingClientRect(),house=el.querySelector('tbody th')!.getBoundingClientRect();
-    return {mutations,frames,headerTop:header.top-box.top,houseLeft:house.left-box.left};
+    const nav=el.querySelector('.calendar-mobile-nav')!.getBoundingClientRect();
+    return {mutations,frames,headerTop:header.top-box.top,houseLeft:house.left-box.left,navHeight:nav.height,navTop:nav.top-box.top,navLeft:nav.left-box.left};
   });
-  expect(metrics.mutations).toBe(0);expect(Math.abs(metrics.headerTop)).toBeLessThan(2);expect(Math.abs(metrics.houseLeft)).toBeLessThan(2);
+  expect(metrics.mutations).toBe(0);expect(Math.abs(metrics.headerTop-metrics.navHeight)).toBeLessThan(2);expect(Math.abs(metrics.houseLeft)).toBeLessThan(2);
+  if(mobile){expect(Math.abs(metrics.navTop)).toBeLessThan(2);expect(Math.abs(metrics.navLeft)).toBeLessThan(2);}
   let nativeGesture;
   if(browserName==='chromium' && (page.viewportSize()?.width??0)<=430){
     const cdp=await page.context().newCDPSession(page);
@@ -95,16 +116,36 @@ test('dense board fits dates, preserves mode, sticky axes and full house names w
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
   const clipping=await region.locator('td button').evaluateAll(buttons=>buttons.some(el=>el.scrollWidth>el.clientWidth+1));expect(clipping).toBe(false);
   const pageY=await page.evaluate(()=>scrollY);
-  // Playwright intentionally does not implement mouse.wheel for mobile WebKit.
-  // Real iPhone finger scrolling outside the grid remains a manual acceptance.
-  if(pageY>30 && !(browserName==='webkit'&&testInfo.project.use.isMobile)){
+  if(pageY>30 && browserName==='chromium' && testInfo.project.use.isMobile){
+    // Use a real touch gesture for a touch device, rather than a desktop wheel.
+    const cdp=await page.context().newCDPSession(page);
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:1,y:100}]});
+    for(let i=1;i<=10;i++){
+      await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:1,y:100+i*10}]});
+      await page.evaluate(()=>new Promise(requestAnimationFrame));
+    }
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+    await expect.poll(()=>page.evaluate(()=>scrollY)).toBeLessThan(pageY-20);
+    await cdp.detach();
+  }else if(pageY>30 && !testInfo.project.use.isMobile){
     await page.mouse.move(1,100);await page.mouse.wheel(0,-100);
     await expect.poll(()=>page.evaluate(()=>scrollY)).toBeLessThan(pageY-20);
   }
+  // Playwright has no native swipe/wheel input on mobile WebKit. Real iPhone
+  // scrolling outside the grid remains a physical-device acceptance check.
   const measurements=testInfo.outputPath('calendar-metrics.json');
   await writeFile(measurements,JSON.stringify({geometry,metrics,drift,nativeGesture},null,2));
   await testInfo.attach('board-measurements',{path:measurements,contentType:'application/json'});
   await page.screenshot({path:testInfo.outputPath('compact-calendar.png'),fullPage:true});
+  if(mobile){
+    await page.getByRole('button',{name:'Следующий месяц',exact:true}).click();
+    await expect(region.locator('[data-calendar-date="2027-02-01"]')).toBeVisible();
+    await expect(region.locator('.calendar-day')).toHaveCount(28);
+    await page.getByRole('button',{name:'Предыдущий месяц',exact:true}).click();
+    await expect(region.locator('[data-calendar-date="2027-01-01"]')).toBeVisible();
+    await expect(region.locator('.calendar-day')).toHaveCount(31);
+    await expect(page.locator('.calendar-card')).toHaveAttribute('data-density','compact');
+  }
 });
 
 test('range close, reopen and manual price retain board position and change public search',async({page,request},testInfo)=>{

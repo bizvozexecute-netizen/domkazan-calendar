@@ -116,19 +116,41 @@
 .calendar-card[data-density=compact] .calendar-house-name { min-height:32px; font-size:10px; }
 .calendar-card[data-density=compact] .calendar-day { height:32px; font-size:9px; }
 .calendar-selection-expand { display:none; }
+.calendar-mobile-nav,.calendar-mobile-manual { display:none; }
 .calendar-house-dialog { margin:auto; width:min(420px,calc(100% - 32px)); padding:24px; border:1px solid var(--dk-line); border-radius:14px; background:white; color:var(--dk-ink); overflow-wrap:anywhere; }
 .calendar-house-dialog::backdrop { background:#172b4266; }
 .calendar-house-dialog h2 { font-size:20px; font-weight:650; }
 .calendar-house-dialog>div { display:flex; flex-wrap:wrap; gap:12px; margin-top:18px; }
 .calendar-house-dialog :is(button,a) { display:inline-flex; align-items:center; min-height:44px; padding:8px 12px; border:1px solid var(--dk-line); border-radius:8px; }
 @media(max-width:760px) {
+  .calendar-page { --calendar-nav-height:calc(52px + env(safe-area-inset-top,0px)); display:flex; flex-direction:column; gap:8px; }
+  .calendar-page>* { margin-block:0!important; }
+  .calendar-heading { align-items:center; gap:8px; }
+  .calendar-heading p,.calendar-desktop-tools,.calendar-density { display:none; }
+  .admin-main .calendar-heading h1 { font-size:22px; }
+  .calendar-heading>a { padding:6px 10px; }
+  .calendar-card-header { flex-wrap:nowrap; padding:4px 6px; gap:6px; }
+  .calendar-card-header label { flex:1; width:auto; min-width:0; }
+  .calendar-search-label { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+  .admin-main .calendar-card-header input { min-height:36px; margin:0; padding:6px 8px; font-size:16px; }
+  .calendar-card-header p { display:none; }
+  .calendar-mobile-manual { display:inline-flex; align-items:center; flex-shrink:0; padding:6px 8px; }
+  /* Keep month navigation inside the native scrollport, above sticky dates.
+     Its height includes the safe area; no document scroll/touch interception. */
+  .calendar-mobile-nav { display:flex; position:sticky; top:0; left:0; z-index:40; width:100%; height:var(--calendar-nav-height); box-sizing:border-box; align-items:center; gap:4px; padding:calc(4px + env(safe-area-inset-top,0px)) 4px 4px; background:#fff; border-bottom:1px solid var(--dk-line); }
+  .calendar-mobile-nav>button { flex:0 0 44px; min-height:44px; padding:4px; border:1px solid var(--dk-line); border-radius:8px; background:#fff; }
+  .calendar-mobile-nav>button:last-child { flex-basis:68px; }
+  .calendar-mobile-nav>button:disabled { opacity:.5; }
+  .calendar-mobile-nav label { flex:1; min-width:0; }
+  .admin-main .calendar-mobile-nav input { width:100%; min-width:0; min-height:44px; padding:4px; border:1px solid var(--dk-line); border-radius:8px; background:#f7f9fc; font-size:16px; }
+  .calendar-grid-scroll thead th { top:var(--calendar-nav-height); }
+  .calendar-grid-scroll { max-height:72vh; max-height:min(72dvh,calc(100svh - 80px - env(safe-area-inset-bottom,0px))); scroll-padding-top:calc(var(--calendar-nav-height) + 32px); }
   /* Mobile WebKit can reserve two scrollbar gutters (page + grid). Native
      touch/keyboard scrolling stays enabled; do not spend date space on a gutter. */
   .calendar-grid-scroll { scrollbar-width:none; }
   .calendar-grid-scroll::-webkit-scrollbar { width:0; height:0; }
-  .admin-main:has(.calendar-card) { padding:20px 8px; }
+  .admin-main:has(.calendar-card) { padding:12px 8px; }
   .calendar-card[data-density=compact] .calendar-grid-scroll { --calendar-house-width:64px; --calendar-min-date:clamp(31px,8vw,35px); }
-  .calendar-card-header { padding:8px 10px; gap:4px; }
   .calendar-density-help { width:100%; margin-left:0; }
   .calendar-grid-scroll th.calendar-house-cell { padding:0 3px; }
 }
