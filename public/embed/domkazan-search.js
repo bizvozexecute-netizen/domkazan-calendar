@@ -261,7 +261,7 @@
     if(reason?.code==='MIN_NIGHTS'&&Number.isInteger(reason.minNights)&&reason.minNights>0)return `На выбранные даты минимальный срок проживания — ${reason.minNights} ${plural(reason.minNights,'ночь','ночи','ночей')}. Увеличьте период.`;
     return copy.unavailableMessage;
   }
-  function mount({ root, apiUrl, requestUrl, privacyUrl, cards: explicitCards, getFilters,
+  function mount({ root, apiUrl, requestUrl, privacyUrl, consentUrl, cards: explicitCards, getFilters,
     initialValues = {}, getViewState, transformHouses, onResults, onInvalidate, renderPrice, testMode = false,
     calendarUrl, houseSlug, resultsUrl, ownerContacts, showCount = true, quietSuccess = false, resultElement, onSearchComplete, onRequestSaved, uiSettings: configuredUi }) {
     if (!root || !apiUrl) throw new Error("Укажите root и apiUrl для DomKazanCalendar.");
@@ -337,6 +337,13 @@
     } catch { /* A policy URL must be configured before accepting applications. */ }
     if (policy) { const link = document.createElement("a"); link.href = policy; link.target = "_blank"; link.rel = "noopener noreferrer";
       link.textContent = "Политика обработки данных"; consentCopy.append(link); }
+    if (policy && consentUrl) try {
+      const url=new URL(consentUrl);
+      if(url.protocol==='https:'&&!url.username&&!url.password){
+        const link=document.createElement('a');link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';link.textContent='Текст согласия';
+        consentCopy.append(document.createTextNode(' · '),link);
+      }
+    } catch { /* An optional document never replaces the required policy. */ }
     requestForm.append(consentLabel);
     const send = document.createElement("button"); send.type = "submit"; send.textContent = copy.submitButton;send.className="dk-primary"; requestForm.append(send);
     const requestMessage = document.createElement("p"); requestMessage.className = "message wide";

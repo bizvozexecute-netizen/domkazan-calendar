@@ -1,0 +1,136 @@
+<!-- DomKazan: page-local catalog and individual house URLs. Working page 70446131 only. -->
+<link rel="preconnect" href="https://45.147.31.241" crossorigin>
+<style>
+  #rec1184803096 { padding:0 !important; margin:0 !important; background:#f6f8fb; }
+  #allrecords:is(.dkcal-pending,.dkcal-ready)[data-tilda-page-id="70446131"] > .r:not(#rec1184803096):not(#rec1088252761):not(#rec1096886496) { display:none !important; }
+  #allrecords:is(.dkcal-pending,.dkcal-ready):not(.dkcal-detail)[data-tilda-page-id="70446131"] > #rec1088252761 { display:block !important; }
+  #allrecords.dkcal-detail[data-tilda-page-id="70446131"] > :is(#rec1088252761,#rec1096886496) { display:none !important; }
+  #catalog { scroll-margin-top:80px; }
+  #domkazan-test-status { margin:0; padding:32px 20px; font:14px/1.6 Arial,sans-serif; color:#42576e; }
+  #domkazan-test-status button { min-height:44px; margin:12px 0 0; padding:8px 16px; cursor:pointer; }
+#allrecords:is(.dkcal-pending,.dkcal-ready)[data-tilda-page-id="70446131"] { display:flex; flex-direction:column; }
+#allrecords:is(.dkcal-pending,.dkcal-ready)[data-tilda-page-id="70446131"] > #rec1088252761 { order:1; }
+#allrecords:is(.dkcal-pending,.dkcal-ready)[data-tilda-page-id="70446131"] > #rec1096886496 { order:2; margin-top:0 !important; }
+#allrecords:is(.dkcal-pending,.dkcal-ready)[data-tilda-page-id="70446131"] > #rec1184803096 { order:3; }
+</style>
+<div id="catalog"><div id="domkazan-catalog"></div></div>
+<p id="domkazan-test-status" role="status">Загружаем каталог домов…</p>
+<script>/* Inlined by render-tilda-test-snippet.mjs; restricted to the reviewed working Tilda page. */
+(() => {
+  const apiOrigin = 'https://45.147.31.241';
+  const pagePath = '/';
+  const page = document.querySelector('#allrecords[data-tilda-page-id="70446131"]');
+  const root = document.getElementById('domkazan-catalog');
+  const status = document.getElementById('domkazan-test-status');
+  if (location.origin !== 'https://domkazan116.ru' || location.pathname !== pagePath ||
+      !page || !root?.closest('#rec1184803096') || !status) return;
+
+  window.domkazanTestCatalog?.destroy();
+  performance.mark('domkazan:startup');
+  // Tilda's anchor menu starts a BODY ResizeObserver at DOMContentLoaded.
+  // Keep its existing viewport guard for the old anchor observer; the scoped
+  // snippet CSS retains the header and its independently initialized burger.
+  // Do not patch Tilda
+  // functions, ResizeObserver, or error handlers. Restore the attribute on failure.
+  const navigation = document.getElementById('rec1088252761');
+  const previousScreenMax = navigation?.getAttribute('data-screen-max');
+  navigation?.setAttribute('data-screen-max', '0');
+  page.classList.add('dkcal-pending');
+  status.hidden = false;
+  const controller = new AbortController();
+  let active = true, mounted;
+  const timer = setTimeout(() => fail(), 30000);
+  const slowTimer=setTimeout(()=>{if(active&&!page.classList.contains('dkcal-ready'))status.textContent='Загрузка занимает больше времени. Проверяем соединение…';},8000);
+  function mode(){page.classList.toggle('dkcal-detail',new URLSearchParams(location.search).has('house'));}
+  mode();window.addEventListener('popstate',mode);root.addEventListener('domkazan:ready',mode);
+
+  function restore() {
+    page.classList.remove('dkcal-pending', 'dkcal-ready','dkcal-detail');
+    if (navigation) {
+      if (previousScreenMax === null) navigation.removeAttribute('data-screen-max');
+      else navigation.setAttribute('data-screen-max', previousScreenMax);
+    }
+  }
+  function fail() {
+    if (!active) return;
+    active = false; clearTimeout(timer);clearTimeout(slowTimer); controller.abort(); restore();
+    mounted?.destroy();
+    // The legacy catalog contains links used during acceptance. On failure,
+    // direct clients to the existing public phone rather than a test booking form.
+    for(const anchor of page.querySelectorAll('#rec4148990801 a[href]'))try{
+      const url=new URL(anchor.href,location.href);
+      if(url.origin===location.origin&&url.pathname.startsWith('/calendar-test-')){
+        anchor.href='tel:+79053106605';anchor.textContent='Уточнить по телефону';anchor.removeAttribute('target');
+      }
+    }catch{/* Leave unrelated Tilda links untouched. */}
+    status.hidden = false;
+    status.textContent = 'Не удалось загрузить поиск. Доступность домов не проверена. Ниже доступен обычный каталог Tilda. ';
+    const retry = document.createElement('button'); retry.type = 'button'; retry.textContent = 'Повторить загрузку';
+    retry.addEventListener('click', () => location.reload()); status.append(retry);
+  }
+  function ready() {
+    if (!active) return;
+    if (page.classList.contains('dkcal-pending')) performance.measure('domkazan:startup-to-ready', 'domkazan:startup');
+    clearTimeout(timer);clearTimeout(slowTimer); page.classList.replace('dkcal-pending', 'dkcal-ready');
+    status.hidden = true;
+  }
+  root.addEventListener('domkazan:ready', ready);
+  root.addEventListener('domkazan:error', fail);
+  async function loadScript(file, present) {
+    if (present) return Promise.resolve();
+    for(let attempt=0;attempt<2;attempt++)try{return await new Promise((resolve, reject) => {
+      // Dynamic ordered scripts still download together. WebKit may hold an
+      // explicitly async script until first paint / DOMContentLoaded, behind
+      // unrelated Tilda defer scripts. This queue can execute before either.
+      const script = document.createElement('script'); script.async = false;
+      const deadline=setTimeout(()=>finish(new Error('Script timeout')),8000);
+      const finish = (error) => {
+        clearTimeout(deadline);
+        script.onload = script.onerror = null; controller.signal.removeEventListener('abort', cancelled);
+        if (error) { script.remove(); reject(error); } else resolve();
+      };
+      const cancelled = () => finish(new Error('Startup cancelled'));
+      script.onload = () => finish(); script.onerror = () => finish(new Error('Script unavailable'));
+      controller.signal.addEventListener('abort', cancelled, {once:true});
+      script.src = `${apiOrigin}/embed/${file}${attempt?'?retry=1':''}`; document.head.append(script);
+    });}catch(error){if(controller.signal.aborted||attempt===1)throw error;}
+  }
+
+  // Fetch public content and both independent modules at once, without waiting
+  // for unrelated Tilda images/scripts or DOMContentLoaded. Availability and
+  // booking totals continue to come from fresh server requests after a search.
+  async function readCatalog(path) {
+    for(let attempt=0;attempt<2;attempt++){
+      const request=new AbortController(),deadline=setTimeout(()=>request.abort(),5000);
+      const cancelled=()=>request.abort();controller.signal.addEventListener('abort',cancelled,{once:true});
+      try{return await fetch(`${apiOrigin}${path}`, {signal:request.signal,cache:'no-store'})
+      .then(response => { if (!response.ok) throw new Error('Catalog unavailable'); return response.json(); })
+      .then(data => { if (!Array.isArray(data?.products)) throw new Error('Invalid catalog'); return data; });}
+      catch(error){if(controller.signal.aborted||attempt===1)throw error;}
+      finally{clearTimeout(deadline);controller.signal.removeEventListener('abort',cancelled);}
+    }
+  }
+  const catalogData = readCatalog('/api/catalog');
+  // Public metadata is a small CDN request, outside Tilda's HTML block limit.
+  // Race it with the live origin; either source can recover from the other failing.
+  // Prices/occupancy are never read from this cache to authorize a request.
+  const initial = readCatalog('/embed/domkazan-catalog-initial.json');
+  const firstCatalog = Promise.any([initial, catalogData]);
+  Promise.all([
+    loadScript('domkazan-search.js', window.DomKazanCalendar),
+    loadScript('domkazan-catalog.js', window.DomKazanCatalog),
+    firstCatalog,
+  ]).then(([, , data]) => {
+    if (active) mounted = window.DomKazanCatalog.mount({root, apiOrigin, pagePath, testMode:false,privacyUrl:"https://45.147.31.241/privacy-2026-10-26.html",consentUrl:"https://45.147.31.241/consent-2026-10-26.html",embedded:true, catalogData:data,
+      refreshCatalogData:catalogData});
+  }).catch(fail);
+
+  window.domkazanTestCatalog = {
+    destroy() {
+      active = false; clearTimeout(timer);clearTimeout(slowTimer); controller.abort(); mounted?.destroy(); restore();
+      window.removeEventListener('popstate',mode);root.removeEventListener('domkazan:ready',mode);
+      root.removeEventListener('domkazan:ready', ready); root.removeEventListener('domkazan:error', fail);
+    },
+  };
+})();
+</script>

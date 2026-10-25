@@ -6,6 +6,22 @@ import {clientDay} from './client-dates.mjs';
 
 const script = readFileSync(new URL("../public/embed/domkazan-search.js", import.meta.url), "utf8");
 
+test('request consent has distinct versioned documents, unchecked by default and no unsafe links',()=>{
+  for(const consentUrl of ['https://calendar.example.invalid/consent-2026-10-26.html','javascript:alert(1)','https://user:pass@calendar.example.invalid/consent']){
+    const dom=new JSDOM('<div id="search"></div>',{url:'https://domkazan116.ru/',runScripts:'outside-only'});
+    dom.window.eval(script);
+    const controller=dom.window.DomKazanCalendar.mount({root:dom.window.document.getElementById('search'),apiUrl:'https://calendar.example.invalid/api/availability',privacyUrl:'https://calendar.example.invalid/privacy-2026-10-26.html',consentUrl});
+    const root=dom.window.document.getElementById('search').shadowRoot;
+    assert.equal(root.querySelector('[name=consent]').checked,false);
+    assert.equal(root.querySelector('[name=consent]').required,true);
+    assert.equal(root.querySelector('.consent a').href,'https://calendar.example.invalid/privacy-2026-10-26.html');
+    const links=[...root.querySelectorAll('.consent a')];
+    assert.equal(links.length,consentUrl.includes('user:')||consentUrl.startsWith('javascript:')?1:2);
+    for(const link of links)assert.equal(link.rel,'noopener noreferrer');
+    controller.destroy();dom.window.close();
+  }
+});
+
 test("widget filters existing catalog cards and updates only their price labels", async () => {
   const dom = new JSDOM(`
     <div id="search"></div>

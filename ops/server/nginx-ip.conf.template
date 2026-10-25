@@ -21,14 +21,25 @@ server {
   error_log /var/log/nginx/domkazan-error.log crit;
   add_header X-Content-Type-Options nosniff always;
   add_header Referrer-Policy same-origin always;
-  # This release exposes administration only. Public search, requests and widgets
-  # remain disconnected until actual prices, availability and privacy policy pass acceptance.
+  # Public catalog and requests have independent, explicit release flags.
+  # Internal retry, test pages and other unlisted paths remain private.
   location = /api/health { proxy_pass http://127.0.0.1:3000; }
   location /api/internal/ { return 404; }
+  location = /privacy { return 302 /privacy-2026-10-26.html; }
+  location ~ ^/(?:privacy|consent)-2026-10-26\.html$ {
+    root /var/www/domkazan;
+    try_files $uri =404;
+    default_type text/html;
+    add_header Cache-Control "no-store" always;
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy same-origin always;
+    add_header Content-Security-Policy "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" always;
+  }
+  ${PUBLIC_ASSETS_LOCATION}
   location / {
     return 404;
   }
-  location ~ ^/(?:admin(?:/|$)|api/admin(?:/|$)|_next/) {
+  location ~ ^/(?:admin(?:/|$)|api/admin(?:/|$)|_next/${PUBLIC_API_PATTERN}) {
     proxy_pass http://127.0.0.1:3000;
     proxy_http_version 1.1;
     proxy_set_header Host ${SERVER_IP};
