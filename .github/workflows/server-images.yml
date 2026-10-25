@@ -1,0 +1,35 @@
+name: Server images
+on:
+  pull_request:
+    paths:
+      - .github/workflows/server-images.yml
+      - Dockerfile
+      - .dockerignore
+      - ops/server/**
+permissions:
+  contents: read
+jobs:
+  images:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Build immutable release images without deployment credentials
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          docker build --target runner -t domkazan-calendar:app-${SOURCE_SHA} .
+          docker build --target tools -t domkazan-calendar:tools-${SOURCE_SHA} .
+          mkdir release
+          docker save domkazan-calendar:app-${SOURCE_SHA} domkazan-calendar:tools-${SOURCE_SHA} | gzip -1 > release/images.tar.gz
+          printf '%s\n' "$SOURCE_SHA" > release/source-sha.txt
+          cd release
+          sha256sum images.tar.gz > images.tar.gz.sha256
+      - uses: actions/upload-artifact@v5
+        with:
+          name: server-images
+          path: release/
+          retention-days: 3
