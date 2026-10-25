@@ -37,23 +37,9 @@ docker compose --env-file "$root/config/database.env" -f "$root/compose.infrastr
 cp -p /etc/nginx/sites-available/domkazan "$root/config/nginx.previous"
 restore_nginx() { cp -p "$root/config/nginx.previous" /etc/nginx/sites-available/domkazan; }
 trap restore_nginx ERR
-python3 - <<'PY'
-from ipaddress import ip_address
-from pathlib import Path
-from urllib.parse import urlparse
-root = Path('/srv/domkazan')
-env = dict(line.split('=', 1) for line in (root / 'config/app.env').read_text().splitlines() if line)
-origin = urlparse(env['APP_ORIGIN'])
-assert origin.scheme == 'https' and origin.path in ('', '/') and not origin.query and not origin.fragment
-host = str(ip_address(origin.hostname))
-assert len(env['TRUSTED_PROXY_SECRET']) >= 32
-config = (root / 'operations/nginx-ip.conf.template').read_text()
-config = config.replace('${SERVER_IP}', host).replace('${TRUSTED_PROXY_SECRET}', env['TRUSTED_PROXY_SECRET'])
-assert '${' not in config
-Path('/etc/nginx/sites-available/domkazan').write_text(config)
-PY
+python3 "$root/operations/render-nginx.py"
 nginx -t
 systemctl reload nginx
 trap - ERR
 curl --fail --silent --show-error "https://$server_ip/api/health"
-printf '\nDeployed %s; administration only, no public catalog cutover.\n' "$source_sha"
+printf '\nDeployed %s; public routes follow explicit release flags. Tilda was not changed.\n' "$source_sha"

@@ -18,3 +18,4 @@ playwright-report/
 *.dump
 *.dump.sha256
 *.partial
+__pycache__/

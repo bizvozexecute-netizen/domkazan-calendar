@@ -5,12 +5,25 @@ import { GET } from '../ops/tilda-test-gateway/api/availability.js';
 import { POST } from '../ops/tilda-test-gateway/api/requests.js';
 import {GET as calendarGet} from '../ops/tilda-test-gateway/api/house-calendar.js';
 import {renderTildaTestSnippet} from '../scripts/render-tilda-test-snippet.mjs';
+import {renderTildaProductionSnippet} from '../scripts/render-tilda-production-snippet.mjs';
 
 const gateway = 'https://domkazan-calendar-tilda-test-gatewa.vercel.app';
 const upstream = 'https://domkazan-calendar-test-cnu827x24-iss-projects-5d0a08b3.vercel.app';
 const headers = { origin: 'https://domkazan116.ru', 'x-vercel-oidc-token': 'test-oidc' };
 const query = 'checkIn=2026-10-20&checkOut=2026-10-22&guests=2';
 const tildaHouse = { id: 'test-tilda-id', slug: 'tilda-259712110892', quote: { total: '14000.00' } };
+
+test('working-page integration is pinned to reviewed page, block, server and policy',async()=>{
+  const snippet=await renderTildaProductionSnippet('https://45.147.31.241/privacy');
+  assert.equal(readFileSync(new URL('../integration/tilda-70446131-t123.html',import.meta.url),'utf8').replace(/\r\n/g,'\n'),snippet);
+  assert.match(snippet,/70446131/);
+  assert.match(snippet,/rec1184803096/);
+  assert.match(snippet,/testMode:false,privacyUrl:"https:\/\/45\.147\.31\.241\/privacy"/);
+  assert.doesNotMatch(snippet,/testMode:true|calendar-test-|homereserve\.ru|4862390501/);
+  assert.ok(snippet.length<12000);
+  await assert.rejects(renderTildaProductionSnippet('https://example.invalid/privacy'),/reviewed production policy/);
+  await assert.rejects(renderTildaProductionSnippet('https://45.147.31.241/test-policy'),/reviewed production policy/);
+});
 
 test('prepared test-page snippet stays synchronized with the reviewed bootstrap',async()=>{
   const snippet=await renderTildaTestSnippet(gateway);

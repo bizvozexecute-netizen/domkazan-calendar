@@ -36,6 +36,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
+      - run: python3 -m unittest discover -s tests -p test_server_nginx.py
       - run: npm run test:integration
       - run: npm run build
       - name: Prefer the Ubuntu archive for browser dependencies
