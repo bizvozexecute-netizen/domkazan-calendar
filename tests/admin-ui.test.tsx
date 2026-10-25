@@ -16,6 +16,7 @@ test("house search handles mobile spaces, ё, punctuation, joined numbers and ca
   assert.ok(matchesHouseSearch("", "Дом"));
   assert.equal(matchesHouseSearch("Мирный3", "Мирный 2"), false);
   assert.equal(matchesHouseSearch("Мирный", "Щербаковка 3"), false);
+  assert.equal(Array.from({length:5},(_,i)=>`Дербышки ${i+1}`).filter(name=>matchesHouseSearch("Дербышки",name)).length, 5);
 });
 
 test("native touch scroll locks the initial axis, keeps inertia and releases for wheel/pinch", () => {

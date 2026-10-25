@@ -18,6 +18,33 @@ async function login(page:Page){
 }
 test.afterAll(async()=>{await db.$disconnect();});
 
+test('desktop stays signed in after phone login and the exact Дербышки query finds five houses',async({page,browser})=>{
+  const fixture=houses.map((house,index)=>index<5?{...house,name:`Вымышленные Дербышки ${index+1}`,calendarName:`Дербышки ${index+1}`}:house);
+  await page.route('**/api/admin/calendar?*',route=>route.fulfill({json:{month,dates,houses:fixture}}));
+  const phoneContext=await browser.newContext({baseURL:process.env.APP_ORIGIN,locale:'ru-RU',viewport:{width:390,height:844}});
+  try{
+    await login(page);
+    const phone=await phoneContext.newPage();
+    await login(phone);
+    expect((await page.context().request.get('/api/admin/calendar?month='+month)).status()).toBe(200);
+    await page.reload();
+    await expect(page).toHaveURL(/\/admin$/);
+    const region=page.getByRole('region',{name:'Цены и занятость домов',exact:true});
+    await expect(region.locator('tbody tr')).toHaveCount(80);
+    await region.evaluate(element=>{element.scrollTop=900;});
+    await page.getByRole('searchbox',{name:'Найти дом в шахматке'}).fill('Дербышки');
+    await expect(region.locator('tbody tr')).toHaveCount(5);
+    expect(await region.evaluate(element=>element.scrollTop)).toBe(0);
+    await phone.getByRole('button',{name:'Выйти',exact:true}).click();
+    await expect(phone).toHaveURL(/\/admin\/login$/);
+    expect((await page.context().request.get('/api/admin/calendar?month='+month)).status()).toBe(200);
+    expect((await phoneContext.request.get('/api/admin/calendar?month='+month)).status()).toBe(401);
+  }finally{
+    await page.context().request.post('/api/admin/logout',{headers:{Origin:process.env.APP_ORIGIN!}});
+    await phoneContext.close();
+  }
+});
+
 test('mobile house search handles keyboard spelling, reveals matches and recovers from an empty result',async({page},testInfo)=>{
   const fixture=houses.map((house,index)=>index===0?{...house,name:'Вымышленный Мирный 2',calendarName:'МИР 2'}:house);
   let reads=0;
