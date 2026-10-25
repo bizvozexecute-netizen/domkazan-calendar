@@ -9,7 +9,7 @@
     if(colors&&['primary','text','background'].every(key=>/^#[0-9a-f]{6}$/i.test(colors[key]||''))&&['primary','text'].every(key=>ratio(colors[key],'#FFFFFF')>=4.5&&ratio(colors[key],colors.background)>=4.5)&&ratio(colors.background,'#586B80')>=4.5)result.colors={...result.colors,primary:colors.primary,text:colors.text,background:colors.background};
     for(const key of ['whatsapp','telegram'])if(/^#[0-9a-f]{6}$/i.test(colors?.[key]||'')&&ratio(colors[key],'#FFFFFF')>=4.5&&ratio(colors[key],result.colors.background)>=4.5)result.colors[key]=colors[key];
     for(const key of Object.keys(result.texts)){const text=value?.texts?.[key];if(typeof text==='string'&&text.trim()&&text.length<=(key.endsWith('Button')?40:240)&&!/[<>{}\u0000-\u001f\u007f]/.test(text))result.texts[key]=text.trim();}
-    result.contacts=safeContacts(value?.contacts);return result;
+    result.contacts=safeContacts(value?.contacts);result.testEnvironment=value?.testEnvironment===true;return result;
   }
   function safeContacts(value){return {
     phone:typeof value?.phone==='string'&&/^tel:\+?\d{10,15}$/.test(value.phone)?value.phone:null,
@@ -28,6 +28,10 @@
     .dk-secondary,.contacts a.dk-secondary{background:#fff;color:var(--dk-accent);border-color:var(--dk-accent)}
     .contacts a.dk-secondary.dk-whatsapp,.contacts a.dk-secondary.dk-whatsapp:hover{background:var(--dk-whatsapp);border-color:var(--dk-whatsapp);color:#fff}
     .contacts a.dk-secondary.dk-telegram,.contacts a.dk-secondary.dk-telegram:hover{background:var(--dk-telegram);border-color:var(--dk-telegram);color:#fff}
+    .dk-secondary.dk-phone,.contacts a.dk-secondary.dk-phone,.dk-secondary.dk-phone:hover,.contacts a.dk-secondary.dk-phone:hover{background:#000;border-color:#000;color:#fff}
+    .dk-secondary.dk-phone:hover,.contacts a.dk-secondary.dk-phone:hover{box-shadow:0 0 0 2px #8998aa}
+    .dk-secondary.dk-phone:active,.contacts a.dk-secondary.dk-phone:active{background:#262626;border-color:#262626;box-shadow:inset 0 0 0 2px #fff}
+    .dk-secondary.dk-phone:focus-visible,.contacts a.dk-secondary.dk-phone:focus-visible{outline:3px solid #165BC4;outline-offset:3px}
     .dk-primary:hover:not(:disabled){background:var(--dk-accent);color:#fff;border-color:var(--dk-accent);box-shadow:0 3px 10px #172b4233}.dk-secondary:hover,.contacts a.dk-secondary:hover{background:#fff;box-shadow:0 2px 8px #172b4220}
     button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid var(--dk-accent);outline-offset:3px}
     .dk-primary:disabled,.dk-secondary:disabled{cursor:not-allowed;opacity:.65}
@@ -263,7 +267,7 @@
     if (!root || !apiUrl) throw new Error("Укажите root и apiUrl для DomKazanCalendar.");
     if (root.closest("a,button")) throw new Error("Форма поиска должна находиться вне ссылки или кнопки.");
     instances.get(root)?.destroy();
-    const ui=applyUi(root,configuredUi);const copy=ui.texts;
+    const ui=applyUi(root,configuredUi);const copy=ui.texts;testMode=testMode||ui.testEnvironment;
     let cards = collectCards(explicitCards);
     const shadow = root.shadowRoot || root.attachShadow({ mode: "open" });
     shadow.replaceChildren();

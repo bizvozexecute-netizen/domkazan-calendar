@@ -3,6 +3,32 @@ import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 import { createElement, act } from "react";
 import { dateKey, todayInMoscow } from "../src/lib/dates.ts";
+import { attachCalendarAxisLock } from "../src/lib/calendar-axis-lock.ts";
+
+test("native touch scroll locks the initial axis, keeps inertia and releases for wheel/pinch", () => {
+  const dom = new JSDOM('<div id="scroll"></div>');
+  const region = dom.window.document.getElementById("scroll")!;
+  const cleanup = attachCalendarAxisLock(region);
+  function touch(type: string, points: number[][]) {
+    const event = new dom.window.Event(type, {cancelable:true});
+    Object.defineProperty(event,"touches",{value:points.map(([clientX,clientY])=>({clientX,clientY}))});
+    region.dispatchEvent(event);assert.equal(event.defaultPrevented,false);
+  }
+  region.scrollLeft=80;region.scrollTop=100;
+  touch('touchstart',[[100,200]]);touch('touchmove',[[94,150]]);
+  region.scrollLeft=95;region.scrollTop=160;region.dispatchEvent(new dom.window.Event('scroll'));
+  assert.equal(region.scrollLeft,80);assert.equal(region.scrollTop,160);
+  touch('touchend',[]);region.scrollLeft=90;region.scrollTop=200;region.dispatchEvent(new dom.window.Event('scroll'));
+  assert.equal(region.scrollLeft,80,'secondary axis stays fixed during momentum');
+  touch('touchstart',[[100,200]]);touch('touchmove',[[40,196]]);
+  region.scrollLeft=150;region.scrollTop=210;region.dispatchEvent(new dom.window.Event('scroll'));
+  assert.equal(region.scrollLeft,150);assert.equal(region.scrollTop,200);
+  region.dispatchEvent(new dom.window.Event('wheel'));region.scrollTop=230;region.dispatchEvent(new dom.window.Event('scroll'));
+  assert.equal(region.scrollTop,230);
+  touch('touchstart',[[100,200],[130,200]]);region.scrollTop=240;region.dispatchEvent(new dom.window.Event('scroll'));
+  assert.equal(region.scrollTop,240,'pinch zoom is not locked');
+  cleanup();dom.window.close();
+});
 
 test("calendar cells are keyboard buttons and selected range reaches the admin API", async () => {
   const dom = new JSDOM("<!doctype html><html><body><main id='root'></main></body></html>", { url: "http://localhost:3000/admin" });
@@ -23,12 +49,25 @@ test("calendar cells are keyboard buttons and selected range reaches the admin A
     },
   });
   dom.window.confirm = () => true;
+  let mobile = true;
+  const mediaListeners = new Set<() => void>();
+  Object.assign(dom.window, { matchMedia: () => ({ matches: mobile,
+    addEventListener: (_: string, listener: () => void) => mediaListeners.add(listener),
+    removeEventListener: (_: string, listener: () => void) => mediaListeners.delete(listener),
+  }) });
+  dom.window.localStorage.setItem('domkazan.calendar-density.v1', 'comfortable');
   const { createRoot } = await import("react-dom/client");
   const { AdminCalendar } = await import("../src/components/admin-calendar.tsx");
   const container = dom.window.document.getElementById("root")!;
   const root = createRoot(container);
   await act(async () => { root.render(createElement(AdminCalendar)); });
-  const cells = [...container.querySelectorAll<HTMLButtonElement>("button[aria-pressed]")];
+  assert.equal(container.querySelector('.calendar-card')?.getAttribute('data-density'), 'compact');
+  await act(async () => { mobile = false; mediaListeners.forEach(listener => listener()); });
+  assert.equal(container.querySelector('.calendar-card')?.getAttribute('data-density'), 'comfortable');
+  await act(async () => { mobile = true; mediaListeners.forEach(listener => listener()); });
+  assert.equal(container.querySelector('.calendar-card')?.getAttribute('data-density'), 'compact');
+  assert.equal(dom.window.localStorage.getItem('domkazan.calendar-density.v1'), 'comfortable');
+  const cells = [...container.querySelectorAll<HTMLButtonElement>(".calendar-price[aria-pressed]")];
   assert.equal(cells.length, 2);
   assert.equal(cells[0].getAttribute("aria-label")?.includes(first), true);
   await act(async () => { cells[0].click(); cells[1].click(); });

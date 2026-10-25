@@ -164,3 +164,16 @@ test('catalog maps by explicit Product UID after slug rename and submits the dat
   assert.doesNotMatch(widget.querySelector('.receipt').textContent,/synthetic-database-id|Заявка synthetic:/);
   controller.destroy();dom.window.close();
 });
+
+
+test('test labels follow safe environment metadata; explicit production has no test title or notices',async()=>{
+  for(const [testMode,testEnvironment,marked] of [[true,false,true],[false,true,true],[false,false,false]]){
+    const dom=new JSDOM('<div id="catalog"></div>',{url:'https://catalog.example.invalid/catalog',runScripts:'outside-only'});
+    const win=dom.window;
+    win.fetch=async()=>Response.json({products:details.products.slice(0,1)});
+    for(const file of ['domkazan-search.js','domkazan-catalog.js'])win.eval(readFileSync(new URL(`../public/embed/${file}`,import.meta.url),'utf8'));
+    const controller=win.DomKazanCatalog.mount({root:win.document.getElementById('catalog'),apiOrigin:'https://gateway.example.invalid',testMode,uiSettings:{testEnvironment}});
+    try{await flush();assert.equal(Boolean(win.document.getElementById('catalog').shadowRoot.querySelector('.test-note')),marked);assert.equal(win.document.title.includes(', тест'),marked);}
+    finally{controller.destroy();dom.window.close();}
+  }
+});

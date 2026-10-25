@@ -96,7 +96,7 @@ test("catalog search, stale form reset, application and manual confirmation work
   expect((await loginResponse).status()).toBe(303);
   await expect(page).toHaveURL(/\/admin$/);
   await expect(page.getByRole("heading", { name: "Шахматка занятости" })).toBeVisible();
-  await expect(page.locator("button[aria-pressed]").first()).toBeVisible();
+  await expect(page.locator(".calendar-price[aria-pressed]").first()).toBeVisible();
   await expect(page.getByRole('region',{name:'Действия с выбранными датами',exact:true})).toBeHidden();
   await page.getByRole('button',{name:'Выбрать даты вручную',exact:true}).click();
   if (testInfo.project.name === "desktop") {

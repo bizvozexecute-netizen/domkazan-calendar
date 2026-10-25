@@ -4,6 +4,29 @@ import {CLIENT_UI_DEFAULTS,contrast} from '../../src/lib/client-ui';
 
 test.beforeEach(async({context})=>journeyFixture(context));
 
+test('phone actions are black with white text, distinct pressed/focus states and intact tel links',async({page})=>{
+  await openFixtureHouse(page);
+  const phones=page.locator('a[href="tel:+70000000000"]');
+  await expect(phones.first()).toBeVisible();
+  for(const phone of await phones.all()){
+    await expect(phone).toHaveCSS('background-color','rgb(0, 0, 0)');
+    await expect(phone).toHaveCSS('color','rgb(255, 255, 255)');
+    expect((await phone.boundingBox())!.height).toBeGreaterThanOrEqual(48);
+    // Safari's default Tab preference can skip links. Establish keyboard
+    // modality on this action, then focus the link explicitly in both engines.
+    await phone.press('Tab');await phone.focus();
+    await expect(phone).toBeFocused();await expect(phone).toHaveCSS('outline-style','solid');
+    await expect(phone).toHaveCSS('outline-width','3px');
+    await phone.scrollIntoViewIfNeeded();
+    const box=(await phone.boundingBox())!;
+    await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();
+    await expect(phone).toHaveCSS('background-color','rgb(38, 38, 38)');
+    // Release away from the link: checking styles must not place a call.
+    await page.mouse.move(0,0);await page.mouse.up();
+    await expect(phone).toHaveAttribute('href','tel:+70000000000');
+  }
+});
+
 test('a slow settings response keeps configured owner contact actions',async({page,context})=>{
   await context.route(`${fixtureOrigin}/api/client-settings`,async route=>{
     // A normal cold start must not silently remove all contact buttons.
@@ -56,7 +79,7 @@ test('agreed colors and texts reach catalog, gallery and request form with acces
   const video=page.getByRole('button',{name:'Перейти к видео дома',exact:true});
   await expect(video).toHaveText('Посмотреть видео');
   await expect(page.getByRole('button',{name:'Рассчитать поездку',exact:true})).toBeVisible();
-  for(const [action,border] of [[video,'rgb(22, 76, 154)'],[page.getByRole('link',{name:'Позвонить',exact:true}),'rgb(22, 76, 154)'],[page.getByRole('link',{name:'Telegram',exact:true}),'rgb(23, 101, 181)'],[page.getByRole('link',{name:'WhatsApp',exact:true}),'rgb(20, 108, 60)']] as const){
+  for(const [action,border] of [[video,'rgb(22, 76, 154)'],[page.getByRole('link',{name:'Позвонить',exact:true}),'rgb(0, 0, 0)'],[page.getByRole('link',{name:'Telegram',exact:true}),'rgb(23, 101, 181)'],[page.getByRole('link',{name:'WhatsApp',exact:true}),'rgb(20, 108, 60)']] as const){
     const box=await action.boundingBox();expect(box?.height).toBeGreaterThanOrEqual(48);
     await expect(action).toHaveCSS('border-top-color',border);
     await action.hover();

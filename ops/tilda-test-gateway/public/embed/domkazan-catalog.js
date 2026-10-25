@@ -263,6 +263,7 @@
       const ui=window.DomKazanCalendar.applyUi(root,await configuredUi);
       if(!alive)return;
       const copy=ui.texts;
+      testMode=testMode||ui.testEnvironment;
       const products = data.products.filter(product => /^\d{12}$/.test(product.productUid) && product.slug === `tilda-${product.productUid}`);
       const bySlug = new Map(products.map(product => [product.slug, product]));
       const byUid = new Map(products.map(product => [product.productUid, product]));
@@ -277,7 +278,7 @@
       const top=el('div',{class:'top'},[brand]);
       // A cached previous search module must not crash the newer catalog.
       const owner=window.DomKazanCalendar.safeContacts?.(ui.contacts)||{};
-      if(owner.phone)top.append(link(window.DomKazanCalendar.phoneLabel?.(owner.phone)||owner.phone.slice(4),owner.phone,'top-contact dk-secondary'));
+      if(owner.phone)top.append(link(window.DomKazanCalendar.phoneLabel?.(owner.phone)||owner.phone.slice(4),owner.phone,'top-contact dk-secondary dk-phone'));
       if(!embedded)shell.append(top);
       if (houseUid && !selected) {
         document.title='Дом не найден — DomKazan';
@@ -311,7 +312,7 @@
       let detailPrice;
 
       if (selected) {
-        document.title = `${selected.name} — DomKazan, тест`;
+        document.title = `${selected.name} — DomKazan${testMode ? ", тест" : ""}`;
         const galleryRoot = el('div', { class:'gallery' }, selected.images.map(src => el('img', { 'data-original':src, alt:selected.name })));
         shell.append(galleryRoot); media = mountGallery({root:galleryRoot, rutubeUrl:selected.rutubeUrl, uiSettings:ui});
         const info = houseDescription(selected);
@@ -333,7 +334,7 @@
         const layoutStyle=el('style',{text:'.house-layout{grid-template-areas:"gallery booking" "copy booking"}.house-layout>.gallery{grid-area:gallery;margin:0}.house-copy{grid-area:copy}.booking{grid-area:booking}@media(max-width:760px){.house-layout{grid-template-areas:"gallery" "booking" "copy"}}'});
         shell.append(layoutStyle,layout);
       } else {
-        document.title='Каталог домов — DomKazan, тест';
+        document.title=`Каталог домов — DomKazan${testMode ? ', тест' : ''}`;
         const sort = el('select', {'aria-label':'Сортировать',title:'Сортировка полной стоимости доступна после поиска'}, [['default', 'Порядок каталога'], ['price', 'Сначала дешевле'], ['price-desc', 'Сначала дороже']].map(([value, label]) => el('option', { value, text: label })));
         sort.disabled=true;sortControl=sort;
         sort.value = filter.sort;

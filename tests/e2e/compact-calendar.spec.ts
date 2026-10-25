@@ -1,0 +1,197 @@
+import {test,expect,type Page} from '@playwright/test';
+import {db} from '../../src/lib/db';
+import {writeFile} from 'node:fs/promises';
+
+const month='2027-01';
+const dates=Array.from({length:31},(_,i)=>`${month}-${String(i+1).padStart(2,'0')}`);
+const houses=Array.from({length:80},(_,i)=>({id:`density-${i}`,slug:`density-${i}`,name:`Вымышленный длинный дом для проверки ${i}`,calendarName:`Дом ${i}`,isActive:true,revision:0,
+  cells:dates.map(date=>({date,price:'12000.00',source:'base',status:i===2?'closed':'free'}))}));
+async function login(page:Page){
+  await page.goto('/admin/login');await page.getByLabel('Email',{exact:true}).fill('browser-tester@example.invalid');
+  await page.getByLabel('Пароль',{exact:true}).fill(process.env.E2E_ADMIN_PASSWORD!);
+  const [response]=await Promise.all([
+    page.waitForResponse(r=>r.url().endsWith('/api/admin/login')&&r.request().method()==='POST',{timeout:30000}),
+    page.getByRole('button',{name:'Войти',exact:true}).click(),
+  ]);
+  expect(response.status()).toBe(303);
+  await expect(page).toHaveURL(/\/admin$/,{timeout:20000});
+}
+test.afterAll(async()=>{await db.$disconnect();});
+
+test('dense board fits dates, preserves mode, sticky axes and full house names without scroll rerenders',async({page,browserName},testInfo)=>{
+  const mobile=(page.viewportSize()?.width??0)<=1023;
+  if(mobile)await page.addInitScript(()=>localStorage.setItem('domkazan.calendar-density.v1','comfortable'));
+  await page.route('**/api/admin/calendar?*',route=>{
+    const target=new URL(route.request().url()).searchParams.get('month')!;
+    const [year,number]=target.split('-').map(Number);
+    const targetDates=Array.from({length:new Date(Date.UTC(year,number,0)).getUTCDate()},(_,i)=>`${target}-${String(i+1).padStart(2,'0')}`);
+    return route.fulfill({json:{month:target,dates:targetDates,houses:houses.map(house=>({...house,cells:targetDates.map((date,i)=>({...house.cells[i],date}))}))}});
+  });
+  await login(page);await page.goto(`/admin?month=${month}`);
+  const region=page.getByRole('region',{name:'Цены и занятость домов',exact:true});
+  await expect(region.locator('tbody tr')).toHaveCount(80);
+  const geometry=await region.evaluate(el=>{
+    const house=el.querySelector('thead th')!.getBoundingClientRect().width;
+    const date=el.querySelector('[data-calendar-date]')!.getBoundingClientRect().width;
+    return {visible:Math.floor((el.clientWidth-house+0.5)/date),width:el.clientWidth,date,house};
+  });
+  if((page.viewportSize()?.width??0)<=430)expect(geometry.visible,JSON.stringify(geometry)).toBeGreaterThanOrEqual(8);
+  if((page.viewportSize()?.width??0)>=1280)expect(geometry.visible).toBe(31);
+  for(const date of dates){
+    const weekday=new Date(date+'T00:00:00Z').getUTCDay();
+    expect(await page.locator(`[data-calendar-date="${date}"]`).getAttribute('data-weekend')).toBe(weekday===5||weekday===6?'':null);
+  }
+  await page.getByRole('button',{name:`Полное название: ${houses[0].name}`,exact:true}).click();
+  await expect(page.getByRole('dialog')).toContainText(houses[0].name);
+  await page.getByRole('button',{name:'Закрыть название',exact:true}).click();
+  await expect(page.getByRole('button',{name:`Полное название: ${houses[0].name}`,exact:true})).toBeFocused();
+  if(mobile){
+    await expect(page.getByRole('group',{name:'Плотность шахматки'})).toBeHidden();
+    await expect(page.locator('.calendar-card')).toHaveAttribute('data-density','compact');
+    await page.reload();
+    await expect(region.locator('tbody tr')).toHaveCount(80);
+    await expect(page.locator('.calendar-card')).toHaveAttribute('data-density','compact');
+    expect(await page.evaluate(()=>localStorage.getItem('domkazan.calendar-density.v1'))).toBe('comfortable');
+    await page.getByRole('searchbox',{name:'Найти дом в шахматке'}).fill('Дом 7');
+    await expect(region.locator('tbody tr')).toHaveCount(11);
+    await page.getByRole('searchbox',{name:'Найти дом в шахматке'}).fill('');
+  }else{
+    await page.getByRole('button',{name:'Обычный',exact:true}).click();await page.reload();
+    await expect(page.getByRole('button',{name:'Обычный',exact:true})).toHaveAttribute('aria-pressed','true');
+    await page.getByRole('button',{name:'Компактный',exact:true}).click();
+  }
+  await expect(region.locator('tbody tr')).toHaveCount(80);
+  await region.scrollIntoViewIfNeeded();
+  const metrics=await region.evaluate(async el=>{
+    el.scrollLeft=80;el.scrollTop=150;
+    await new Promise(requestAnimationFrame);
+    let mutations=0;const observer=new MutationObserver(records=>{mutations+=records.length;});
+    observer.observe(el,{subtree:true,attributes:true,childList:true,characterData:true});
+    const frames:number[]=[];
+    let previous=performance.now();
+    for(let i=0;i<20;i++){await new Promise(requestAnimationFrame);const now=performance.now();frames.push(now-previous);previous=now;el.scrollTop+=5;}
+    observer.disconnect();
+    const box=el.getBoundingClientRect(),header=el.querySelector('thead th:nth-child(2)')!.getBoundingClientRect(),house=el.querySelector('tbody th')!.getBoundingClientRect();
+    const nav=el.querySelector('.calendar-mobile-nav')!.getBoundingClientRect();
+    return {mutations,frames,headerTop:header.top-box.top,houseLeft:house.left-box.left,navHeight:nav.height,navTop:nav.top-box.top,navLeft:nav.left-box.left};
+  });
+  expect(metrics.mutations).toBe(0);expect(Math.abs(metrics.headerTop-metrics.navHeight)).toBeLessThan(2);expect(Math.abs(metrics.houseLeft)).toBeLessThan(2);
+  if(mobile){expect(Math.abs(metrics.navTop)).toBeLessThan(2);expect(Math.abs(metrics.navLeft)).toBeLessThan(2);}
+  let nativeGesture;
+  if(browserName==='chromium' && (page.viewportSize()?.width??0)<=430){
+    const cdp=await page.context().newCDPSession(page);
+    const box=(await region.boundingBox())!;
+    const start=await region.evaluate(el=>({left:el.scrollLeft,top:el.scrollTop}));
+    const x=Math.round(box.x+box.width-45),y=Math.round(Math.min(box.y+box.height-80,650));
+    const swipe=async(dx:number,dy:number)=>{
+      await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});
+      for(let i=1;i<=10;i++){
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:x+dx*i/10,y:y+dy*i/10}]});
+        await page.evaluate(()=>new Promise(requestAnimationFrame));
+      }
+      await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+    };
+    await swipe(-12,-110);
+    await expect.poll(async()=>(await region.evaluate(el=>el.scrollTop))-start.top).toBeGreaterThan(40);
+    const afterVertical=await region.evaluate(el=>({left:el.scrollLeft,top:el.scrollTop}));
+    expect(Math.abs(afterVertical.left-start.left)).toBeLessThanOrEqual(3);
+    await swipe(-110,-10);
+    await expect.poll(async()=>(await region.evaluate(el=>el.scrollLeft))-afterVertical.left).toBeGreaterThan(40);
+    const afterHorizontal=await region.evaluate(el=>({left:el.scrollLeft,top:el.scrollTop}));
+    expect(Math.abs(afterHorizontal.top-afterVertical.top)).toBeLessThanOrEqual(3);
+    nativeGesture={start,afterVertical,afterHorizontal};await cdp.detach();
+  }
+  // Native event delivery is engine-dependent in emulation. This exercises the
+  // passive fallback and momentum without pretending synthetic events are fingers.
+  const drift=await region.evaluate(el=>{
+    const fire=(type:string,x:number,y:number)=>{const event=new Event(type,{bubbles:true});Object.defineProperty(event,'touches',{value:type==='touchend'?[]:[{clientX:x,clientY:y}]});el.dispatchEvent(event);};
+    const left=el.scrollLeft,top=el.scrollTop;
+    fire('touchstart',100,150);fire('touchmove',94,90);el.scrollLeft+=18;el.scrollTop+=70;el.dispatchEvent(new Event('scroll'));
+    const vertical={secondary:el.scrollLeft-left,primary:el.scrollTop-top};fire('touchend',0,0);
+    fire('touchstart',100,150);fire('touchmove',40,146);const second=el.scrollTop;el.scrollLeft+=60;el.scrollTop+=16;el.dispatchEvent(new Event('scroll'));
+    const horizontal={secondary:el.scrollTop-second};fire('touchend',0,0);el.dispatchEvent(new Event('scrollend'));
+    return {vertical,horizontal};
+  });
+  expect(drift.vertical.secondary).toBe(0);expect(drift.vertical.primary).toBe(70);expect(drift.horizontal.secondary).toBe(0);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+  const clipping=await region.locator('td button').evaluateAll(buttons=>buttons.some(el=>el.scrollWidth>el.clientWidth+1));expect(clipping).toBe(false);
+  const pageY=await page.evaluate(()=>scrollY);
+  if(pageY>30 && browserName==='chromium' && testInfo.project.use.isMobile){
+    // Use a real touch gesture for a touch device, rather than a desktop wheel.
+    const cdp=await page.context().newCDPSession(page);
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:1,y:100}]});
+    for(let i=1;i<=10;i++){
+      await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:1,y:100+i*10}]});
+      await page.evaluate(()=>new Promise(requestAnimationFrame));
+    }
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+    await expect.poll(()=>page.evaluate(()=>scrollY)).toBeLessThan(pageY-20);
+    await cdp.detach();
+  }else if(pageY>30 && !testInfo.project.use.isMobile){
+    await page.mouse.move(1,100);await page.mouse.wheel(0,-100);
+    await expect.poll(()=>page.evaluate(()=>scrollY)).toBeLessThan(pageY-20);
+  }
+  // Playwright has no native swipe/wheel input on mobile WebKit. Real iPhone
+  // scrolling outside the grid remains a physical-device acceptance check.
+  const measurements=testInfo.outputPath('calendar-metrics.json');
+  await writeFile(measurements,JSON.stringify({geometry,metrics,drift,nativeGesture},null,2));
+  await testInfo.attach('board-measurements',{path:measurements,contentType:'application/json'});
+  await page.screenshot({path:testInfo.outputPath('compact-calendar.png'),fullPage:true});
+  if(mobile){
+    await page.getByRole('button',{name:'Следующий месяц',exact:true}).click();
+    await expect(region.locator('[data-calendar-date="2027-02-01"]')).toBeVisible();
+    await expect(region.locator('.calendar-day')).toHaveCount(28);
+    await page.getByRole('button',{name:'Предыдущий месяц',exact:true}).click();
+    await expect(region.locator('[data-calendar-date="2027-01-01"]')).toBeVisible();
+    await expect(region.locator('.calendar-day')).toHaveCount(31);
+    await expect(page.locator('.calendar-card')).toHaveAttribute('data-density','compact');
+    const originalViewport=page.viewportSize()!;
+    await page.setViewportSize({width:844,height:390});
+    await expect(page.locator('.calendar-card')).toHaveAttribute('data-density','compact');
+    await expect(page.getByRole('group',{name:'Плотность шахматки'})).toBeHidden();
+    await expect(page.getByRole('group',{name:'Навигация по месяцам'})).toBeVisible();
+    await page.setViewportSize(originalViewport);
+  }
+});
+
+test('range close, reopen and manual price retain board position and change public search',async({page,request},testInfo)=>{
+  const id=`compact-action-${testInfo.project.name}`;
+  const fillerIds=Array.from({length:30},(_,i)=>`${id}-row-${i}`);
+  await db.house.deleteMany({where:{id}});
+  await db.house.createMany({data:fillerIds.map((id,i)=>({id,slug:id,name:`А синтетическая строка ${i}`,maxGuests:4}))});
+  await db.house.create({data:{id,slug:id,name:'Вымышленный UX дом',maxGuests:4,baseRates:{create:{startsOn:new Date('2027-01-01'),endsOn:new Date('2027-02-01'),weekdayPrice:12000,fridayPrice:13000,saturdayPrice:14000,sundayPrice:12000}}}});
+  try{
+    await login(page);await page.goto(`/admin?month=${month}`);
+    const region=page.getByRole('region',{name:'Цены и занятость домов',exact:true});
+    const row=region.locator('tr').filter({has:page.getByRole('button',{name:'Полное название: Вымышленный UX дом',exact:true})});
+    await expect(row).toBeVisible();
+    await region.scrollIntoViewIfNeeded();
+    await row.getByRole('button',{name:/2027-01-10, Свободно/}).click();
+    await row.getByRole('button',{name:/2027-01-12, Свободно/}).click();
+    await expect(row.locator('[aria-pressed=true]')).toHaveCount(3);
+    const position=()=>region.evaluate(el=>({left:el.scrollLeft,top:el.scrollTop}));
+    const search=async()=> (await(await request.get(`/api/availability?checkIn=2027-01-10&checkOut=2027-01-13&guests=2`)).json()).houses.find((h:{slug:string})=>h.slug===id);
+    const confirm=async(label:string)=>{
+      await page.getByRole('button',{name:label,exact:true}).click();
+      const before=await position();
+      expect(before.top).toBeGreaterThan(0);
+      await page.getByRole('button',{name:'Подтвердить изменение',exact:true}).click();
+      await expect(page.getByRole('status').filter({hasText:'Изменения сохранены.'})).toBeVisible();
+      expect(await position()).toEqual(before);
+    };
+    await confirm('Закрыть даты');expect(await search()).toBeUndefined();
+    await confirm('Открыть даты');expect(await search()).toBeTruthy();
+    await page.getByLabel('Ручная цена, ₽',{exact:true}).fill('12345.67');
+    await confirm('Изменить стоимость');expect((await search()).quote.total).toBe('37037.01');
+    await page.getByRole('button',{name:'Закрыть панель действий',exact:true}).click();
+    await expect(row.locator('.calendar-price').filter({hasText:'12345,67'})).toHaveCount(3);
+    expect(await row.locator('.calendar-price').evaluateAll(buttons=>buttons.some(el=>el.scrollWidth>el.clientWidth+1))).toBe(false);
+    await row.getByRole('button',{name:/2027-01-16, Свободно/}).click();
+    await expect(row.locator('[aria-pressed=true]')).toHaveCount(1);
+    if((page.viewportSize()?.width??0)<1024){
+      await page.getByRole('button',{name:'Действия для одной даты',exact:true}).click();
+      await expect(page.getByLabel('Ручная цена, ₽',{exact:true})).toBeVisible();
+    }
+    await page.getByRole('button',{name:'Закрыть панель действий',exact:true}).click();
+  }finally{await db.house.deleteMany({where:{id:{in:[id,...fillerIds]}}});}
+});
