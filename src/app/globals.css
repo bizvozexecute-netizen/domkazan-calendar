@@ -103,18 +103,19 @@
 .calendar-grid-scroll { --calendar-house-width:132px; --calendar-min-date:64px; max-width:100%; max-height:68vh; max-height:68dvh; overflow:auto; touch-action:pan-x pan-y pinch-zoom; overscroll-behavior:contain; overflow-anchor:none; }
 .calendar-table { width:max(100%,calc(var(--calendar-house-width) + var(--calendar-days) * max(var(--calendar-min-date),calc(var(--calendar-price-ch) * 1ch + 8px)))); table-layout:fixed; font-size:12px; }
 .calendar-house-col { width:var(--calendar-house-width); }
-.calendar-grid-scroll .calendar-house-cell { width:var(--calendar-house-width); min-width:0; max-width:none; padding:0 6px; }
+.calendar-grid-scroll th.calendar-house-cell { width:var(--calendar-house-width); min-width:0; max-width:none; padding:0 6px; }
 .calendar-grid-scroll .calendar-house-name { display:block; width:100%; min-height:44px; padding:4px 0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; text-align:left; color:#21578f; font-size:12px; font-weight:550; }
 .calendar-inactive { display:block; font-size:9px; color:var(--dk-muted); }
 .calendar-grid-scroll .calendar-day { height:44px; padding:2px 0; background:#f7f9fc; font-size:10px; line-height:1.2; }
 .calendar-grid-scroll .calendar-day[data-weekend] { background:#e8dafa; color:#562987; }
-.calendar-grid-scroll .calendar-price { display:block; width:100%; min-height:44px; padding:4px 2px; white-space:nowrap; font-size:12px; line-height:1.2; font-variant-numeric:tabular-nums; letter-spacing:-.2px; touch-action:pan-x pan-y pinch-zoom; }
+.admin-main .calendar-grid-scroll .calendar-price { display:block; width:100%; min-height:44px; padding:4px 2px; white-space:nowrap; font-size:12px; line-height:1.2; font-variant-numeric:tabular-nums; letter-spacing:-.2px; touch-action:pan-x pan-y pinch-zoom; }
 .calendar-grid-scroll .calendar-price:focus-visible { position:relative; z-index:1; outline-offset:-3px; }
 .calendar-card[data-density=compact] .calendar-grid-scroll { --calendar-house-width:96px; --calendar-min-date:32px; }
 .calendar-card[data-density=compact] .calendar-table { font-size:10px; width:max(100%,calc(var(--calendar-house-width) + var(--calendar-days) * max(var(--calendar-min-date),calc(var(--calendar-price-ch) * 1ch + 3px)))); }
 .calendar-card[data-density=compact] .calendar-price { min-height:32px; padding:2px 1px; font-size:10px; letter-spacing:-.3px; }
 .calendar-card[data-density=compact] .calendar-house-name { min-height:32px; font-size:10px; }
 .calendar-card[data-density=compact] .calendar-day { height:32px; font-size:9px; }
+.calendar-selection-expand { display:none; }
 .calendar-house-dialog { margin:auto; width:min(420px,calc(100% - 32px)); padding:24px; border:1px solid var(--dk-line); border-radius:14px; background:white; color:var(--dk-ink); overflow-wrap:anywhere; }
 .calendar-house-dialog::backdrop { background:#172b4266; }
 .calendar-house-dialog h2 { font-size:20px; font-weight:650; }
@@ -125,9 +126,17 @@
   .calendar-card[data-density=compact] .calendar-grid-scroll { --calendar-house-width:64px; --calendar-min-date:31px; }
   .calendar-card-header { padding:8px 10px; gap:4px; }
   .calendar-density-help { width:100%; margin-left:0; }
-  .calendar-grid-scroll .calendar-house-cell { padding:0 3px; }
+  .calendar-grid-scroll th.calendar-house-cell { padding:0 3px; }
 }
 @media(max-width:360px) {
-  .calendar-card[data-density=compact] .calendar-grid-scroll { --calendar-house-width:56px; --calendar-min-date:30px; }
+  .admin-main:has(.calendar-card) { padding-inline:4px; }
+  .calendar-card[data-density=compact] .calendar-grid-scroll { --calendar-house-width:48px; --calendar-min-date:30px; }
   .calendar-card[data-density=compact] .calendar-table,.calendar-card[data-density=compact] .calendar-price { font-size:9.5px; }
+}
+
+@media(max-width:1023px) {
+  .calendar-actions.is-selecting { max-height:180px; padding:10px 12px; }
+  .calendar-actions.is-selecting .calendar-action-fields,.calendar-actions.is-selecting .calendar-action-buttons,.calendar-actions.is-selecting .calendar-action-help { display:none; }
+  .calendar-actions.is-selecting .calendar-selection-expand { display:inline-flex; align-items:center; min-height:44px; padding:6px 10px; border:1px solid var(--dk-line); border-radius:8px; margin-top:6px; }
+  .calendar-actions.is-selecting [role=status]:empty { display:none; }
 }

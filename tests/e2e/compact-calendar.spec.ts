@@ -54,18 +54,29 @@ test('dense board fits dates, preserves mode, sticky axes and full house names w
     const cdp=await page.context().newCDPSession(page);
     const box=(await region.boundingBox())!;
     const start=await region.evaluate(el=>({left:el.scrollLeft,top:el.scrollTop}));
-    await cdp.send('Input.synthesizeScrollGesture',{x:Math.round(box.x+box.width-45),y:Math.round(Math.min(box.y+box.height-60,700)),yDistance:-110,xDistance:-12,gestureSourceType:'touch',speed:400});
+    const x=Math.round(box.x+box.width-45),y=Math.round(Math.min(box.y+box.height-80,650));
+    const swipe=async(dx:number,dy:number)=>{
+      await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});
+      for(let i=1;i<=10;i++){
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:x+dx*i/10,y:y+dy*i/10}]});
+        await page.evaluate(()=>new Promise(requestAnimationFrame));
+      }
+      await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+    };
+    await swipe(-12,-110);
+    await expect.poll(async()=>(await region.evaluate(el=>el.scrollTop))-start.top).toBeGreaterThan(40);
     const afterVertical=await region.evaluate(el=>({left:el.scrollLeft,top:el.scrollTop}));
-    expect(afterVertical.top-start.top).toBeGreaterThan(40);expect(Math.abs(afterVertical.left-start.left)).toBeLessThanOrEqual(3);
-    await cdp.send('Input.synthesizeScrollGesture',{x:Math.round(box.x+box.width-45),y:Math.round(Math.min(box.y+box.height-60,700)),yDistance:-10,xDistance:-110,gestureSourceType:'touch',speed:400});
+    expect(Math.abs(afterVertical.left-start.left)).toBeLessThanOrEqual(3);
+    await swipe(-110,-10);
+    await expect.poll(async()=>(await region.evaluate(el=>el.scrollLeft))-afterVertical.left).toBeGreaterThan(40);
     const afterHorizontal=await region.evaluate(el=>({left:el.scrollLeft,top:el.scrollTop}));
-    expect(afterHorizontal.left-afterVertical.left).toBeGreaterThan(40);expect(Math.abs(afterHorizontal.top-afterVertical.top)).toBeLessThanOrEqual(3);
+    expect(Math.abs(afterHorizontal.top-afterVertical.top)).toBeLessThanOrEqual(3);
     nativeGesture={start,afterVertical,afterHorizontal};await cdp.detach();
   }
   // Native event delivery is engine-dependent in emulation. This exercises the
   // passive fallback and momentum without pretending synthetic events are fingers.
   const drift=await region.evaluate(el=>{
-    const fire=(type:string,x:number,y:number)=>el.dispatchEvent(new TouchEvent(type,{touches:type==='touchend'?[]:[new Touch({identifier:1,target:el,clientX:x,clientY:y})],bubbles:true}));
+    const fire=(type:string,x:number,y:number)=>{const event=new Event(type,{bubbles:true});Object.defineProperty(event,'touches',{value:type==='touchend'?[]:[{clientX:x,clientY:y}]});el.dispatchEvent(event);};
     const left=el.scrollLeft,top=el.scrollTop;
     fire('touchstart',100,150);fire('touchmove',94,90);el.scrollLeft+=18;el.scrollTop+=70;el.dispatchEvent(new Event('scroll'));
     const vertical={secondary:el.scrollLeft-left,primary:el.scrollTop-top};fire('touchend',0,0);
@@ -82,7 +93,9 @@ test('dense board fits dates, preserves mode, sticky axes and full house names w
 
 test('range close, reopen and manual price retain board position and change public search',async({page,request},testInfo)=>{
   const id=`compact-action-${testInfo.project.name}`;
+  const fillerIds=Array.from({length:30},(_,i)=>`${id}-row-${i}`);
   await db.house.deleteMany({where:{id}});
+  await db.house.createMany({data:fillerIds.map((id,i)=>({id,slug:id,name:`А синтетическая строка ${i}`,maxGuests:4}))});
   await db.house.create({data:{id,slug:id,name:'Вымышленный UX дом',maxGuests:4,baseRates:{create:{startsOn:new Date('2027-01-01'),endsOn:new Date('2027-02-01'),weekdayPrice:12000,fridayPrice:13000,saturdayPrice:14000,sundayPrice:12000}}}});
   try{
     await login(page);await page.goto(`/admin?month=${month}`);
@@ -98,6 +111,7 @@ test('range close, reopen and manual price retain board position and change publ
     const confirm=async(label:string)=>{
       await page.getByRole('button',{name:label,exact:true}).click();
       const before=await position();
+      expect(before.top).toBeGreaterThan(0);
       await page.getByRole('button',{name:'Подтвердить изменение',exact:true}).click();
       await expect(page.getByRole('status').filter({hasText:'Изменения сохранены.'})).toBeVisible();
       expect(await position()).toEqual(before);
@@ -109,5 +123,12 @@ test('range close, reopen and manual price retain board position and change publ
     await page.getByRole('button',{name:'Закрыть панель действий',exact:true}).click();
     await expect(row.locator('.calendar-price').filter({hasText:'12345,67'})).toHaveCount(3);
     expect(await row.locator('.calendar-price').evaluateAll(buttons=>buttons.some(el=>el.scrollWidth>el.clientWidth+1))).toBe(false);
-  }finally{await db.house.delete({where:{id}});}
+    await row.getByRole('button',{name:/2027-01-16, Свободно/}).click();
+    await expect(row.locator('[aria-pressed=true]')).toHaveCount(1);
+    if((page.viewportSize()?.width??0)<1024){
+      await page.getByRole('button',{name:'Действия для одной даты',exact:true}).click();
+      await expect(page.getByLabel('Ручная цена, ₽',{exact:true})).toBeVisible();
+    }
+    await page.getByRole('button',{name:'Закрыть панель действий',exact:true}).click();
+  }finally{await db.house.deleteMany({where:{id:{in:[id,...fillerIds]}}});}
 });

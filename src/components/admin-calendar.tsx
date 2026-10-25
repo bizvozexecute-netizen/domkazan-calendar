@@ -225,22 +225,23 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
     <div ref={actionsRegion} hidden={!actionsOpen} role="region" aria-label="Действия с выбранными датами"
       style={{ "--panel-left": `${panel.left}px`, "--panel-top": `${panel.top}px` } as CSSProperties}
       onKeyDown={(event) => { if (event.key === "Escape" && !busy) closeActions(); }}
-      className="calendar-actions fixed inset-x-0 bottom-0 z-50 max-h-[55vh] overflow-auto rounded-t-xl border bg-white p-4 shadow-xl lg:inset-x-auto lg:bottom-auto lg:left-[var(--panel-left)] lg:top-[var(--panel-top)] lg:w-[720px] lg:rounded-xl">
+      className={`calendar-actions ${selection && !selection.complete && !manualOpen ? "is-selecting" : ""} fixed inset-x-0 bottom-0 z-50 max-h-[55vh] overflow-auto rounded-t-xl border bg-white p-4 shadow-xl lg:inset-x-auto lg:bottom-auto lg:left-[var(--panel-left)] lg:top-[var(--panel-top)] lg:w-[720px] lg:rounded-xl`}>
       <div className="flex items-center justify-between gap-2"><h2 className="text-base font-medium">Действия с датами</h2><button type="button" disabled={busy} onClick={closeActions} className="rounded border px-3 py-1" aria-label="Закрыть панель действий">×</button></div>
-      <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      <button type="button" className="calendar-selection-expand" onClick={() => setSelection(current => current && {...current,complete:true})}>Действия для одной даты</button>
+      <div className="calendar-action-fields mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         <label className="grid min-w-0 gap-1 text-sm">Дом<select aria-label="Дом" value={selection?.houseId ?? ""} onChange={(event) => setSelection(event.target.value ? { houseId: event.target.value, start: today(), end: today(), complete: true } : null)} className="min-w-0 w-full rounded-lg border px-3 py-2"><option value="">Выберите дом</option>{board?.houses.map((house) => <option key={house.id} value={house.id}>{house.name}</option>)}</select></label>
         <label className="grid min-w-0 gap-1 text-sm">С даты<input type="date" min="2000-01-01" max="2100-12-31" value={selection?.start ?? ""} onChange={(event) => setSelection((current) => current && { ...current, start: event.target.value, complete: true })} className="min-w-0 w-full rounded-lg border px-3 py-2" /></label>
         <label className="grid min-w-0 gap-1 text-sm">По дату включительно<input type="date" min="2000-01-01" max="2100-12-31" value={selection?.end ?? ""} onChange={(event) => setSelection((current) => current && { ...current, end: event.target.value, complete: true })} className="min-w-0 w-full rounded-lg border px-3 py-2" /></label>
         <label className="grid min-w-0 gap-1 text-sm">Ручная цена, ₽<input type="text" inputMode="decimal" placeholder="Например, 12000" value={price} onChange={(event) => setPrice(event.target.value)} className="min-w-0 w-full rounded-lg border px-3 py-2" /></label>
       </div>
       <div className="mt-2 text-xs text-slate-600">{selectedHouse ? `${selectedHouse.name}: ${selection?.start} — ${selection?.end}` : "Выберите дом и даты"}</div>
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="calendar-action-buttons mt-3 flex flex-wrap gap-2">
         <button type="button" disabled={!selectedHouse || busy} onClick={() => apply("close")} className="rounded-lg bg-amber-700 px-4 py-2 text-white disabled:opacity-50">Закрыть даты</button>
         <button type="button" disabled={!selectedHouse || busy} onClick={() => apply("open")} className="rounded-lg border border-emerald-700 px-4 py-2 text-emerald-900 disabled:opacity-50">Открыть даты</button>
         <button type="button" disabled={!selectedHouse || busy} onClick={() => apply("setPrice")} className="rounded-lg bg-emerald-800 px-4 py-2 text-white disabled:opacity-50">Изменить стоимость</button>
         <button type="button" disabled={!selectedHouse || busy} onClick={() => apply("clearPrice")} className={buttonStyle}>Убрать ручную цену</button>
       </div>
-      <p className="mt-2 text-xs text-slate-600">«Открыть» снимает ручное закрытие. Подтверждённые заявки по-прежнему занимают даты.</p>
+      <p className="calendar-action-help mt-2 text-xs text-slate-600">«Открыть» снимает ручное закрытие. Подтверждённые заявки по-прежнему занимают даты.</p>
       <p className="mt-2 min-h-6 text-sm font-medium" role="status" aria-live="polite">{busy ? "Сохраняем…" : message}</p>
       {pending && <div role="alertdialog" aria-labelledby="calendar-confirm-label" aria-modal="false" className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
         <p id="calendar-confirm-label" className="font-medium">{pending.label}</p>
