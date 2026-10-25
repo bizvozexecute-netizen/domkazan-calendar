@@ -18,6 +18,52 @@ async function login(page:Page){
 }
 test.afterAll(async()=>{await db.$disconnect();});
 
+test('mobile house search handles keyboard spelling, reveals matches and recovers from an empty result',async({page},testInfo)=>{
+  const fixture=houses.map((house,index)=>index===0?{...house,name:'Вымышленный Мирный 2',calendarName:'МИР 2'}:house);
+  let reads=0;
+  await page.route('**/api/admin/calendar?*',route=>{reads++;return route.fulfill({json:{month,dates,houses:fixture}});});
+  await login(page);
+  const region=page.getByRole('region',{name:'Цены и занятость домов',exact:true});
+  await expect(region.locator('tbody tr')).toHaveCount(80);
+  await region.evaluate(element=>{element.scrollTop=900;element.scrollLeft=100;});
+  const search=page.getByRole('searchbox',{name:'Найти дом в шахматке'});
+  const initialReads=reads;
+  for(const value of ['мирный\u202f2','Мирный2','2 мирный','МИР2']){
+    await search.fill(value);
+    await expect(region.locator('tbody tr')).toHaveCount(1);
+    await expect(region.getByRole('button',{name:'Полное название: Вымышленный Мирный 2',exact:true})).toBeVisible();
+    expect(await region.evaluate(element=>element.scrollTop)).toBe(0);
+  }
+  await search.fill('несуществующий дом');
+  await expect(region.getByText('Домов по запросу', {exact:false})).toBeVisible();
+  await expect(region.locator('table')).toHaveCount(0);
+  await region.getByRole('button',{name:'Очистить поиск',exact:true}).click();
+  await expect(search).toHaveValue('');
+  await expect(region.locator('tbody tr')).toHaveCount(80);
+  expect(reads).toBe(initialReads);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+  await page.screenshot({path:testInfo.outputPath('search-recovered.png')});
+});
+
+test('section navigation reports pending work and policy draft stays behind admin login',async({page})=>{
+  await page.route('**/admin/houses*',async route=>{
+    const headers=route.request().headers();
+    if(headers['next-router-prefetch'] || headers['next-router-segment-prefetch'] || headers.purpose==='prefetch')return route.abort();
+    await new Promise(resolve=>setTimeout(resolve,1200));
+    await route.continue();
+  });
+  await page.goto('/admin/privacy-draft');
+  await expect(page).toHaveURL(/\/admin\/login/);
+  await login(page);
+  await page.getByRole('navigation',{name:'Администрирование'}).getByRole('link',{name:'Дома',exact:true}).click();
+  await expect(page.getByRole('status').filter({hasText:'Открываем раздел «Дома»'})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'Дома',exact:true})).toBeVisible();
+  await page.getByRole('navigation',{name:'Администрирование'}).getByRole('link',{name:'Настройки',exact:true}).click();
+  await page.getByRole('link',{name:'Проект политики обработки данных для согласования',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Проект политики обработки персональных данных',exact:true})).toBeVisible();
+  await expect(page.getByText('Черновик для согласования.',{exact:false})).toBeVisible();
+});
+
 test('dense board fits dates, preserves mode, sticky axes and full house names without scroll rerenders',async({page,browserName},testInfo)=>{
   const mobile=(page.viewportSize()?.width??0)<=1023;
   if(mobile)await page.addInitScript(()=>localStorage.setItem('domkazan.calendar-density.v1','comfortable'));
