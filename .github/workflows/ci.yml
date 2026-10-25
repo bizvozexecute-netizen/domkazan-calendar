@@ -38,6 +38,13 @@ jobs:
       - run: npm test
       - run: npm run test:integration
       - run: npm run build
+      - name: Prefer the Ubuntu archive for browser dependencies
+        run: |
+          # The Azure mirror took almost nine minutes for 119 MB in a previous run.
+          # Keep Ubuntu package verification and use the official archive mirror.
+          if [ -f /etc/apt/apt-mirrors.txt ]; then
+            sudo sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' /etc/apt/apt-mirrors.txt
+          fi
       - run: npx playwright install --with-deps chromium webkit
       - run: npm run test:e2e
       - run: sudo apt-get update && sudo apt-get install -y postgresql-client-16

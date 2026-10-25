@@ -18,7 +18,7 @@ function subscribeDensity(listener: () => void) {
   return () => window.removeEventListener("storage", listener);
 }
 const defaultDensity = (): Density => "compact";
-const mobileQuery = "(max-width: 760px)";
+const mobileQuery = "(max-width: 1023px)";
 function readMobile() { return window.matchMedia?.(mobileQuery).matches ?? false; }
 function subscribeMobile(listener: () => void) {
   const query = window.matchMedia?.(mobileQuery);

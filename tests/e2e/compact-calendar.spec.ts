@@ -19,7 +19,7 @@ async function login(page:Page){
 test.afterAll(async()=>{await db.$disconnect();});
 
 test('dense board fits dates, preserves mode, sticky axes and full house names without scroll rerenders',async({page,browserName},testInfo)=>{
-  const mobile=(page.viewportSize()?.width??0)<=760;
+  const mobile=(page.viewportSize()?.width??0)<=1023;
   if(mobile)await page.addInitScript(()=>localStorage.setItem('domkazan.calendar-density.v1','comfortable'));
   await page.route('**/api/admin/calendar?*',route=>{
     const target=new URL(route.request().url()).searchParams.get('month')!;
@@ -145,6 +145,12 @@ test('dense board fits dates, preserves mode, sticky axes and full house names w
     await expect(region.locator('[data-calendar-date="2027-01-01"]')).toBeVisible();
     await expect(region.locator('.calendar-day')).toHaveCount(31);
     await expect(page.locator('.calendar-card')).toHaveAttribute('data-density','compact');
+    const originalViewport=page.viewportSize()!;
+    await page.setViewportSize({width:844,height:390});
+    await expect(page.locator('.calendar-card')).toHaveAttribute('data-density','compact');
+    await expect(page.getByRole('group',{name:'Плотность шахматки'})).toBeHidden();
+    await expect(page.getByRole('group',{name:'Навигация по месяцам'})).toBeVisible();
+    await page.setViewportSize(originalViewport);
   }
 });
 
