@@ -72,3 +72,18 @@ test('a click confined to the shadow tree still opens the house',async({page})=>
   await expect(page.locator('h1')).toHaveText(fixtureProduct.name);
   await expect(page.locator('[data-domkazan-transition]')).toHaveCount(0);
 });
+
+test('a stalled transition falls back once instead of keeping the catalog locked',async({page})=>{
+  await page.clock.install();
+  let documents=0;page.on('request',request=>{if(request.isNavigationRequest()&&request.frame()===page.mainFrame())documents++;});
+  await page.goto(`${fixtureOrigin}/resilience-fixture`);
+  await expect(page.locator('.details-link')).toBeVisible();
+  await page.locator('#catalog').evaluate(root=>root.addEventListener('domkazan:view-ready',event=>event.stopImmediatePropagation(),true));
+  await page.locator('.details-link').click();
+  await expect(page.locator('[data-domkazan-transition]')).toHaveCount(1);
+  await page.clock.fastForward(16000);
+  await expect(page.locator('h1')).toHaveText(fixtureProduct.name);
+  await expect(page.locator('[data-domkazan-transition]')).toHaveCount(0);
+  await expect(page.locator('#catalog')).not.toHaveAttribute('inert','');
+  expect(documents).toBe(2);
+});

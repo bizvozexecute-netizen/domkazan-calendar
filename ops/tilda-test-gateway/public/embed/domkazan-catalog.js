@@ -554,6 +554,7 @@
       current=mountPage({...options,pagePath,catalogData,uiSettings:clientSettings,catalogReturn:readReturn()});
     }
     function showTransition(isCatalog){
+      clearTimeout(transitionTimer);
       navigating=true;root.inert=true;
       if(!overlay){overlay=document.createElement('div');overlay.setAttribute('data-domkazan-transition','');overlay.setAttribute('role','status');overlay.style.cssText='position:fixed;inset:0;z-index:2147483000;display:grid;place-content:center;padding:24px;background:#f5f7fa;color:#172b42;text-align:center;font:500 15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';document.body.append(overlay);}
       overlay.textContent=isCatalog?'Возвращаемся к каталогу…':'Открываем дом…';
