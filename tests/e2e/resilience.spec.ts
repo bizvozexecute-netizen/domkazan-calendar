@@ -162,7 +162,9 @@ test('availability conflict removes stale request and keeps checkout on the next
   // Change the visible month rather than treating an absent cell as disabled.
   await showCalendarDay(page,fixtureDay(6));
   await expect(page.locator(`[data-day="${fixtureDay(6)}"]`)).toBeDisabled();
-  await page.keyboard.press('Escape');await page.getByRole('button',{name:'Оставить заявку: Вымышленный дом'}).click();
+  await page.getByRole('button',{name:'Следующий месяц',exact:true}).press('Escape');
+  await expect(page.getByRole('dialog',{name:'Выбор дат проживания'})).toBeHidden();
+  await page.getByRole('button',{name:'Оставить заявку: Вымышленный дом'}).click();
   await page.getByRole('checkbox',{name:/Согласен на обработку/}).check();await page.getByRole('button',{name:'Отправить заявку',exact:true}).click();
   await expect(page.getByText('Доступность дома изменилась. Повторите поиск перед новой заявкой.',{exact:true})).toBeVisible();
   await expect(page.locator('[data-domkazan-action-for]')).toHaveCount(0);

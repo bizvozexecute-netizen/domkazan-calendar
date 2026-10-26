@@ -63,7 +63,10 @@ test("one search, price sorting, house calendar, gallery, receipt and return pre
     await expect(page.locator(`[data-day="${day(offset)}"]`)).toBeDisabled();
   }
   await page.screenshot({path:testInfo.outputPath('journey-calendar.png'),fullPage:true});
-  await page.keyboard.press("Escape");
+  // Month navigation replaces day cells. Send Escape from a surviving calendar
+  // control, then verify the popover closed before editing the next field.
+  await page.getByRole('button',{name:'Следующий месяц',exact:true}).press('Escape');
+  await expect(page.getByRole('dialog',{name:'Выбор дат проживания'})).toBeHidden();
   // A house can be requoted independently; return still restores the catalog's search.
   await page.getByLabel('Гостей',{exact:true}).fill('9');
   await page.getByRole('button',{name:'Проверить стоимость',exact:true}).click();
