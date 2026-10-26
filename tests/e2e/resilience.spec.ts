@@ -1,6 +1,6 @@
 import {test,expect} from '@playwright/test';
 import {fixtureOrigin,fixtureProduct,fixtureHouses,fixtureDay,journeyFixture,openFixtureHouse} from './journey-fixture';
-import {selectStay} from './stay-helper';
+import {selectStay,showCalendarDay} from './stay-helper';
 import {CLIENT_UI_DEFAULTS} from '../../src/lib/client-ui';
 
 test.beforeEach(async({context})=>journeyFixture(context));
@@ -156,10 +156,11 @@ test('availability conflict removes stale request and keeps checkout on the next
   await context.route(`${fixtureOrigin}/api/requests`,route=>route.fulfill({status:409,json:{error:'Занято'}}));
   await openFixtureHouse(page);await page.getByRole('button',{name:'Выезд',exact:true}).click();
   // Occupied night is a valid departure boundary; it cannot be stayed through.
+  await showCalendarDay(page,fixtureDay(5));
   await expect(page.locator(`[data-day="${fixtureDay(5)}"]`)).toBeEnabled();
   // The following day can be in the next month (for example 26 October + 6).
   // Change the visible month rather than treating an absent cell as disabled.
-  if(await page.locator(`[data-day="${fixtureDay(6)}"]`).count()===0)await page.getByRole('button',{name:'Следующий месяц',exact:true}).click();
+  await showCalendarDay(page,fixtureDay(6));
   await expect(page.locator(`[data-day="${fixtureDay(6)}"]`)).toBeDisabled();
   await page.keyboard.press('Escape');await page.getByRole('button',{name:'Оставить заявку: Вымышленный дом'}).click();
   await page.getByRole('checkbox',{name:/Согласен на обработку/}).check();await page.getByRole('button',{name:'Отправить заявку',exact:true}).click();

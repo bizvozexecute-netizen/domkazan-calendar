@@ -1,6 +1,6 @@
 import {readFile} from "node:fs/promises";
 import {test,expect} from "@playwright/test";
-import {selectStay} from "./stay-helper";
+import {selectStay,showCalendarDay} from "./stay-helper";
 
 // This suite uses synthetic contacts only; admin/auth tests never record video.
 test.use({video:'on'});
@@ -58,7 +58,10 @@ test("one search, price sorting, house calendar, gallery, receipt and return pre
   await page.getByRole("button",{name:"Видео Rutube",exact:true}).click();await expect(page.locator('iframe[title="Видео дома на Rutube"]')).toHaveAttribute('src',/rutube.ru\/play\/embed\/a{32}\//);
   await page.getByRole("button",{name:"Фото 1",exact:true}).click();
   await page.getByRole("button",{name:"Заезд",exact:true}).click();
-  await expect(page.locator(`[data-day="${day(5)}"]`)).toBeDisabled();await expect(page.locator(`[data-day="${day(6)}"]`)).toBeDisabled();
+  for(const offset of [5,6]){
+    await showCalendarDay(page,day(offset));
+    await expect(page.locator(`[data-day="${day(offset)}"]`)).toBeDisabled();
+  }
   await page.screenshot({path:testInfo.outputPath('journey-calendar.png'),fullPage:true});
   await page.keyboard.press("Escape");
   // A house can be requoted independently; return still restores the catalog's search.
