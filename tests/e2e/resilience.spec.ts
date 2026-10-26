@@ -156,7 +156,11 @@ test('availability conflict removes stale request and keeps checkout on the next
   await context.route(`${fixtureOrigin}/api/requests`,route=>route.fulfill({status:409,json:{error:'Занято'}}));
   await openFixtureHouse(page);await page.getByRole('button',{name:'Выезд',exact:true}).click();
   // Occupied night is a valid departure boundary; it cannot be stayed through.
-  await expect(page.locator(`[data-day="${fixtureDay(5)}"]`)).toBeEnabled();await expect(page.locator(`[data-day="${fixtureDay(6)}"]`)).toBeDisabled();
+  await expect(page.locator(`[data-day="${fixtureDay(5)}"]`)).toBeEnabled();
+  // The following day can be in the next month (for example 26 October + 6).
+  // Change the visible month rather than treating an absent cell as disabled.
+  if(await page.locator(`[data-day="${fixtureDay(6)}"]`).count()===0)await page.getByRole('button',{name:'Следующий месяц',exact:true}).click();
+  await expect(page.locator(`[data-day="${fixtureDay(6)}"]`)).toBeDisabled();
   await page.keyboard.press('Escape');await page.getByRole('button',{name:'Оставить заявку: Вымышленный дом'}).click();
   await page.getByRole('checkbox',{name:/Согласен на обработку/}).check();await page.getByRole('button',{name:'Отправить заявку',exact:true}).click();
   await expect(page.getByText('Доступность дома изменилась. Повторите поиск перед новой заявкой.',{exact:true})).toBeVisible();
