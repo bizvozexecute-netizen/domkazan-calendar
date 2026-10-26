@@ -22,10 +22,10 @@ for(const selector of ['.cover','h2 a','.details-link']){
   });
 }
 
-test('a failed History API falls back to the ordinary house URL',async({page})=>{
+for(const method of ['pushState','replaceState'] as const)test(`a failed History API ${method} falls back to the ordinary house URL`,async({page})=>{
   await page.goto(`${fixtureOrigin}/resilience-fixture?guests=2`);
   await expect(page.locator('.details-link')).toBeVisible();
-  await page.evaluate(()=>{history.pushState=()=>{throw new DOMException('Unavailable','SecurityError');};});
+  await page.evaluate(method=>{history[method]=()=>{throw new DOMException('Unavailable','SecurityError');};},method);
   await page.locator('.details-link').click();
   await expect(page.locator('h1')).toHaveText(fixtureProduct.name);
   expect(new URL(page.url()).searchParams.get('house')).toBe(fixtureProduct.productUid);

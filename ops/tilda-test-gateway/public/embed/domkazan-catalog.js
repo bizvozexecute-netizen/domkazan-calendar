@@ -574,8 +574,8 @@
       if(!new URL(location.href).searchParams.has('house')&&target.searchParams.has('house')){
         const back=new URL(target);back.searchParams.delete('house');
         catalogReturn={url:back.pathname+back.search,y:scrollY,uid:target.searchParams.get('house')};
-        history.replaceState({...history.state,domkazanCatalogReturn:catalogReturn},'',catalogReturn.url);
         try{sessionStorage.setItem('domkazan.catalog.return.v1',JSON.stringify(catalogReturn));}catch{/* History retains the return point when storage is unavailable. */}
+        history.replaceState({...history.state,domkazanCatalogReturn:catalogReturn},'',catalogReturn.url);
       }
       showTransition(!target.searchParams.has('house'));
       history.pushState({...history.state,domkazanCatalogReturn:catalogReturn},'',target.pathname+target.search);render();
