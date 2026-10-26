@@ -17,6 +17,8 @@ test('working bootstrap uses production mode, keeps header and restores filtered
   await fixture(context);
   await page.goto('https://domkazan116.ru/');
   await expect(page.locator('.cards article')).toHaveCount(1);
+  const catalogScript=page.locator('script[src*="/embed/domkazan-catalog.js"]');
+  await expect(catalogScript).toHaveAttribute('src',/\?v=nav-20261026(?:&retry=1)?$/);
   await expect(page.getByText('Main menu',{exact:true})).toBeVisible();
   await expect(page.getByText('Main hero',{exact:true})).toBeVisible();
   const hero=await page.locator('#rec1096886496').boundingBox();

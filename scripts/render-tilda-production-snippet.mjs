@@ -27,6 +27,10 @@ export async function renderTildaProductionSnippet(policyUrl) {
     if(!snippet.includes(from))throw new Error('Bootstrap contract changed: review production mapping');
     snippet=snippet.replaceAll(from,to);
   }
+  // A newly published page must not reuse the pre-fix Safari navigation module.
+  const scriptUrl="script.src = `${apiOrigin}/embed/${file}${attempt?'?retry=1':''}`";
+  if(!snippet.includes(scriptUrl))throw new Error('Review versioned production asset loading');
+  snippet=snippet.replace(scriptUrl,"script.src = `${apiOrigin}/embed/${file}?v=nav-20261026${attempt?'&retry=1':''}`");
   const failureMarker='mounted?.destroy();\n    status.hidden = false;';
   if(!snippet.includes(failureMarker))throw new Error('Review the production fallback contract');
   snippet=snippet.replace(failureMarker,`mounted?.destroy();
