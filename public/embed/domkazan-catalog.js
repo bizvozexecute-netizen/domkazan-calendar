@@ -492,7 +492,7 @@
     let catalogData=options.catalogData!==undefined?Promise.resolve(options.catalogData):fetch(new URL('/api/catalog',options.apiOrigin),{signal:controller.signal})
       .then(async response=>{if(!response.ok)throw new Error('Каталог временно недоступен.');return response.json();})
       .finally(()=>clearTimeout(timer));
-    let current,overlay,alive=true,revision=0,navigating=false,restorePending=false,engaged=false;
+    let current,overlay,transitionTimer,alive=true,revision=0,navigating=false,restorePending=false,engaged=false;
     const engage=()=>{engaged=true;};
     for(const event of ['pointerdown','keydown','input','wheel'])root.addEventListener(event,engage,{passive:true});
     async function refreshed(data){
@@ -519,7 +519,8 @@
       note.append(retry);root.prepend(note);
     }
     if(options.refreshCatalogData)Promise.resolve(options.refreshCatalogData).then(refreshed).catch(staleContent);
-    function removeOverlay(){overlay?.remove();overlay=null;root.inert=false;}
+    function removeOverlay(){clearTimeout(transitionTimer);overlay?.remove();overlay=null;root.inert=false;}
+    function nativeNavigation(target){removeOverlay();navigating=false;location.assign(target.href);}
     function readReturn(){
       try{
         const fromHistory=history.state?.domkazanCatalogReturn;
@@ -540,45 +541,58 @@
       let saved;
       if(isCatalog){const value=readReturn();if(value?.url===location.pathname+location.search)saved=value;}
       let focus;
-      if(navigating||saved){
-        window.scrollTo?.({top:isCatalog?Math.max(0,saved?.y||0):0,behavior:'instant'});
+      try{if(navigating||saved){
+        // Use the long-supported overload, independent of Safari's supported
+        // ScrollBehavior values. A restoration failure must never lock the UI.
+        window.scrollTo?.(0,isCatalog?Math.max(0,saved?.y||0):0);
         if(navigating)focus=root.shadowRoot?.querySelector(saved?.uid?`[data-domkazan-house="tilda-${saved.uid}"] h2 a`:'h1');
-      }
-      (window.requestAnimationFrame||((callback)=>setTimeout(callback,0)))(()=>{if(alive&&revision===token){removeOverlay();navigating=false;if(focus){if(focus.tagName==='H1')focus.tabIndex=-1;focus.focus({preventScroll:true});}}});
+      }}catch{/* Keep the rendered view usable even if scroll restoration fails. */}
+      (window.requestAnimationFrame||((callback)=>setTimeout(callback,0)))(()=>{if(alive&&revision===token){removeOverlay();navigating=false;if(focus){if(focus.tagName==='H1')focus.tabIndex=-1;try{focus.focus({preventScroll:true});}catch{/* Focus must not break navigation. */}}}});
     }
     function render(){
       revision++;restorePending=true;current?.destroy();
       current=mountPage({...options,pagePath,catalogData,uiSettings:clientSettings,catalogReturn:readReturn()});
     }
     function showTransition(isCatalog){
+      clearTimeout(transitionTimer);
       navigating=true;root.inert=true;
       if(!overlay){overlay=document.createElement('div');overlay.setAttribute('data-domkazan-transition','');overlay.setAttribute('role','status');overlay.style.cssText='position:fixed;inset:0;z-index:2147483000;display:grid;place-content:center;padding:24px;background:#f5f7fa;color:#172b42;text-align:center;font:500 15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';document.body.append(overlay);}
       overlay.textContent=isCatalog?'Возвращаемся к каталогу…':'Открываем дом…';
     }
     function clicked(event){
-      if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
-      const anchor=event.composedPath().find(node=>node?.tagName==='A'&&node.hasAttribute('href'));
+      // Only explicit auxiliary mouse buttons opt out. Touch/keyboard clicks
+      // may omit button or report -1; pointerType is unreliable on iOS Safari.
+      if(event.defaultPrevented||event.button>0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
+      const anchor=event.composedPath?.().find(node=>node?.tagName==='A'&&node.hasAttribute('href'))||event.target?.closest?.('a[href]');
       if(!anchor||anchor.hasAttribute('download')||(anchor.target&&anchor.target!=='_self'))return;
       let target;try{target=new URL(anchor.href,location.href);}catch{return;}
       if(target.origin!==location.origin||target.pathname!==pagePath||target.hash)return;
-      event.preventDefault();
+      // Keep a real href as the fallback. Cancel it only once the replacement
+      // navigation has started successfully; History API failures use the href.
+      try{
       let catalogReturn=readReturn();
       if(!new URL(location.href).searchParams.has('house')&&target.searchParams.has('house')){
         const back=new URL(target);back.searchParams.delete('house');
         catalogReturn={url:back.pathname+back.search,y:scrollY,uid:target.searchParams.get('house')};
-        history.replaceState({...history.state,domkazanCatalogReturn:catalogReturn},'',catalogReturn.url);
         try{sessionStorage.setItem('domkazan.catalog.return.v1',JSON.stringify(catalogReturn));}catch{/* History retains the return point when storage is unavailable. */}
+        history.replaceState({...history.state,domkazanCatalogReturn:catalogReturn},'',catalogReturn.url);
       }
       showTransition(!target.searchParams.has('house'));
       history.pushState({...history.state,domkazanCatalogReturn:catalogReturn},'',target.pathname+target.search);render();
+      event.preventDefault();
+      transitionTimer=setTimeout(()=>{if(alive&&navigating)nativeNavigation(target);},15000);
+      }catch{event.preventDefault();nativeNavigation(target);}
     }
-    function popped(){if(location.pathname===pagePath){showTransition(!new URL(location.href).searchParams.has('house'));render();}}
-    root.addEventListener('click',clicked);
+    function popped(){if(location.pathname===pagePath){const target=new URL(location.href);try{showTransition(!target.searchParams.has('house'));render();transitionTimer=setTimeout(()=>{if(alive&&navigating)nativeNavigation(target);},15000);}catch{nativeNavigation(target);}}}
+    // Delegate inside our shadow tree: outside it Safari retargets event.target
+    // to the host, so the target fallback cannot find the actual house anchor.
+    const clickRoot=root.shadowRoot||root.attachShadow({mode:'open'});
+    clickRoot.addEventListener('click',clicked);
     root.addEventListener('domkazan:view-ready',ready);
     root.addEventListener('domkazan:error',removeOverlay);
     window.addEventListener('popstate',popped);
     render();
-    const instance={destroy(){alive=false;controller.abort();clearTimeout(timer);current?.destroy();removeOverlay();root.querySelector('[data-content-retry]')?.remove();for(const event of ['pointerdown','keydown','input','wheel'])root.removeEventListener(event,engage);root.removeEventListener('click',clicked);root.removeEventListener('domkazan:view-ready',ready);root.removeEventListener('domkazan:error',removeOverlay);window.removeEventListener('popstate',popped);history.scrollRestoration=previousRestoration;}};
+    const instance={destroy(){alive=false;controller.abort();clearTimeout(timer);current?.destroy();removeOverlay();root.querySelector('[data-content-retry]')?.remove();for(const event of ['pointerdown','keydown','input','wheel'])root.removeEventListener(event,engage);clickRoot.removeEventListener('click',clicked);root.removeEventListener('domkazan:view-ready',ready);root.removeEventListener('domkazan:error',removeOverlay);window.removeEventListener('popstate',popped);history.scrollRestoration=previousRestoration;}};
     mountedPages.set(root,instance);return instance;
   }
   window.DomKazanCatalog = { mount };

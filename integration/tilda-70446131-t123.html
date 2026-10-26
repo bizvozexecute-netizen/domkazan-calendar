@@ -92,7 +92,7 @@
       const cancelled = () => finish(new Error('Startup cancelled'));
       script.onload = () => finish(); script.onerror = () => finish(new Error('Script unavailable'));
       controller.signal.addEventListener('abort', cancelled, {once:true});
-      script.src = `${apiOrigin}/embed/${file}${attempt?'?retry=1':''}`; document.head.append(script);
+      script.src = `${apiOrigin}/embed/${file}?v=nav-20261026${attempt?'&retry=1':''}`; document.head.append(script);
     });}catch(error){if(controller.signal.aborted||attempt===1)throw error;}
   }
 
