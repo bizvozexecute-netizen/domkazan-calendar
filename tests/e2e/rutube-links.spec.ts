@@ -9,7 +9,7 @@ for(const path of ['shorts','video','video/private']) {
     const url=`https://rutube.ru/${path}/${id}/${key}`;
     await context.route(`${fixtureOrigin}/api/catalog`,route=>route.fulfill({json:{products:[{...fixtureProduct,rutubeUrl:url}]}}));
     await openFixtureHouse(page);
-    await page.getByRole('button',{name:'Смотреть видео',exact:true}).click();
+    await page.getByRole('button',{name:'Перейти к видео дома',exact:true}).click();
     await expect(page.locator('.gallery iframe')).toHaveAttribute('src',`https://rutube.ru/play/embed/${id}/${key}`);
     await expect(page.getByRole('link',{name:'Открыть видео в Rutube ↗'})).toHaveAttribute('href',url);
     await expect(page.getByRole('heading',{name:fixtureProduct.name,exact:true})).toBeVisible();
