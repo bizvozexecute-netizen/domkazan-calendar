@@ -113,8 +113,13 @@
     let video = null;
     try {
       const url = new URL(rutubeUrl);
-      const id = url.pathname.match(/^\/(?:video|play\/embed)\/([a-f0-9]{32})\/?$/i)?.[1];
-      if (url.protocol === "https:" && url.hostname === "rutube.ru" && id) video = `https://rutube.ru/play/embed/${id}/`;
+      const id = url.pathname.match(/^\/(?:shorts|video(?:\/private)?|play\/embed)\/([a-f0-9]{32})\/?$/i)?.[1];
+      if (url.protocol === "https:" && url.hostname === "rutube.ru" && !url.username && !url.password && !url.port && id) {
+        const embed = new URL(`https://rutube.ru/play/embed/${id}/`);
+        const access = url.searchParams.get('p');
+        if (access && /^[a-z0-9_-]{1,200}$/i.test(access)) embed.searchParams.set('p', access);
+        if (!url.pathname.includes('/private/') || embed.searchParams.has('p')) video = embed.href;
+      }
     } catch { /* Optional video; unsupported URLs never become iframe content. */ }
     if (!photos.length && !video) {
       root.replaceChildren(text('p','Фотографии дома уточните у владельца.','subtitle'));

@@ -3,11 +3,39 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import {clientDay,clientStayQuery} from './client-dates.mjs';
-import { publicCatalog,loadCatalog } from '../ops/tilda-test-gateway/lib/catalog.js';
+import { publicCatalog,loadCatalog,normalizeRutube } from '../ops/tilda-test-gateway/lib/catalog.js';
 import {descriptionContent,descriptionText} from '../ops/tilda-test-gateway/lib/description.js';
 
 const details = JSON.parse(readFileSync(new URL('../data/tilda-catalog-details.json', import.meta.url), 'utf8'));
 const flush = () => new Promise(resolve => setTimeout(resolve, 20));
+
+test('Rutube Shorts and unlisted links normalize without losing the access key',()=>{
+  const id='a'.repeat(32);
+  for(const path of ['shorts','video','play/embed']) assert.equal(normalizeRutube(`https://rutube.ru/${path}/${id}/?utm_source=test`),`https://rutube.ru/video/${id}/`);
+  assert.equal(normalizeRutube(`https://rutube.ru/video/private/${id}/?p=synthetic_Key-1`),`https://rutube.ru/video/${id}/?p=synthetic_Key-1`);
+  for(const url of [`https://rutube.ru/video/private/${id}/`,`https://rutube.ru.evil.invalid/video/${id}/`,`https://user@rutube.ru/video/${id}/`,`http://rutube.ru/video/${id}/`,`https://rutube.ru:444/video/${id}/`,'javascript:alert(1)']) assert.equal(normalizeRutube(url),null);
+  for(const source of ['gallery','text']) {
+    const url=`https://rutube.ru/shorts/${id}/`;
+    const product={uid:'111111111111',title:'Synthetic',...(source==='gallery'?{gallery:JSON.stringify([{video:url}])}:{text:`<a href="${url}">Видео</a>`})};
+    assert.equal(publicCatalog({total:1,products:[product]}).products[0].rutubeUrl,`https://rutube.ru/video/${id}/`);
+  }
+});
+
+test('gallery opens Shorts and preserves unlisted access in the player and fallback',async()=>{
+  const id='a'.repeat(32);
+  for(const path of [`shorts/${id}/`,`video/private/${id}/?p=synthetic_Key-1`]) {
+    const products=details.products.slice(0,3).map(p=>({...p,rutubeUrl:`https://rutube.ru/${path}`}));
+    const f=await setup('?house=555240345232',house=>house,{catalogData:{products}});
+    try {
+      const gallery=f.shadow.querySelector('.gallery').shadowRoot;
+      const button=[...gallery.querySelectorAll('button')].find(b=>b.textContent.includes('Смотреть видео'));
+      assert.ok(button);button.click();
+      const expected=`https://rutube.ru/play/embed/${id}/${path.includes('?')?'?p=synthetic_Key-1':''}`;
+      assert.equal(gallery.querySelector('iframe').src,expected);
+      assert.equal(gallery.querySelector('.video-help a').href,`https://rutube.ru/${path}`);
+    } finally {f.controller.destroy();f.dom.window.close();}
+  }
+});
 
 test('full Tilda owner text preserves paragraphs, emphasis, lists and price conditions safely',()=>{
   const html='<p>Полное <strong>описание</strong> &laquo;дома&raquo;</p><p>Доплата: 500 ₽<br>Заезд в 15:00</p><ul><li>Баня</li><li><em>Без животных</em></li></ul><script>private()</script><a href="https://homereserve.ru/old">Календарь</a>';

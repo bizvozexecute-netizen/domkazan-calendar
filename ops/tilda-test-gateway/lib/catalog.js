@@ -1,6 +1,19 @@
 import {descriptionContent,descriptionText} from './description.js';
 export const catalogSource = 'https://store.tildaapi.com/api/getproductslist/?storepartuid=213912569062&recid=4148990801&getparts=true&getoptions=true&size=100';
 
+export function normalizeRutube(value) {
+  try {
+    const url = new URL(String(value).trim());
+    const id = url.pathname.match(/^\/(?:shorts|video(?:\/private)?|play\/embed)\/([a-f0-9]{32})\/?$/i)?.[1];
+    if (url.protocol !== 'https:' || url.hostname !== 'rutube.ru' || url.username || url.password || url.port || !id) return null;
+    const result = new URL(`https://rutube.ru/video/${id}/`);
+    const access = url.searchParams.get('p');
+    if (access && /^[a-z0-9_-]{1,200}$/i.test(access)) result.searchParams.set('p', access);
+    if (url.pathname.includes('/private/') && !result.searchParams.has('p')) return null;
+    return result.href;
+  } catch { return null; }
+}
+
 export function plain(value) {
   return String(value ?? '').replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
     .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '').replace(/<br\s*\/?\s*>|<\/p>/gi, '\n')
@@ -29,11 +42,9 @@ export function publicCatalog(data) {
       try { const url = new URL(value); return url.protocol === 'https:' && /(^|\.)tildacdn\.(com|info|net|pub)$/.test(url.hostname); } catch { return false; }
     }))].slice(0, 50);
     const videoCandidates = [...(Array.isArray(rawGallery) ? rawGallery.flatMap(item => [item.video, item.url]) : []),
-      ...(String(product.text||'').match(/https:\/\/rutube\.ru\/(?:video|play\/embed)\/[a-f0-9]{32}\/?/gi)||[]),
-      ...(description.match(/https:\/\/rutube\.ru\/(?:video|play\/embed)\/[a-f0-9]{32}\/?/gi) || [])];
-    const rutubeUrl = videoCandidates.find(value => {
-      try { const url = new URL(value); return url.protocol === 'https:' && url.hostname === 'rutube.ru' && /^\/(?:video|play\/embed)\/[a-f0-9]{32}\/?$/i.test(url.pathname); } catch { return false; }
-    }) || null;
+      ...(String(product.text||'').replace(/&amp;/gi,'&').match(/https:\/\/rutube\.ru\/[^\s<>"']+/gi)||[]),
+      ...(description.match(/https:\/\/rutube\.ru\/[^\s<>"']+/gi) || [])];
+    const rutubeUrl = videoCandidates.map(normalizeRutube).find(Boolean) || null;
     const has = expression => expression.test(facts);
     const amenities = [];
     if (has(/бассейн/i)) amenities.push('pool');
