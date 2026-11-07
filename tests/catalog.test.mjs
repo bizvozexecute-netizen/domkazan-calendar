@@ -9,6 +9,18 @@ import {descriptionContent,descriptionText} from '../ops/tilda-test-gateway/lib/
 const details = JSON.parse(readFileSync(new URL('../data/tilda-catalog-details.json', import.meta.url), 'utf8'));
 const flush = () => new Promise(resolve => setTimeout(resolve, 20));
 
+test('production links include a readable name and still resolve by house ID', async () => {
+  const catalog = await setup('', undefined, { testMode: false });
+  try {
+    const href = catalog.shadow.querySelector('.details-link').href;
+    const url = new URL(href);
+    assert.equal(url.searchParams.get('house'), '555240345232-kazanka-bolshoy');
+    const house = await setup(url.search, undefined, { testMode: false });
+    try { assert.equal(house.shadow.querySelector('h1').textContent, 'Казанка большой'); }
+    finally { house.controller.destroy(); house.dom.window.close(); }
+  } finally { catalog.controller.destroy(); catalog.dom.window.close(); }
+});
+
 test('Rutube Shorts and unlisted links normalize without losing the access key',()=>{
   const id='a'.repeat(32);
   for(const path of ['shorts','video','play/embed']) assert.equal(normalizeRutube(`https://rutube.ru/${path}/${id}/?utm_source=test`),`https://rutube.ru/video/${id}/`);

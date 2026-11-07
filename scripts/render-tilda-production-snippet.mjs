@@ -7,7 +7,7 @@ import {renderTildaTestSnippet} from './render-tilda-test-snippet.mjs';
 // These IDs were read in the working page editor. Replace the old HomeReserve
 // T123, rather than adding a second booking system beside it.
 export async function renderTildaProductionSnippet(policyUrl) {
-  const origin='https://45.147.31.241';
+  const origin='https://83.141.94.35';
   const policy=new URL(policyUrl);
   if(policy.origin!==origin||!['/privacy','/privacy-2026-10-26.html'].includes(policy.pathname)||policy.search||policy.hash||policy.username||policy.password)
     throw new Error('Use the reviewed production policy URL');

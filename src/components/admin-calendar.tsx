@@ -108,6 +108,13 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState<{ action: Action; houseId: string; revision: number; start: string; end: string; price: string; label: string } | null>(null);
+  const confirmationButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!mobile || !pending) return;
+    const button = confirmationButton.current;
+    button?.focus({ preventScroll: true });
+    button?.scrollIntoView?.({ block: "center", inline: "nearest" });
+  }, [mobile, pending]);
   const scrollRegion = useRef<HTMLDivElement>(null);
   const houseSearchInput = useRef<HTMLInputElement>(null);
   useEffect(() => scrollRegion.current ? attachCalendarAxisLock(scrollRegion.current) : undefined, []);
@@ -269,7 +276,7 @@ export function AdminCalendar({ initialMonth = "", initialHouse = "", initialFro
       <p className="mt-2 min-h-6 text-sm font-medium" role="status" aria-live="polite">{busy ? "Сохраняем…" : message}</p>
       {pending && <div role="alertdialog" aria-labelledby="calendar-confirm-label" aria-modal="false" className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
         <p id="calendar-confirm-label" className="font-medium">{pending.label}</p>
-        <div className="mt-3 flex gap-3"><button type="button" onClick={confirmAction} className="rounded-lg bg-emerald-800 px-4 py-2 text-white">Подтвердить изменение</button><button type="button" onClick={() => setPending(null)} className="rounded-lg border bg-white px-4 py-2">Отмена</button></div>
+        <div className="mt-3 flex gap-3"><button ref={confirmationButton} type="button" onClick={confirmAction} className="rounded-lg bg-emerald-800 px-4 py-2 text-white">Подтвердить изменение</button><button type="button" onClick={() => setPending(null)} className="rounded-lg border bg-white px-4 py-2">Отмена</button></div>
       </div>}
     </div>
 
