@@ -238,6 +238,10 @@
     shadow.append(style,mediaStyle,el('style',{text:window.DomKazanCalendar.actionStyles}),galleryHeading, viewer,videoHelp, navigation, thumbs, modal); render();
     return { destroy() { stopPhoto();stopZoom();if (modal.open) modal.close(); shadow.replaceChildren(document.createElement("slot")); root.replaceChildren(...original); } };
   }
+  function houseId(value) {
+    return value?.match(/^(\d{12})(?:-[a-z0-9-]+)?$/)?.[1] ?? value;
+  }
+
   function mountPage({ root, apiOrigin, privacyUrl, consentUrl, pagePath = window.location.pathname, testMode = true, embedded=false, catalogData, catalogReturn, uiSettings: configuredUi }) {
     if (!root || !window.DomKazanCalendar) throw new Error('Модуль поиска не загружен.');
     const origin = new URL(apiOrigin);
@@ -251,10 +255,6 @@
     let lastResult = null;
     let alive = true;
     let refreshContent=()=>{};
-
-    function houseId(value) {
-      return value?.match(/^(\d{12})(?:-[a-z0-9-]+)?$/)?.[1] ?? value;
-    }
 
     function houseUrl(uid, values = {}, name = '') {
       const url = new URL(pagePath, window.location.origin);
