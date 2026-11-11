@@ -9,16 +9,34 @@ import {descriptionContent,descriptionText} from '../ops/tilda-test-gateway/lib/
 const details = JSON.parse(readFileSync(new URL('../data/tilda-catalog-details.json', import.meta.url), 'utf8'));
 const flush = () => new Promise(resolve => setTimeout(resolve, 20));
 
-test('production links include a readable name and still resolve by house ID', async () => {
-  const catalog = await setup('', undefined, { testMode: false });
+test('short house links resolve on direct entry, with both older URL forms still supported', async () => {
+  const options = { testMode: false, shortHouseLinks: true };
+  const catalog = await setup('', undefined, options);
   try {
     const href = catalog.shadow.querySelector('.details-link').href;
     const url = new URL(href);
-    assert.equal(url.searchParams.get('house'), '555240345232-kazanka-bolshoy');
-    const house = await setup(url.search, undefined, { testMode: false });
-    try { assert.equal(house.shadow.querySelector('h1').textContent, 'Казанка большой'); }
-    finally { house.controller.destroy(); house.dom.window.close(); }
+    assert.equal(url.search, '');
+    assert.equal(url.hash, '#dom/kazanka-bolshoy');
+    for (const suffix of [url.hash, '?house=555240345232', '?house=555240345232-kazanka-bolshoy']) {
+      const house = await setup(suffix, undefined, options);
+      try { assert.equal(house.shadow.querySelector('h1').textContent, 'Казанка большой'); }
+      finally { house.controller.destroy(); house.dom.window.close(); }
+    }
   } finally { catalog.controller.destroy(); catalog.dom.window.close(); }
+});
+
+test('matching house names retain distinct links and an ambiguous short link never picks a house', async () => {
+  const products = details.products.slice(0, 2).map(product => ({ ...product, name: 'Один адрес' }));
+  const options = { testMode: false, shortHouseLinks: true, catalogData: { products } };
+  const catalog = await setup('', undefined, options);
+  const ambiguous = await setup('#dom/odin-adres', undefined, options);
+  try {
+    const links = [...catalog.shadow.querySelectorAll('.details-link')].map(anchor => new URL(anchor.href));
+    assert.deepEqual(links.map(url => url.searchParams.get('house')), products.map(product => `${product.productUid}-odin-adres`));
+    assert.equal(ambiguous.shadow.querySelector('h1').textContent, 'Дом не найден');
+  } finally {
+    for (const view of [catalog, ambiguous]) { view.controller.destroy(); view.dom.window.close(); }
+  }
 });
 
 test('Rutube Shorts and unlisted links normalize without losing the access key',()=>{

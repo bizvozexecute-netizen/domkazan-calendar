@@ -18,7 +18,7 @@ test('working bootstrap uses production mode, keeps header and restores filtered
   await page.goto('https://domkazan116.ru/');
   await expect(page.locator('.cards article')).toHaveCount(1);
   const catalogScript=page.locator('script[src*="/embed/domkazan-catalog.js"]');
-  await expect(catalogScript).toHaveAttribute('src',/\?v=nav-20261026(?:&retry=1)?$/);
+  await expect(catalogScript).toHaveAttribute('src',/\?v=house-links-20261112(?:&retry=1)?$/);
   await expect(page.getByText('Main menu',{exact:true})).toBeVisible();
   await expect(page.getByText('Main hero',{exact:true})).toBeVisible();
   const hero=await page.locator('#rec1096886496').boundingBox();
@@ -28,6 +28,7 @@ test('working bootstrap uses production mode, keeps header and restores filtered
   await expect(page.getByText('Тестовый стенд',{exact:false})).toHaveCount(0);
   await expect(page.getByRole('link',{name:'Политика обработки персональных данных',exact:true})).toHaveAttribute('href',origin+'/privacy-2026-10-26.html');
   await page.getByLabel('Гостей',{exact:true}).fill('7');
+  await expect(page.locator('.details-link')).toHaveAttribute('href',/guests=7.*#dom\/vymyshlennyy-dom$/);
   await page.locator('.details-link').click();
   await expect(page.getByText('Main hero',{exact:true})).toBeHidden();
   await expect(page.getByRole('heading',{name:fixtureProduct.name,exact:true})).toBeVisible();
@@ -35,6 +36,19 @@ test('working bootstrap uses production mode, keeps header and restores filtered
   await expect(page.locator('.cards article')).toHaveCount(1);
   await expect(page.getByLabel('Гостей',{exact:true})).toHaveValue('7');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+});
+
+test('short links open directly and work when the history API rejects navigation',async({page,context})=>{
+  await fixture(context);
+  await page.goto('https://domkazan116.ru/#dom/vymyshlennyy-dom');
+  await expect(page.getByRole('heading',{name:fixtureProduct.name,exact:true})).toBeVisible();
+  await expect(page.getByText('Main hero',{exact:true})).toBeHidden();
+  await page.goto('https://domkazan116.ru/');
+  await expect(page.locator('.details-link')).toBeVisible();
+  await page.evaluate(()=>{history.pushState=()=>{throw new Error('History unavailable');};});
+  await page.locator('.details-link').click();
+  await expect(page).toHaveURL(/#dom\/vymyshlennyy-dom$/);
+  await expect(page.getByRole('heading',{name:fixtureProduct.name,exact:true})).toBeVisible();
 });
 
 test('working bootstrap stays inert on the isolated test path',async({page,context})=>{

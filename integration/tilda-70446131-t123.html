@@ -41,7 +41,7 @@
   let active = true, mounted;
   const timer = setTimeout(() => fail(), 30000);
   const slowTimer=setTimeout(()=>{if(active&&!page.classList.contains('dkcal-ready'))status.textContent='Загрузка занимает больше времени. Проверяем соединение…';},8000);
-  function mode(){page.classList.toggle('dkcal-detail',new URLSearchParams(location.search).has('house'));}
+  function mode(){page.classList.toggle('dkcal-detail',new URLSearchParams(location.search).has('house')||/^#dom\/[a-z0-9-]{1,80}$/.test(location.hash));}
   mode();window.addEventListener('popstate',mode);root.addEventListener('domkazan:ready',mode);
 
   function restore() {
@@ -92,7 +92,7 @@
       const cancelled = () => finish(new Error('Startup cancelled'));
       script.onload = () => finish(); script.onerror = () => finish(new Error('Script unavailable'));
       controller.signal.addEventListener('abort', cancelled, {once:true});
-      script.src = `${apiOrigin}/embed/${file}?v=nav-20261026${attempt?'&retry=1':''}`; document.head.append(script);
+      script.src = `${apiOrigin}/embed/${file}?v=house-links-20261112${attempt?'&retry=1':''}`; document.head.append(script);
     });}catch(error){if(controller.signal.aborted||attempt===1)throw error;}
   }
 
@@ -121,7 +121,7 @@
     loadScript('domkazan-catalog.js', window.DomKazanCatalog),
     firstCatalog,
   ]).then(([, , data]) => {
-    if (active) mounted = window.DomKazanCatalog.mount({root, apiOrigin, pagePath, testMode:false,privacyUrl:"https://83.141.94.35/privacy-2026-10-26.html",consentUrl:"https://83.141.94.35/consent-2026-10-26.html",embedded:true, catalogData:data,
+    if (active) mounted = window.DomKazanCatalog.mount({root, apiOrigin, pagePath, testMode:false,shortHouseLinks:true,privacyUrl:"https://83.141.94.35/privacy-2026-10-26.html",consentUrl:"https://83.141.94.35/consent-2026-10-26.html",embedded:true, catalogData:data,
       refreshCatalogData:catalogData});
   }).catch(fail);
 
