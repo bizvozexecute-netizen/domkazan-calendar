@@ -39,19 +39,19 @@ jobs:
       - run: python3 -m unittest discover -s tests -p test_server_nginx.py
       - run: npm run test:integration
       - run: npm run build
-      - name: Use HTTPS for Ubuntu browser dependencies
+      - name: Run browser tests in the matching Playwright image
         run: |
-          # Package downloads from the plain HTTP Ubuntu mirror timed out on the runner.
-          for source in /etc/apt/apt-mirrors.txt /etc/apt/sources.list.d/ubuntu.sources; do
-            if [ -f "$source" ]; then
-              sudo sed -i -E 's|http://(azure\.)?archive\.ubuntu\.com/ubuntu|https://archive.ubuntu.com/ubuntu|g; s|http://security\.ubuntu\.com/ubuntu|https://security.ubuntu.com/ubuntu|g' "$source"
-            fi
-          done
-      - run: npx playwright install --with-deps chromium webkit firefox
-        timeout-minutes: 8
-      - run: npm run test:e2e
-      - run: sudo apt-get update && sudo apt-get install -y postgresql-client-16
-      - run: npm run test:backup
+          version=$(node -p 'require("@playwright/test/package.json").version')
+          docker run --rm --init --network host --shm-size=1g \
+            --user "$(id -u):$(id -g)" -e HOME=/tmp -e CI=true \
+            -e DATABASE_URL -e TEST_DATABASE_URL -e NEXT_TELEMETRY_DISABLED \
+            -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" -w "$GITHUB_WORKSPACE" \
+            "mcr.microsoft.com/playwright:v${version}-noble" npm run test:e2e
+      - name: Verify backup with the runner's PostgreSQL 16 client
+        run: |
+          export PATH="/usr/lib/postgresql/16/bin:$PATH"
+          pg_dump --version
+          npm run test:backup
       - run: npm audit --omit=dev
       - name: Full dependency audit
         run: npm audit
