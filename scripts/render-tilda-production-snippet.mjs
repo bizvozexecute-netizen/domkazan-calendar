@@ -19,7 +19,8 @@ export async function renderTildaProductionSnippet(policyUrl) {
     ['rec4862390501','rec1184803096'],
     ['rec4862082401','rec1088252761'],
     ['rec4862082801','rec1096886496'],
-    ['testMode:true,embedded:true',`testMode:false,privacyUrl:${JSON.stringify(policy.href)},consentUrl:${JSON.stringify(origin+'/consent-2026-10-26.html')},embedded:true`],
+    ['testMode:true,embedded:true',`testMode:false,shortHouseLinks:true,privacyUrl:${JSON.stringify(policy.href)},consentUrl:${JSON.stringify(origin+'/consent-2026-10-26.html')},embedded:true`],
+    ["new URLSearchParams(location.search).has('house')", "new URLSearchParams(location.search).has('house')||/^#dom\\/[a-z0-9-]{1,80}$/.test(location.hash)"],
     ['Test page 70446131 only.','Working page 70446131 only.'],
     ['restricted to the isolated Tilda test page.','restricted to the reviewed working Tilda page.'],
   ];
@@ -30,7 +31,7 @@ export async function renderTildaProductionSnippet(policyUrl) {
   // A newly published page must not reuse the pre-fix Safari navigation module.
   const scriptUrl="script.src = `${apiOrigin}/embed/${file}${attempt?'?retry=1':''}`";
   if(!snippet.includes(scriptUrl))throw new Error('Review versioned production asset loading');
-  snippet=snippet.replace(scriptUrl,"script.src = `${apiOrigin}/embed/${file}?v=nav-20261026${attempt?'&retry=1':''}`");
+  snippet=snippet.replace(scriptUrl,"script.src = `${apiOrigin}/embed/${file}?v=house-links-20261112${attempt?'&retry=1':''}`");
   const failureMarker='mounted?.destroy();\n    status.hidden = false;';
   if(!snippet.includes(failureMarker))throw new Error('Review the production fallback contract');
   snippet=snippet.replace(failureMarker,`mounted?.destroy();

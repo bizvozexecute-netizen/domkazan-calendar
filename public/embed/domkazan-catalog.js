@@ -242,7 +242,29 @@
     return value?.match(/^(\d{12})(?:-[a-z0-9-]+)?$/)?.[1] ?? value;
   }
 
-  function mountPage({ root, apiOrigin, privacyUrl, consentUrl, pagePath = window.location.pathname, testMode = true, embedded=false, catalogData, catalogReturn, uiSettings: configuredUi }) {
+  function houseHash(hash) {
+    return hash.match(/^#dom\/([a-z0-9-]{1,80})$/)?.[1];
+  }
+
+  function isHouseUrl(url) {
+    return Boolean(houseHash(url.hash) || url.searchParams.has('house'));
+  }
+
+  function catalogUrl(url) {
+    const back = new URL(url);
+    back.searchParams.delete('house');
+    if (houseHash(back.hash)) back.hash = '';
+    return back;
+  }
+
+  function publicHouseSlug(name) {
+    const letters = 'абвгдеёжзийклмнопрстуфхцчшщъыьэюя';
+    const latin = 'a b v g d e yo zh z i y k l m n o p r s t u f kh ts ch sh shch  y  e yu ya'.split(' ');
+    return [...name.toLowerCase()].map(char => latin[letters.indexOf(char)] ?? char).join('')
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80).replace(/-$/, '');
+  }
+
+  function mountPage({ root, apiOrigin, privacyUrl, consentUrl, pagePath = window.location.pathname, testMode = true, shortHouseLinks = false, embedded=false, catalogData, catalogReturn, uiSettings: configuredUi }) {
     if (!root || !window.DomKazanCalendar) throw new Error('Модуль поиска не загружен.');
     const origin = new URL(apiOrigin);
     if (origin.protocol !== 'https:') throw new Error('Требуется HTTPS API.');
@@ -256,17 +278,16 @@
     let alive = true;
     let refreshContent=()=>{};
 
+    const publicSlugs = new Map();
     function houseUrl(uid, values = {}, name = '') {
       const url = new URL(pagePath, window.location.origin);
       if (uid) {
-        const letters = 'абвгдеёжзийклмнопрстуфхцчшщъыьэюя';
-        const latin = 'a b v g d e yo zh z i y k l m n o p r s t u f kh ts ch sh shch  y  e yu ya'.split(' ');
-        const slug = [...name.toLowerCase()].map(char => latin[letters.indexOf(char)] ?? char).join('')
-          .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80).replace(/-$/, '');
-        url.searchParams.set('house', !testMode && slug ? `${uid}-${slug}` : uid);
+        const slug = publicHouseSlug(name);
+        if (shortHouseLinks && publicSlugs.get(slug) === uid) url.hash = `dom/${slug}`;
+        else url.searchParams.set('house', !testMode && slug ? `${uid}-${slug}` : uid);
       }
       for (const name of ['checkIn', 'checkOut', 'guests', 'amenities', 'sort']) if (values[name]) url.searchParams.set(name, values[name]);
-      return url.pathname + url.search;
+      return url.pathname + url.search + url.hash;
     }
 
     async function load() {
@@ -282,9 +303,13 @@
       const products = data.products.filter(product => /^\d{12}$/.test(product.productUid) && product.slug === `tilda-${product.productUid}`);
       const bySlug = new Map(products.map(product => [product.slug, product]));
       const byUid = new Map(products.map(product => [product.productUid, product]));
+      for (const product of products) {
+        const slug = publicHouseSlug(product.name);
+        if (slug) publicSlugs.set(slug, publicSlugs.has(slug) ? null : product.productUid);
+      }
       const query = new URLSearchParams(window.location.search);
-      const houseUid = houseId(query.get('house'));
-      const selected = products.find(product => product.productUid === houseUid);
+      const shortSlug = houseHash(location.hash);
+      const selected = byUid.get(shortSlug ? publicSlugs.get(shortSlug) : houseId(query.get('house')));
       const values = Object.fromEntries(['checkIn', 'checkOut', 'guests', 'amenities', 'sort'].map(name => [name, query.get(name) || '']));
       const style = shadow.querySelector('style');
       const shell = el('div', { class: 'shell' });if(embedded)shell.style.paddingTop='12px';
@@ -295,7 +320,7 @@
       const owner=window.DomKazanCalendar.safeContacts?.(ui.contacts)||{};
       if(owner.phone)top.append(link(window.DomKazanCalendar.phoneLabel?.(owner.phone)||owner.phone.slice(4),owner.phone,'top-contact dk-secondary dk-phone'));
       if(!embedded)shell.append(top);
-      if (houseUid && !selected) {
+      if (isHouseUrl(new URL(location.href)) && !selected) {
         document.title='Дом не найден — DomKazan';
         shell.append(link('← Все дома', houseUrl(null), 'back'), text('h1', 'Дом не найден'), text('p', 'Возможно, он был удалён из каталога. Выберите другой вариант.', 'subtitle'));
         root.dispatchEvent(new CustomEvent('domkazan:ready',{bubbles:true}));
@@ -507,7 +532,7 @@
     let catalogData=options.catalogData!==undefined?Promise.resolve(options.catalogData):fetch(new URL('/api/catalog',options.apiOrigin),{signal:controller.signal})
       .then(async response=>{if(!response.ok)throw new Error('Каталог временно недоступен.');return response.json();})
       .finally(()=>clearTimeout(timer));
-    let current,overlay,transitionTimer,alive=true,revision=0,navigating=false,restorePending=false,engaged=false;
+    let current,overlay,transitionTimer,renderedUrl,alive=true,revision=0,navigating=false,restorePending=false,engaged=false;
     const engage=()=>{engaged=true;};
     for(const event of ['pointerdown','keydown','input','wheel'])root.addEventListener(event,engage,{passive:true});
     async function refreshed(data){
@@ -543,7 +568,7 @@
         if(!value||!Number.isFinite(value.y)||!/^\d{12}$/.test(value.uid))return null;
         const url=new URL(value.url,location.origin);
         if(url.origin!==location.origin||url.pathname!==pagePath||url.searchParams.has('house')||url.hash)return null;
-        if(!fromHistory){const currentUrl=new URL(location.href);currentUrl.searchParams.delete('house');if(currentUrl.pathname+currentUrl.search!==url.pathname+url.search)return null;}
+        if(!fromHistory){const currentUrl=catalogUrl(location.href);if(currentUrl.pathname+currentUrl.search!==url.pathname+url.search)return null;}
         return{...value,url:url.pathname+url.search};
       }catch{return null;}
     }
@@ -552,7 +577,7 @@
       if(!restorePending)return;
       restorePending=false;
       const token=revision;
-      const isCatalog=!new URL(location.href).searchParams.has('house');
+      const isCatalog=!isHouseUrl(new URL(location.href));
       let saved;
       if(isCatalog){const value=readReturn();if(value?.url===location.pathname+location.search)saved=value;}
       let focus;
@@ -565,6 +590,7 @@
       (window.requestAnimationFrame||((callback)=>setTimeout(callback,0)))(()=>{if(alive&&revision===token){removeOverlay();navigating=false;if(focus){if(focus.tagName==='H1')focus.tabIndex=-1;try{focus.focus({preventScroll:true});}catch{/* Focus must not break navigation. */}}}});
     }
     function render(){
+      renderedUrl=location.href;
       revision++;restorePending=true;current?.destroy();
       current=mountPage({...options,pagePath,catalogData,uiSettings:clientSettings,catalogReturn:readReturn()});
     }
@@ -581,24 +607,28 @@
       const anchor=event.composedPath?.().find(node=>node?.tagName==='A'&&node.hasAttribute('href'))||event.target?.closest?.('a[href]');
       if(!anchor||anchor.hasAttribute('download')||(anchor.target&&anchor.target!=='_self'))return;
       let target;try{target=new URL(anchor.href,location.href);}catch{return;}
-      if(target.origin!==location.origin||target.pathname!==pagePath||target.hash)return;
+      if(target.origin!==location.origin||target.pathname!==pagePath||(target.hash&&!houseHash(target.hash)))return;
       // Keep a real href as the fallback. Cancel it only once the replacement
       // navigation has started successfully; History API failures use the href.
       try{
       let catalogReturn=readReturn();
-      if(!new URL(location.href).searchParams.has('house')&&target.searchParams.has('house')){
-        const back=new URL(target);back.searchParams.delete('house');
-        catalogReturn={url:back.pathname+back.search,y:scrollY,uid:houseId(target.searchParams.get('house'))};
+      if(!isHouseUrl(new URL(location.href))&&isHouseUrl(target)){
+        const back=catalogUrl(target);
+        const cardUid=anchor.closest('[data-domkazan-house]')?.dataset.domkazanHouse?.slice('tilda-'.length);
+        catalogReturn={url:back.pathname+back.search,y:scrollY,uid:cardUid||houseId(target.searchParams.get('house'))};
         try{sessionStorage.setItem('domkazan.catalog.return.v1',JSON.stringify(catalogReturn));}catch{/* History retains the return point when storage is unavailable. */}
         history.replaceState({...history.state,domkazanCatalogReturn:catalogReturn},'',catalogReturn.url);
       }
-      showTransition(!target.searchParams.has('house'));
-      history.pushState({...history.state,domkazanCatalogReturn:catalogReturn},'',target.pathname+target.search);render();
+      showTransition(!isHouseUrl(target));
+      history.pushState({...history.state,domkazanCatalogReturn:catalogReturn},'',target.href);render();
       event.preventDefault();
       transitionTimer=setTimeout(()=>{if(alive&&navigating)nativeNavigation(target);},15000);
       }catch{event.preventDefault();nativeNavigation(target);}
     }
-    function popped(){if(location.pathname===pagePath){const target=new URL(location.href);try{showTransition(!target.searchParams.has('house'));render();transitionTimer=setTimeout(()=>{if(alive&&navigating)nativeNavigation(target);},15000);}catch{nativeNavigation(target);}}}
+    function popped(){if(location.pathname===pagePath&&location.href!==renderedUrl){const target=new URL(location.href);try{showTransition(!isHouseUrl(target));render();transitionTimer=setTimeout(()=>{if(alive&&navigating)nativeNavigation(target);},15000);}catch{nativeNavigation(target);}}}
+    function hashChanged(event){
+      if(houseHash(new URL(event.oldURL).hash)!==houseHash(new URL(event.newURL).hash))popped();
+    }
     // Delegate inside our shadow tree: outside it Safari retargets event.target
     // to the host, so the target fallback cannot find the actual house anchor.
     const clickRoot=root.shadowRoot||root.attachShadow({mode:'open'});
@@ -606,8 +636,9 @@
     root.addEventListener('domkazan:view-ready',ready);
     root.addEventListener('domkazan:error',removeOverlay);
     window.addEventListener('popstate',popped);
+    window.addEventListener('hashchange',hashChanged);
     render();
-    const instance={destroy(){alive=false;controller.abort();clearTimeout(timer);current?.destroy();removeOverlay();root.querySelector('[data-content-retry]')?.remove();for(const event of ['pointerdown','keydown','input','wheel'])root.removeEventListener(event,engage);clickRoot.removeEventListener('click',clicked);root.removeEventListener('domkazan:view-ready',ready);root.removeEventListener('domkazan:error',removeOverlay);window.removeEventListener('popstate',popped);history.scrollRestoration=previousRestoration;}};
+    const instance={destroy(){alive=false;controller.abort();clearTimeout(timer);current?.destroy();removeOverlay();root.querySelector('[data-content-retry]')?.remove();for(const event of ['pointerdown','keydown','input','wheel'])root.removeEventListener(event,engage);clickRoot.removeEventListener('click',clicked);root.removeEventListener('domkazan:view-ready',ready);root.removeEventListener('domkazan:error',removeOverlay);window.removeEventListener('popstate',popped);window.removeEventListener('hashchange',hashChanged);history.scrollRestoration=previousRestoration;}};
     mountedPages.set(root,instance);return instance;
   }
   window.DomKazanCatalog = { mount };
