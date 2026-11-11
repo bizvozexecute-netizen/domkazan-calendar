@@ -1,24 +1,58 @@
 import { db } from "./db";
-import { dateKey } from "./dates";
+import { nightsBetween } from "./dates";
 
 type TelegramResult = { ok?: boolean; parameters?: { retry_after?: number } };
 
+const stayDate = new Intl.DateTimeFormat("ru-RU", { dateStyle: "short", timeZone: "UTC" });
+const receivedDate = new Intl.DateTimeFormat("ru-RU", {
+  dateStyle: "short", timeStyle: "short", timeZone: "Europe/Moscow",
+});
+const amount = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 });
+const messengerNames: Record<string, string> = {
+  TELEGRAM: "Telegram", WHATSAPP: "WhatsApp", OTHER: "Другой способ связи",
+};
+
+function escapeHtml(value: string) {
+  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+}
+
+function requestsLink() {
+  try {
+    const url = new URL(process.env.APP_ORIGIN ?? "");
+    if (url.protocol === "https:" && !url.username && !url.password) {
+      return `<a href="${escapeHtml(url.origin + "/admin/requests")}">Открыть заявки в админке</a>`;
+    }
+  } catch { /* Local test environments may have no public URL. */ }
+  return null;
+}
+
 function messageFor(request: {
-  id: string; checkIn: Date; checkOut: Date; guestCount: number; quotedTotal: { toString(): string } | null;
+  id: string; createdAt: Date; checkIn: Date; checkOut: Date; guestCount: number;
+  quotedTotal: { toString(): string } | null;
   clientName: string; clientPhone: string | null; messenger: string | null; messengerContact: string | null;
   message: string | null; house: { name: string };
 }) {
-  return [
-    `Новая заявка ${request.id}`,
-    `Дом: ${request.house.name}`,
-    `Даты: ${dateKey(request.checkIn)} — ${dateKey(request.checkOut)}`,
-    `Гостей: ${request.guestCount}`,
-    `Стоимость: ${request.quotedTotal?.toString() ?? "не указана"} ₽`,
-    `Имя: ${request.clientName}`,
-    `Телефон: ${request.clientPhone ?? "не указан"}`,
-    request.messenger ? `${request.messenger}: ${request.messengerContact ?? ""}` : null,
-    request.message ? `Комментарий: ${request.message}` : null,
+  const price = request.quotedTotal ? `${amount.format(Number(request.quotedTotal.toString()))} ₽` : "уточнить";
+  const messenger = request.messenger && (messengerNames[request.messenger] ?? request.messenger);
+  const stay = [
+    `<b>${escapeHtml(request.house.name)}</b>`,
+    `Заезд ${stayDate.format(request.checkIn)} · выезд ${stayDate.format(request.checkOut)}`,
+    `Ночей: ${nightsBetween(request.checkIn, request.checkOut)} · гостей: ${request.guestCount}`,
+    `<b>Стоимость: ${price}</b>`,
+  ].join("\n");
+  const contact = [
+    `<b>${escapeHtml(request.clientName)}</b>`,
+    request.clientPhone ? `Телефон: ${escapeHtml(request.clientPhone)}` : null,
+    messenger && request.messengerContact
+      ? `${escapeHtml(messenger)}: ${escapeHtml(request.messengerContact)}` : null,
   ].filter(Boolean).join("\n");
+  return [
+    stay,
+    contact,
+    request.message ? `<b>Комментарий</b>\n${escapeHtml(request.message)}` : null,
+    `Заявка от ${receivedDate.format(request.createdAt)} (МСК)\nНомер: ${escapeHtml(request.id)}`,
+    requestsLink(),
+  ].filter(Boolean).join("\n\n");
 }
 
 export async function deliverTelegramNotification(id: string, now = new Date()): Promise<boolean> {
@@ -37,7 +71,7 @@ export async function deliverTelegramNotification(id: string, now = new Date()):
   try {
     const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text: messageFor(notification.bookingRequest),
+      body: JSON.stringify({ chat_id: chatId, text: messageFor(notification.bookingRequest), parse_mode: "HTML",
         link_preview_options: { is_disabled: true } }),
       signal: AbortSignal.timeout(5000),
     });

@@ -115,13 +115,15 @@ test("Telegram failure is retried without another booking request", async () => 
     process.env.TELEGRAM_CHAT_ID = "123";
     const originalFetch = globalThis.fetch;
     let attempts = 0;
-    globalThis.fetch = async () => {
+    let payload: { parse_mode: string; text: string } | undefined;
+    globalThis.fetch = async (_url, init) => {
+      payload = JSON.parse(String(init?.body));
       attempts++;
       return new Response(JSON.stringify({ ok: attempts > 1 }), { status: attempts > 1 ? 200 : 502,
         headers: { "Content-Type": "application/json" } });
     };
     try {
-      const response = await submit(request(body(houseId)));
+      const response = await submit(request(body(houseId, { comment: "<b>Only text & contacts</b>" })));
       assert.equal(response.status, 201);
       const id = (await response.json()).requestId;
       const notification = await db.telegramNotification.findUniqueOrThrow({ where: { bookingRequestId: id } });
@@ -130,6 +132,11 @@ test("Telegram failure is retried without another booking request", async () => 
       assert.equal((await db.telegramNotification.findUniqueOrThrow({ where: { id: notification.id } })).status, "SENT");
       assert.equal(await db.bookingRequest.count({ where: { houseId } }), 1);
       assert.equal(attempts, 2);
+      assert.equal(payload?.parse_mode, "HTML");
+      assert.match(payload!.text, /^<b>Synthetic House<\/b>\nЗаезд/);
+      assert.match(payload!.text, /Ночей: 2 · гостей: 2/);
+      assert.match(payload!.text, /&lt;b&gt;Only text &amp; contacts&lt;\/b&gt;/);
+      assert.ok(payload!.text.endsWith("Номер: " + id) || payload!.text.includes("Номер: " + id + "\n"));
     } finally { globalThis.fetch = originalFetch; delete process.env.TELEGRAM_BOT_TOKEN; delete process.env.TELEGRAM_CHAT_ID; }
   });
 });
