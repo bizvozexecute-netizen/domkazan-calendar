@@ -1,5 +1,5 @@
 <!-- DomKazan: page-local catalog and individual house URLs. Working page 70446131 only. -->
-<link rel="preconnect" href="https://45.147.31.241" crossorigin>
+<link rel="preconnect" href="https://83.141.94.35" crossorigin>
 <style>
   #rec1184803096 { padding:0 !important; margin:0 !important; background:#f6f8fb; }
   #allrecords:is(.dkcal-pending,.dkcal-ready)[data-tilda-page-id="70446131"] > .r:not(#rec1184803096):not(#rec1088252761):not(#rec1096886496) { display:none !important; }
@@ -17,7 +17,7 @@
 <p id="domkazan-test-status" role="status">Загружаем каталог домов…</p>
 <script>/* Inlined by render-tilda-test-snippet.mjs; restricted to the reviewed working Tilda page. */
 (() => {
-  const apiOrigin = 'https://45.147.31.241';
+  const apiOrigin = 'https://83.141.94.35';
   const pagePath = '/';
   const page = document.querySelector('#allrecords[data-tilda-page-id="70446131"]');
   const root = document.getElementById('domkazan-catalog');
@@ -121,7 +121,7 @@
     loadScript('domkazan-catalog.js', window.DomKazanCatalog),
     firstCatalog,
   ]).then(([, , data]) => {
-    if (active) mounted = window.DomKazanCatalog.mount({root, apiOrigin, pagePath, testMode:false,privacyUrl:"https://45.147.31.241/privacy-2026-10-26.html",consentUrl:"https://45.147.31.241/consent-2026-10-26.html",embedded:true, catalogData:data,
+    if (active) mounted = window.DomKazanCatalog.mount({root, apiOrigin, pagePath, testMode:false,privacyUrl:"https://83.141.94.35/privacy-2026-10-26.html",consentUrl:"https://83.141.94.35/consent-2026-10-26.html",embedded:true, catalogData:data,
       refreshCatalogData:catalogData});
   }).catch(fail);
 

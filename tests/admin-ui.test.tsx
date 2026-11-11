@@ -63,6 +63,8 @@ test("calendar cells are keyboard buttons and selected range reaches the admin A
     },
   });
   dom.window.confirm = () => true;
+  const scrollTargets: HTMLElement[] = [];
+  dom.window.HTMLElement.prototype.scrollIntoView = function () { scrollTargets.push(this); };
   let mobile = true;
   const mediaListeners = new Set<() => void>();
   Object.assign(dom.window, { matchMedia: () => ({ matches: mobile,
@@ -93,6 +95,8 @@ test("calendar cells are keyboard buttons and selected range reaches the admin A
   assert.equal(calls.some(item => item.body?.action === "close"), false);
   const confirm = [...container.querySelectorAll("button")].find(item => item.textContent === "Подтвердить изменение");
   assert.ok(confirm);
+  assert.equal(scrollTargets.at(-1), confirm);
+  assert.equal(dom.window.document.activeElement, confirm);
   await act(async () => { confirm.click(); });
   const write = calls.find((item) => item.url === "/api/admin/calendar" && item.body?.action === "close");
   assert.equal(write?.body?.start, first);

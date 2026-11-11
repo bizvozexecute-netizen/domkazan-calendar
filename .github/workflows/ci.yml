@@ -39,17 +39,19 @@ jobs:
       - run: python3 -m unittest discover -s tests -p test_server_nginx.py
       - run: npm run test:integration
       - run: npm run build
-      - name: Prefer the Ubuntu archive for browser dependencies
+      - name: Run browser tests in the matching Playwright image
         run: |
-          # The Azure mirror took almost nine minutes for 119 MB in a previous run.
-          # Keep Ubuntu package verification and use the official archive mirror.
-          if [ -f /etc/apt/apt-mirrors.txt ]; then
-            sudo sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' /etc/apt/apt-mirrors.txt
-          fi
-      - run: npx playwright install --with-deps chromium webkit firefox
-      - run: npm run test:e2e
-      - run: sudo apt-get update && sudo apt-get install -y postgresql-client-16
-      - run: npm run test:backup
+          version=$(node -p 'require("@playwright/test/package.json").version')
+          docker run --rm --init --network host --shm-size=1g \
+            --user "$(id -u):$(id -g)" -e HOME=/tmp -e CI=true \
+            -e DATABASE_URL -e TEST_DATABASE_URL -e NEXT_TELEMETRY_DISABLED \
+            -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" -w "$GITHUB_WORKSPACE" \
+            "mcr.microsoft.com/playwright:v${version}-noble" npm run test:e2e
+      - name: Verify backup with the runner's PostgreSQL 16 client
+        run: |
+          export PATH="/usr/lib/postgresql/16/bin:$PATH"
+          pg_dump --version
+          npm run test:backup
       - run: npm audit --omit=dev
       - name: Full dependency audit
         run: npm audit

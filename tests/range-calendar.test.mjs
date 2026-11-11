@@ -77,6 +77,10 @@ test('house calendar distinguishes occupied and missing rate, and never crosses 
   const {dom,controller,shadow}=setup({calendarUrl:'https://example.invalid/api/house-calendar',houseSlug:'free'});
   dom.window.fetch=async()=>({ok:true,json:async()=>({days:[{date:start,status:'available',price:'1000',minNights:1},{date:middle,status:'occupied',price:'1000',minNights:1},{date:end,status:'unpriced',price:null,minNights:1}]})});
   shadow.querySelector('[aria-label="Заезд"]').click();await flush();
+  // The fixture can start in the next month when this runs near month end.
+  for(let step=0;step<2&&!shadow.querySelector(`[data-day="${start}"]`);step++) {
+    shadow.querySelector('[aria-label="Следующий месяц"]').click();await flush();
+  }
   assert.equal(shadow.querySelector(`[data-day="${middle}"]`)?.disabled,true);
   shadow.querySelector(`[data-day="${start}"]`).click();
   assert.equal(shadow.querySelector(`[data-day="${end}"]`)?.disabled,true);

@@ -113,8 +113,13 @@
     let video = null;
     try {
       const url = new URL(rutubeUrl);
-      const id = url.pathname.match(/^\/(?:video|play\/embed)\/([a-f0-9]{32})\/?$/i)?.[1];
-      if (url.protocol === "https:" && url.hostname === "rutube.ru" && id) video = `https://rutube.ru/play/embed/${id}/`;
+      const id = url.pathname.match(/^\/(?:shorts|video(?:\/private)?|play\/embed)\/([a-f0-9]{32})\/?$/i)?.[1];
+      if (url.protocol === "https:" && url.hostname === "rutube.ru" && !url.username && !url.password && !url.port && id) {
+        const embed = new URL(`https://rutube.ru/play/embed/${id}/`);
+        const access = url.searchParams.get('p');
+        if (access && /^[a-z0-9_-]{1,200}$/i.test(access)) embed.searchParams.set('p', access);
+        if (!url.pathname.includes('/private/') || embed.searchParams.has('p')) video = embed.href;
+      }
     } catch { /* Optional video; unsupported URLs never become iframe content. */ }
     if (!photos.length && !video) {
       root.replaceChildren(text('p','Фотографии дома уточните у владельца.','subtitle'));
@@ -233,6 +238,10 @@
     shadow.append(style,mediaStyle,el('style',{text:window.DomKazanCalendar.actionStyles}),galleryHeading, viewer,videoHelp, navigation, thumbs, modal); render();
     return { destroy() { stopPhoto();stopZoom();if (modal.open) modal.close(); shadow.replaceChildren(document.createElement("slot")); root.replaceChildren(...original); } };
   }
+  function houseId(value) {
+    return value?.match(/^(\d{12})(?:-[a-z0-9-]+)?$/)?.[1] ?? value;
+  }
+
   function mountPage({ root, apiOrigin, privacyUrl, consentUrl, pagePath = window.location.pathname, testMode = true, embedded=false, catalogData, catalogReturn, uiSettings: configuredUi }) {
     if (!root || !window.DomKazanCalendar) throw new Error('Модуль поиска не загружен.');
     const origin = new URL(apiOrigin);
@@ -247,9 +256,15 @@
     let alive = true;
     let refreshContent=()=>{};
 
-    function houseUrl(uid, values = {}) {
+    function houseUrl(uid, values = {}, name = '') {
       const url = new URL(pagePath, window.location.origin);
-      if (uid) url.searchParams.set('house', uid);
+      if (uid) {
+        const letters = 'абвгдеёжзийклмнопрстуфхцчшщъыьэюя';
+        const latin = 'a b v g d e yo zh z i y k l m n o p r s t u f kh ts ch sh shch  y  e yu ya'.split(' ');
+        const slug = [...name.toLowerCase()].map(char => latin[letters.indexOf(char)] ?? char).join('')
+          .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80).replace(/-$/, '');
+        url.searchParams.set('house', !testMode && slug ? `${uid}-${slug}` : uid);
+      }
       for (const name of ['checkIn', 'checkOut', 'guests', 'amenities', 'sort']) if (values[name]) url.searchParams.set(name, values[name]);
       return url.pathname + url.search;
     }
@@ -268,7 +283,7 @@
       const bySlug = new Map(products.map(product => [product.slug, product]));
       const byUid = new Map(products.map(product => [product.productUid, product]));
       const query = new URLSearchParams(window.location.search);
-      const houseUid = query.get('house');
+      const houseUid = houseId(query.get('house'));
       const selected = products.find(product => product.productUid === houseUid);
       const values = Object.fromEntries(['checkIn', 'checkOut', 'guests', 'amenities', 'sort'].map(name => [name, query.get(name) || '']));
       const style = shadow.querySelector('style');
@@ -349,7 +364,7 @@
         shell.append(toolbar);
         list = el('div', { class: 'cards grid', 'aria-label': 'Каталог домов' });
         for (const [index, product] of products.entries()) {
-          const href = houseUrl(product.productUid, values);
+          const href = houseUrl(product.productUid, values, product.name);
           const cover = el('a', { href, class: 'cover', 'aria-label': `Подробнее: ${product.name}` });
           mountCover(cover, product, index);
           cover.append(el('span',{class:'photo-count'},[icon('photos'),document.createTextNode(`${product.images.length} фото`)]));
@@ -371,8 +386,8 @@
 
       function applyResults(houses, snapshot, scroll = true) {
         const params = paramsWithFilters({checkIn:snapshot.checkIn, checkOut:snapshot.checkOut, guests:snapshot.guests});
-        window.history.replaceState(window.history.state, '', houseUrl(selected?.productUid, params));
-        for (const {product,nodes} of cardLinks) for (const node of nodes) node.href = houseUrl(product.productUid, params);
+        window.history.replaceState(window.history.state, '', houseUrl(selected?.productUid, params, selected?.name));
+        for (const {product,nodes} of cardLinks) for (const node of nodes) node.href = houseUrl(product.productUid, params, product.name);
         if (counter) counter.textContent = `Найдено домов: ${houses.length}`;
         if (resultsContext) resultsContext.textContent=`${snapshot.checkIn.split('-').reverse().join('.')} — ${snapshot.checkOut.split('-').reverse().join('.')} · ${snapshot.guests} ${plural(Number(snapshot.guests),['гость','гостя','гостей'])} · цена за весь период`;
         if (sortControl) sortControl.disabled=false;
@@ -438,7 +453,7 @@
           if (empty) empty.hidden = true;
           if (breakdown) breakdown.textContent = '';
           if (detailPrice) detailPrice.classList.add('price-placeholder');
-          for (const { product, nodes } of cardLinks) {for (const node of nodes) node.href = houseUrl(product.productUid, paramsWithFilters(currentValues));cards.find(card=>card.slug===product.slug)?.priceElement.classList.add('price-placeholder');}
+          for (const { product, nodes } of cardLinks) {for (const node of nodes) node.href = houseUrl(product.productUid, paramsWithFilters(currentValues), product.name);cards.find(card=>card.slug===product.slug)?.priceElement.classList.add('price-placeholder');}
         },
         onResults:applyResults,
         onRequestSaved(house,snapshot){
@@ -573,7 +588,7 @@
       let catalogReturn=readReturn();
       if(!new URL(location.href).searchParams.has('house')&&target.searchParams.has('house')){
         const back=new URL(target);back.searchParams.delete('house');
-        catalogReturn={url:back.pathname+back.search,y:scrollY,uid:target.searchParams.get('house')};
+        catalogReturn={url:back.pathname+back.search,y:scrollY,uid:houseId(target.searchParams.get('house'))};
         try{sessionStorage.setItem('domkazan.catalog.return.v1',JSON.stringify(catalogReturn));}catch{/* History retains the return point when storage is unavailable. */}
         history.replaceState({...history.state,domkazanCatalogReturn:catalogReturn},'',catalogReturn.url);
       }

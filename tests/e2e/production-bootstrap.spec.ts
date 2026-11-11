@@ -2,7 +2,7 @@ import {test,expect,type BrowserContext} from '@playwright/test';
 import {readFile} from 'node:fs/promises';
 import {fixtureProduct} from './journey-fixture';
 
-const origin='https://45.147.31.241';
+const origin='https://83.141.94.35';
 async function fixture(context:BrowserContext, path='https://domkazan116.ru/'){
   const snippet=(await readFile('integration/tilda-70446131-t123.html','utf8')).replace(/<link rel="preconnect"[^>]*>/g,'');
   await context.route(path,route=>route.fulfill({contentType:'text/html; charset=utf-8',body:`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><div id="allrecords" data-tilda-page-id="70446131"><div id="rec1088252761" class="r" data-screen-max="980">Main menu</div><div id="rec1184803096" class="r">${snippet}</div><div id="rec1096886496" class="r">Main hero</div><div id="fallback" class="r">Original catalog</div><div id="rec4148990801" class="r"><a href="/calendar-test-311744409?house=111111111111">Old test details</a></div></div>`}));
