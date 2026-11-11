@@ -56,6 +56,9 @@
     "typescript": "^5.0.0"
   },
   "overrides": {
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "11.0.1"
+    },
     "deepmerge-ts": "8.0.2",
     "mysql2": "3.24.6",
     "@next/eslint-plugin-next@16.4.0": {
